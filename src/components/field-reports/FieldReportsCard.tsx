@@ -41,11 +41,17 @@ export function FieldReportsCard({ projectId, date }: Props) {
   const { data, isLoading } = useQuery({
     queryKey: key,
     queryFn: async () => {
-      const [{ data: reports }, { data: items }] = await Promise.all([
-        db.from('field_reports').select('*').eq('project_id', projectId).eq('report_date', date).order('created_at'),
-        db.from('field_report_items').select('*, field_reports!inner(report_date)').eq('project_id', projectId).eq('field_reports.report_date', date).order('created_at'),
+      const { data: reports } = await db.from('field_reports').select('*').eq('project_id', projectId).eq('report_date', date).order('created_at');
+      const ids = (reports || []).map((r: any) => r.id);
+      const next = new Date(date + 'T00:00:00Z'); next.setUTCDate(next.getUTCDate() + 1);
+      const [{ data: own }, { data: rel }] = await Promise.all([
+        ids.length ? db.from('field_report_items').select('*').in('report_id', ids).order('created_at') : Promise.resolve({ data: [] }),
+        db.from('field_report_items').select('*').eq('project_id', projectId).in('status', ['released', 'converted'])
+          .gte('released_at', date + 'T00:00:00Z').lt('released_at', next.toISOString()).order('released_at'),
       ]);
-      return { reports: reports || [], items: items || [] };
+      const seen = new Set((own || []).map((i: any) => i.id));
+      const items = [...(own || []), ...(rel || []).filter((i: any) => !seen.has(i.id))];
+      return { reports: reports || [], items };
     },
   });
   const refresh = () => qc.invalidateQueries({ queryKey: key });
