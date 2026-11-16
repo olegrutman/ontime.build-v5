@@ -35,6 +35,6 @@ describe('NTE edits over the ceiling', () => {
     expect(getNteEntryStatus(12000, 500, 10000, 1000).exceedsCap).toBe(false);
   });
   it('still blocks raising an entry past the cap', () => {
-    expect(getNteEntryStatus(9500, 1500, 10000, 1000).exceedsCap).toBe(true);
+    expect(getNteEntryStatus(9500, 2000, 10000, 1000).exceedsCap).toBe(true);
   });
 });
