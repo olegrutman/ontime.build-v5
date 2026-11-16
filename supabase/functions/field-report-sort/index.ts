@@ -50,20 +50,28 @@ Deno.serve(async (req) => {
     if (!member) return json({ error: "Only the crew can sort its report" }, 403);
 
         let transcript: string | null = rep.transcript ?? null;
+    let audioProblem = "";
     if (rep.audio_path && !transcript) {
-      const { data: file } = await sb.storage.from("field-audio").download(rep.audio_path);
-      if (file) {
-        const buf = new Uint8Array(await file.arrayBuffer());
-        const format = rep.audio_path.endsWith(".m4a") ? "mp4" : "webm";
-        try {
-          const t: any = await transcribeAudio({ model: "google/gemini-3.5-transcribe", file: new Blob([buf], { type: format === "mp4" ? "audio/mp4" : "audio/webm" }) });
-          transcript = String(t?.text ?? "").trim().slice(0, 6000) || null;
-        } catch (e) { console.error("transcribe failed", e); }
+      const { data: file, error: dlErr } = await sb.storage.from("field-audio").download(rep.audio_path);
+      if (dlErr || !file) { console.error("audio download failed", dlErr); audioProblem = "Could not open the voice note. Try recording again."; }
+      else {
+        const isMp4 = rep.audio_path.endsWith(".m4a");
+        const type = isMp4 ? "audio/mp4" : "audio/webm";
+        const audio = new File([await file.arrayBuffer()], isMp4 ? "note.m4a" : "note.webm", { type });
+        for (const model of ["google/gemini-3.5-transcribe", "openai/gpt-transcribe"]) {
+          try {
+            const t: any = await transcribeAudio({ model, file: audio } as any);
+            const txt = String(t?.text ?? t?.transcript ?? "").trim();
+            console.log("transcribed", model, txt.length);
+            if (txt) { transcript = txt.slice(0, 6000); break; }
+          } catch (e) { console.error("transcribe failed", model, e instanceof GatewayError ? `${e.code} ${e.message}` : e); }
+        }
+        if (!transcript) audioProblem = "We couldn't hear any words in the voice note. Try recording again closer to the phone, or type the update.";
       }
     }
 
     const text = [rep.raw_text, transcript].filter(Boolean).join("\n\n").trim();
-    if (!text) return json({ error: "Type an update or record a voice note first" }, 400);
+    if (!text) return json({ error: audioProblem || "Type an update or record a voice note first" }, 400);
 
     const raw = await sortText(text);
     const m = raw.match(/\{[\s\S]*\}/);
