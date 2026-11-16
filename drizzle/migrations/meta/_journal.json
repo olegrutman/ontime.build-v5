@@ -547,6 +547,13 @@
       "when": 1794855945713,
       "tag": "0077_block_standin_supplier_send",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1794856098376,
+      "tag": "0078_field_po_note_on_supplier_pick",
+      "breakpoints": true
     }
   ]
 }
