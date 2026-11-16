@@ -268,7 +268,9 @@ function DraftEditor({ report, items, onChange }: { report: any; items: any[]; o
     try {
       await saveText();
       const { data, error } = await supabase.functions.invoke('field-report-sort', { body: { report_id: report.id } });
-      if (error || data?.error) throw new Error(data?.error || error?.message || 'Could not sort the update');
+      let serverMsg: string | undefined = data?.error;
+      if (error && !serverMsg) { try { serverMsg = (await (error as any).context?.json?.())?.error; } catch { /* ignore */ } }
+      if (error || serverMsg) throw new Error(serverMsg || 'Could not sort the update');
       const found = (data?.items || []) as Array<{ kind: Kind; description: string; location: string | null; quantity: number | null; unit: string | null }>;
       if (data?.transcript && !report.transcript) await db.from('field_reports').update({ transcript: data.transcript }).eq('id', report.id);
       if (!found.length) { toast({ title: 'No items found', description: 'Add more detail, or add items by hand.' }); return; }
