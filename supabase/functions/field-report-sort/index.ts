@@ -17,6 +17,18 @@ Return strict JSON: { "items": [ { "kind": "progress"|"material"|"extra_work"|"b
 Kinds: progress = work done; material = material needed; extra_work = work outside the original scope; blocker = something stopping the work; hours = crew time worked (quantity = hours).
 Rules: use only facts stated; never invent items, quantities or locations. One item per distinct fact. Description <= 120 chars, plain, action-led. Never include prices, rates or costs, even if mentioned. Max 12 items.`;
 
+const FIX = `You correct speech-to-text mistakes in a construction crew's spoken field update.
+Fix only words that were clearly misheard construction terms, using the sound and context, e.g. "port"/"poured" -> "framing" when about walls, "by fourths"/"by fours" -> "2x4s", "two by six" -> "2x6", "trust"/"trusts" -> "trusses", "sheeting" -> "sheathing", "joyce" -> "joists", "header"/"headers", "studs", "plates", "OSB", "LVL", "drywall", "rough-in".
+Keep the crew's meaning, numbers and order. Never add facts. If unsure, keep the original word. Return only the corrected text.`;
+
+async function fixTerms(text: string): Promise<string> {
+  try {
+    const r: any = await generateResponse({ model: MODEL, instructions: FIX, input: [{ role: "user", content: text.slice(0, 6000) }] } as any);
+    const out = typeof r?.output_text === "string" ? r.output_text : (r?.output ?? []).flatMap((o: any) => o?.content ?? []).filter((c: any) => c?.type === "output_text").map((c: any) => c.text).join("");
+    return out.trim() || text;
+  } catch (e) { console.error("term fix failed", e); return text; }
+}
+
 async function sortText(text: string): Promise<string> {
   const r: any = await generateResponse({
     model: MODEL,
@@ -63,7 +75,7 @@ Deno.serve(async (req) => {
             const t: any = await transcribeAudio({ model, file: audio } as any);
             const txt = String(t?.text ?? t?.transcript ?? "").trim();
             console.log("transcribed", model, txt.length);
-            if (txt) { transcript = txt.slice(0, 6000); break; }
+            if (txt) { transcript = (await fixTerms(txt)).slice(0, 6000); break; }
           } catch (e) { console.error("transcribe failed", model, e instanceof GatewayError ? `${e.code} ${e.message}` : e); }
         }
         if (!transcript) audioProblem = "We couldn't hear any words in the voice note. Try recording again closer to the phone, or type the update.";
