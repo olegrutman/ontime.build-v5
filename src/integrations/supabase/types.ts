@@ -3815,6 +3815,207 @@ export type Database = {
           },
         ]
       }
+      field_report_items: {
+        Row: {
+          ai_generated: boolean
+          confirmed_at: string | null
+          confirmed_by: string | null
+          converted_co_id: string | null
+          converted_po_id: string | null
+          created_at: string
+          created_by: string
+          crew_org_id: string
+          description: string
+          hold_reason: string | null
+          id: string
+          kind: string
+          location: string | null
+          project_id: string
+          quantity: number | null
+          released_at: string | null
+          released_by: string | null
+          report_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_org_id: string
+          status: string
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_generated?: boolean
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          converted_co_id?: string | null
+          converted_po_id?: string | null
+          created_at?: string
+          created_by?: string
+          crew_org_id: string
+          description: string
+          hold_reason?: string | null
+          id?: string
+          kind: string
+          location?: string | null
+          project_id: string
+          quantity?: number | null
+          released_at?: string | null
+          released_by?: string | null
+          report_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_org_id: string
+          status?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_generated?: boolean
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          converted_co_id?: string | null
+          converted_po_id?: string | null
+          created_at?: string
+          created_by?: string
+          crew_org_id?: string
+          description?: string
+          hold_reason?: string | null
+          id?: string
+          kind?: string
+          location?: string | null
+          project_id?: string
+          quantity?: number | null
+          released_at?: string | null
+          released_by?: string | null
+          report_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_org_id?: string
+          status?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_report_items_converted_co_id_fkey"
+            columns: ["converted_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_report_items_converted_co_id_fkey"
+            columns: ["converted_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_report_items_converted_po_id_fkey"
+            columns: ["converted_po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_report_items_crew_org_id_fkey"
+            columns: ["crew_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_report_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_report_items_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "field_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_report_items_reviewer_org_id_fkey"
+            columns: ["reviewer_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      field_reports: {
+        Row: {
+          audio_path: string | null
+          created_at: string
+          created_by: string
+          crew_org_id: string
+          id: string
+          project_id: string
+          raw_text: string | null
+          report_date: string
+          reviewer_org_id: string
+          status: string
+          submitted_at: string | null
+          transcript: string | null
+          updated_at: string
+        }
+        Insert: {
+          audio_path?: string | null
+          created_at?: string
+          created_by?: string
+          crew_org_id: string
+          id?: string
+          project_id: string
+          raw_text?: string | null
+          report_date?: string
+          reviewer_org_id: string
+          status?: string
+          submitted_at?: string | null
+          transcript?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audio_path?: string | null
+          created_at?: string
+          created_by?: string
+          crew_org_id?: string
+          id?: string
+          project_id?: string
+          raw_text?: string | null
+          report_date?: string
+          reviewer_org_id?: string
+          status?: string
+          submitted_at?: string | null
+          transcript?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_reports_crew_org_id_fkey"
+            columns: ["crew_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_reports_reviewer_org_id_fkey"
+            columns: ["reviewer_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gc_owner_billings: {
         Row: {
           billed_amount: number
@@ -9747,6 +9948,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      decide_field_item: {
+        Args: { p_decision: string; p_item_id: string; p_reason?: string }
+        Returns: undefined
+      }
       decline_org_invitation: {
         Args: { p_invitation_id: string }
         Returns: undefined
@@ -9759,6 +9964,10 @@ export type Database = {
       ensure_tm_project_contracts: {
         Args: { _project_id: string }
         Returns: undefined
+      }
+      field_report_party: {
+        Args: { _report: string; _user: string }
+        Returns: string
       }
       finalize_co_line_review: { Args: { _co_id: string }; Returns: Json }
       finalize_tm_work_order: {
@@ -9965,6 +10174,10 @@ export type Database = {
         }
         Returns: string
       }
+      is_field_reviewer_pair: {
+        Args: { _crew: string; _project: string; _reviewer: string }
+        Returns: boolean
+      }
       is_gc_or_tc_pm: { Args: { _user_id: string }; Returns: boolean }
       is_gc_pm: { Args: { _user_id: string }; Returns: boolean }
       is_invited_org_admin: { Args: { _project_id: string }; Returns: boolean }
@@ -9984,6 +10197,10 @@ export type Database = {
         Returns: boolean
       }
       is_supplier_raised_po: { Args: { _po_id: string }; Returns: boolean }
+      link_field_item_conversion: {
+        Args: { p_co_id?: string; p_item_id: string; p_po_id?: string }
+        Returns: undefined
+      }
       list_billable_change_orders: {
         Args: { p_from_org_id: string; p_project_id: string }
         Returns: {
@@ -10438,6 +10655,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      submit_field_report: { Args: { p_report_id: string }; Returns: undefined }
       suggest_orgs_by_email_domain: {
         Args: { _email: string }
         Returns: {
