@@ -1,7 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Mic, Square, Plus, Trash2, Send, Check, Pause, Loader2, ClipboardList, Sparkles } from 'lucide-react';
+import { Mic, Square, Plus, Trash2, Send, Check, Pause, Loader2, ClipboardList, Sparkles, FileText, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
+import { conversionFor, createWorkOrderFromItem, createMaterialOrderFromItem } from '@/lib/fieldItemConversion';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -153,10 +155,50 @@ function ReportBlock({ title, report, items, reviewer, onChange }: { title: stri
       {items.map(i => (
         <ItemRow key={i.id} item={i}>
           {reviewer && i.status === 'crew_confirmed' && <ReviewActions item={i} onChange={onChange!} />}
+          {reviewer && conversionFor(i) && <ConvertAction item={i} onChange={onChange!} />}
+          {i.status === 'converted' && <ConvertedLink item={i} />}
         </ItemRow>
       ))}
     </div>
   );
+}
+
+function ConvertAction({ item, onChange }: { item: any; onChange: () => void }) {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const kind = conversionFor(item)!;
+  const run = async () => {
+    if (!user) return;
+    setBusy(true);
+    try {
+      if (kind === 'work_order') {
+        const id = await createWorkOrderFromItem(item, user.id);
+        toast({ title: 'Draft order created', description: 'Add pricing on the order page, then submit it.' });
+        onChange(); navigate(`/project/${item.project_id}/change-orders/${id}`);
+      } else {
+        await createMaterialOrderFromItem(item);
+        toast({ title: 'Draft material order created', description: 'Review it under Orders before sending to the supplier.' });
+        onChange();
+      }
+    } catch (e: any) {
+      toast({ title: 'Could not create the order', description: e.message, variant: 'destructive' });
+    } finally { setBusy(false); }
+  };
+  return (
+    <Button size="sm" variant="outline" disabled={busy} onClick={run}>
+      {busy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : kind === 'work_order' ? <FileText className="h-4 w-4 mr-1" /> : <Package className="h-4 w-4 mr-1" />}
+      {kind === 'work_order' ? 'Make work order' : 'Make material order'}
+    </Button>
+  );
+}
+
+function ConvertedLink({ item }: { item: any }) {
+  const navigate = useNavigate();
+  if (item.converted_co_id) return <Button size="sm" variant="link" className="px-0" onClick={() => navigate(`/project/${item.project_id}/change-orders/${item.converted_co_id}`)}>Open work order</Button>;
+  if (item.converted_po_id) return <Button size="sm" variant="link" className="px-0" onClick={() => navigate(`/project/${item.project_id}/purchase-orders`)}>Open material orders</Button>;
+  return null;
 }
 
 function ReviewActions({ item, onChange }: { item: any; onChange: () => void }) {
