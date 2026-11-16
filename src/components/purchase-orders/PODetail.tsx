@@ -439,7 +439,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
   const handleSubmitToSupplier = async () => {
     if (!user || !po) return;
     if (needsSupplierChoice(po)) {
-      toast({ title: 'Choose a supplier first', description: 'This order came from a field report. Use Edit to pick the supplier, then send it.', variant: 'destructive' });
+      toast.error('Choose a supplier first — use Edit to pick one, then send it.');
       return;
     }
 
