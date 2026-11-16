@@ -50,12 +50,14 @@ export async function createMaterialOrderFromItem(item: any): Promise<string> {
   const orgIds = (team || []).map((t: any) => t.org_id);
   let supplierId: string | null = null;
   if (orgIds.length) supplierId = (await db.from('suppliers').select('id').in('organization_id', orgIds).limit(1).maybeSingle()).data?.id ?? null;
+  // No supplier on the project: fall back to the Ontime Master Catalog, like the order form does.
+  if (!supplierId) supplierId = (await db.from('suppliers').select('id').eq('is_system', true).limit(1).maybeSingle()).data?.id ?? null;
   if (!supplierId) throw new Error('Add a supplier to this project first');
   const { data: poNumber, error: nErr } = await db.rpc('generate_po_number', { org_id: orgId });
   if (nErr || !poNumber) throw nErr || new Error('Could not number the order');
   const { data: po, error } = await db.from('purchase_orders').insert({
     organization_id: orgId, created_by_org_id: orgId, po_number: poNumber, po_name: `Field request · ${String(item.description).slice(0, 60)}`,
-    supplier_id: supplierId, project_id: item.project_id, status: 'ACTIVE', notes: 'From crew field report. Not yet sent to the supplier.',
+    supplier_id: supplierId, project_id: item.project_id, status: 'ACTIVE', notes: orgIds.length ? 'From crew field report. Not yet sent to the supplier.' : 'From crew field report. No supplier on this project yet — choose one before sending.',
   }).select('id').single();
   if (error) throw error;
   const { error: lErr } = await db.from('po_line_items').insert({
