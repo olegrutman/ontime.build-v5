@@ -526,6 +526,13 @@
       "when": 1794847111443,
       "tag": "0074_field_reports_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1794849843688,
+      "tag": "0075_field_report_alerts",
+      "breakpoints": true
     }
   ]
 }
