@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { Radio } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { FieldReportPhotoGallery, type FieldReportPhoto } from '@/components/field-reports/FieldReportPhotoGallery';
+import { releasedReportIds } from '@/lib/fieldReportPhotos';
 
 const db = supabase as any;
 const GROUPS: { kind: string; label: string }[] = [
@@ -12,18 +14,27 @@ const GROUPS: { kind: string; label: string }[] = [
 
 /** Read-only daily summary built from field items the Subcontractor released that day. */
 export function FieldSummaryCard({ projectId, date }: { projectId: string; date: string }) {
-  const { data: items = [] } = useQuery({
+  const { data } = useQuery({
     queryKey: ['field-summary', projectId, date],
     queryFn: async () => {
       const next = new Date(date + 'T00:00:00Z'); next.setUTCDate(next.getUTCDate() + 1);
-      const { data } = await db.from('field_report_items')
-        .select('id,kind,description,location,quantity,unit,status')
+      const { data: itemData, error: itemError } = await db.from('field_report_items')
+        .select('id,report_id,kind,description,location,quantity,unit,status,released_at')
         .eq('project_id', projectId).in('status', ['released', 'converted'])
         .gte('released_at', date + 'T00:00:00Z').lt('released_at', next.toISOString())
         .order('released_at');
-      return (data || []) as any[];
+      if (itemError) throw itemError;
+      const items = (itemData || []) as any[];
+      const reportIds = releasedReportIds(items);
+      const { data: photoData, error: photoError } = reportIds.length
+        ? await db.from('field_report_photos').select('*').in('report_id', reportIds).order('created_at')
+        : { data: [], error: null };
+      if (photoError) throw photoError;
+      return { items, photos: (photoData || []) as FieldReportPhoto[] };
     },
   });
+  const items = data?.items || [];
+  const photos = data?.photos || [];
   if (!items.length) return null;
   const hours = items.filter(i => i.kind === 'hours').reduce((s, i) => s + (Number(i.quantity) || 0), 0);
 
@@ -56,6 +67,7 @@ export function FieldSummaryCard({ projectId, date }: { projectId: string; date:
           </div>
         );
       })}
+      <FieldReportPhotoGallery photos={photos} title="Report photos" />
     </div>
   );
 }

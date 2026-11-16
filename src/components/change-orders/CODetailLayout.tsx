@@ -48,6 +48,7 @@ import { fetchWoBilledToDate } from '@/lib/woProgressBillingData';
 import { COActivityFeed } from './COActivityFeed';
 import { COAuditLog } from './COAuditLog';
 import { COPhotosCard, type COPhotosCardHandle } from './COPhotosCard';
+import { LinkedFieldReportPhotos } from '@/components/field-reports/FieldReportPhotoGallery';
 import { COPhotoNudgeBanner } from './COPhotoNudgeBanner';
 import { COAcceptBanner } from './COAcceptBanner';
 import { COExternalApprovalBanner } from './COExternalApprovalBanner';
@@ -987,6 +988,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
               {/* Photos */}
               <COPhotosCard ref={photosCardRef} coId={co.id} role={role} lineItems={lineItems} />
+              <LinkedFieldReportPhotos coId={co.id} />
 
               {/* External Invites */}
               <COExternalInvitesCard coId={co.id} coNumber={co.co_number} coTitle={displayTitle} />
