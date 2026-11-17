@@ -58,6 +58,7 @@ const ITEMS = {
   estimates: { key: 'estimates', label: 'Estimates', icon: FileText, route: 'estimates', featureKey: 'supplier_estimates' },
   schedule: { key: 'schedule', label: 'Schedule', icon: CalendarDays, route: 'schedule', featureKey: 'schedule_gantt', premium: true },
   dailyLog: { key: 'daily-log', label: 'Daily Log', icon: PenLine, route: 'daily-log', featureKey: 'daily_logs' },
+  dailyReports: { key: 'daily-reports', label: 'Daily Reports', icon: PenLine, route: 'daily-reports' },
   crewTracker: { key: 'crew-tracker', label: 'Crew Tracker', icon: Receipt, route: 'crew-tracker' },
   rfis: { key: 'rfis', label: 'RFIs', icon: MessageSquareMore, route: 'rfis', premium: true },
   returns: { key: 'returns', label: 'Returns', icon: RotateCcw, route: 'returns', featureKey: 'returns_tracking' },
@@ -92,7 +93,7 @@ export function getNavGroups(isTM: boolean, isSupplier: boolean, isFC = false): 
   if (isFC) {
     return {
       groups: [
-        { key: 'primary', items: [ITEMS.overview, ITEMS.changeOrders(isTM), ITEMS.invoices] },
+        { key: 'primary', items: [ITEMS.overview, ITEMS.dailyReports, ITEMS.changeOrders(isTM), ITEMS.invoices] },
         // Crews see the Schedule of Values for their own contract (read-only).
         ...(!isTM ? [{ key: 'financials', label: 'Financials', items: [ITEMS.sov] }] : []),
         { key: 'field', label: 'Field', items: [ITEMS.crewTracker, ITEMS.schedule, ITEMS.dailyLog] },
@@ -103,7 +104,7 @@ export function getNavGroups(isTM: boolean, isSupplier: boolean, isFC = false): 
 
   return {
     groups: [
-      { key: 'primary', items: [ITEMS.overview, ITEMS.changeOrders(isTM), ITEMS.invoices] },
+      { key: 'primary', items: [ITEMS.overview, ITEMS.dailyReports, ITEMS.changeOrders(isTM), ITEMS.invoices] },
       {
         key: 'financials',
         label: 'Financials',

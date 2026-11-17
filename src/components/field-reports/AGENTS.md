@@ -1,1 +1,2 @@
 - Field-report AI sorting only returns suggestions; the crew's own session saves them as draft items so row policies and crew review still apply.
+- Daily Reports reuses the existing draft/review controls; the register paginates authorized sources and redacts non-party report text and unreleased items, preserving the subcontractor release boundary.
