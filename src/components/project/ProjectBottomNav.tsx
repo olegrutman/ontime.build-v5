@@ -31,12 +31,13 @@ interface BottomItem {
   route: string;
 }
 
-function getPrimaryItems(isTM: boolean, isFC = false): BottomItem[] {
+function getPrimaryItems(isTM: boolean, isFC = false, isSupplier = false): BottomItem[] {
   return [
     { label: 'Overview', icon: LayoutDashboard, route: 'overview' },
+    ...(!isSupplier ? [{ label: 'Reports', icon: PenLine, route: 'daily-reports' }] : []),
     { label: isTM ? 'WOs' : 'COs', icon: AlertTriangle, route: 'change-orders' },
     { label: 'Invoices', icon: Receipt, route: 'invoices' },
-    ...(isFC ? [{ label: 'Tracker', icon: Users, route: 'crew-tracker' } as BottomItem] : [{ label: 'Orders', icon: Package, route: 'purchase-orders' } as BottomItem]),
+    ...(isSupplier ? [{ label: 'Orders', icon: Package, route: 'purchase-orders' } as BottomItem] : []),
   ];
 }
 
@@ -47,6 +48,7 @@ interface MoreItem {
   featureKey?: string;
   hideForSupplier?: boolean;
   hideForFC?: boolean;
+  crewOnly?: boolean;
 }
 
 interface MoreGroup {
@@ -90,6 +92,8 @@ function getMoreGroups(isTM: boolean): MoreGroup[] {
       label: 'Field',
       items: [
         { label: 'Schedule', icon: CalendarDays, route: 'schedule', featureKey: 'schedule_gantt', hideForSupplier: true },
+        { label: 'Crew Tracker', icon: Users, route: 'crew-tracker', hideForSupplier: true, crewOnly: true },
+        { label: 'Purchase Orders', icon: Package, route: 'purchase-orders', hideForFC: true, hideForSupplier: true },
         { label: 'Daily Log', icon: PenLine, route: 'daily-log', featureKey: 'daily_logs', hideForSupplier: true },
       ],
     },
@@ -175,7 +179,7 @@ export function ProjectBottomNav({ isSupplier = false, isTM = false, isFC = fals
         style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
       >
         <div className="flex items-stretch justify-around h-[56px]">
-          {getPrimaryItems(isTM, isFC).map((item) => {
+          {getPrimaryItems(isTM, isFC, isSupplier).map((item) => {
             const active = activeSection === item.route;
             const Icon = item.icon;
             return (
@@ -212,7 +216,7 @@ export function ProjectBottomNav({ isSupplier = false, isTM = false, isFC = fals
           <DrawerTitle className="sr-only">More sections</DrawerTitle>
           <div className="flex flex-col gap-3 p-4 pb-8 overflow-y-auto">
             {groups.map((group) => {
-              const visible = group.items.filter((i) => !(i.hideForSupplier && isSupplier) && !(i.hideForFC && isFC));
+              const visible = group.items.filter((i) => !(i.hideForSupplier && isSupplier) && !(i.hideForFC && isFC) && !(i.crewOnly && !isFC));
               if (visible.length === 0) return null;
               return (
                 <div key={group.key} className="flex flex-col gap-0.5">

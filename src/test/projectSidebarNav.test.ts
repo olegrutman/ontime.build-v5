@@ -32,10 +32,10 @@ describe('project sidebar nav — all user types', () => {
         expect(new Set(routes).size).toBe(routes.length);
       });
 
-      it('leads with an unlabeled primary block of 3 daily destinations', () => {
+      it('leads with an unlabeled primary block and promotes daily reports for non-suppliers', () => {
         const { groups } = getNavGroups(isTM, isSupplier);
         expect(groups[0].label).toBeUndefined();
-        expect(groups[0].items).toHaveLength(3);
+        expect(groups[0].items).toHaveLength(isSupplier ? 3 : 4);
         expect(groups[0].items[0].key).toBe('overview');
       });
 
@@ -44,9 +44,9 @@ describe('project sidebar nav — all user types', () => {
         expect(groups.filter((g) => g.label).length).toBeLessThanOrEqual(2);
       });
 
-      it('keeps the always-visible list to 8 rows or fewer', () => {
+      it('keeps the always-visible list to 9 rows or fewer', () => {
         const { groups } = getNavGroups(isTM, isSupplier);
-        expect(groups.flatMap((g) => g.items).length).toBeLessThanOrEqual(8);
+        expect(groups.flatMap((g) => g.items).length).toBeLessThanOrEqual(9);
       });
 
       it('every item has a label, icon and route', () => {
