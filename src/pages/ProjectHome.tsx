@@ -58,6 +58,7 @@ import { RFIsTab } from '@/components/rfi';
 import RFIListPage from '@/pages/RFIListPage';
 import { ScheduleTab } from '@/components/schedule/ScheduleTab';
 import { DailyLogPanel } from '@/components/daily-log/DailyLogPanel';
+import { DailyReportDesigns } from '@/components/field-reports/DailyReportDesigns';
 import { useToast } from '@/hooks/use-toast';
 import { FeatureGate, useFeatureEnabled } from '@/components/auth/FeatureGate';
 import { useProjectFinancials } from '@/hooks/useProjectFinancials';
