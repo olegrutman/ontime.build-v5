@@ -1,3 +1,4 @@
 - Field-report AI sorting only returns suggestions; the crew's own session saves them as draft items so row policies and crew review still apply.
 - Daily Reports reuses the existing draft/review controls; the register paginates authorized sources and redacts non-party report text and unreleased items, preserving the subcontractor release boundary.
 - Individual-report design previews use isolated sample state and the existing project shell; they never save reports or decisions, so comparison cannot alter live work.
+- Live individual reports use the review-desk layout with shared draft/review actions; source notes stay in the party-only sidebar and item filters never change report-wide counts, preserving workflow and context.

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Mic, Square, Plus, Trash2, Send, Check, Pause, Loader2, ClipboardList, Sparkles, FileText, Package } from 'lucide-react';
+import { Mic, Square, Plus, Trash2, Send, Check, Pause, Loader2, ClipboardList, Sparkles, FileText, Package, CheckCircle2, TriangleAlert, Clock3, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { conversionFor, createWorkOrderFromItem, createMaterialOrderFromItem } from '@/lib/fieldItemConversion';
@@ -123,7 +123,12 @@ export function FieldReportsCard({ projectId, date }: Props) {
   );
 }
 
-function ItemRow({ item, children }: { item: any; children?: React.ReactNode }) {
+function ItemRow({ item, children, reviewDesk }: { item: any; children?: React.ReactNode; reviewDesk?: boolean }) {
+  if (reviewDesk) {
+    const Icon = item.kind === 'progress' ? CheckCircle2 : item.kind === 'material' ? Package : item.kind === 'blocker' ? TriangleAlert : item.kind === 'hours' ? Clock3 : Plus;
+    const tone = item.kind === 'blocker' ? 'bg-destructive/10 text-destructive' : item.kind === 'progress' ? 'bg-state-approved-bg text-state-approved' : item.kind === 'material' || item.kind === 'hours' ? 'bg-type-sov/10 text-type-sov' : 'bg-state-open-bg text-state-open-foreground';
+    return <article className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm"><div className="flex gap-3"><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tone}`}><Icon size={17} /></span><div className="min-w-0 flex-1 space-y-2"><div className="flex flex-wrap justify-between items-start gap-2"><p className="text-[11px] font-semibold uppercase text-muted-foreground">{KIND_LABEL[item.kind as Kind] || item.kind}</p><Badge variant="outline" className="max-w-full whitespace-normal text-[11px]">{STATUS_LABEL[item.status] || item.status}</Badge></div><p className="break-words text-sm leading-relaxed">{item.description}</p>{(item.location || item.quantity != null) && <p className="flex items-start gap-1.5 text-xs text-muted-foreground"><MapPin size={13} className="shrink-0" /><span className="min-w-0 break-words">{item.location}{item.location && item.quantity != null ? ' · ' : ''}{item.quantity != null ? `${item.quantity} ${item.unit || ''}` : ''}</span></p>}{item.hold_reason && <p className="break-words text-xs text-destructive">Held: {item.hold_reason}</p>}<div className="flex flex-wrap gap-2 pt-1">{children}</div></div></div></article>;
+  }
   return (
     <div className="rounded-xl border p-3 space-y-2">
       <div className="flex items-start justify-between gap-2">
@@ -144,7 +149,7 @@ function ItemRow({ item, children }: { item: any; children?: React.ReactNode }) 
   );
 }
 
-export function ReportBlock({ title, report, items, photos, reviewer, onChange }: { title: string; report: any; items: any[]; photos: FieldReportPhoto[]; reviewer?: boolean; onChange?: () => void }) {
+export function ReportBlock({ title, report, items, photos, reviewer, onChange, reviewDesk }: { title: string; report: any; items: any[]; photos: FieldReportPhoto[]; reviewer?: boolean; onChange?: () => void; reviewDesk?: boolean }) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const loadAudio = async () => {
     const { data } = await supabase.storage.from('field-audio').createSignedUrl(report.audio_path, 600);
@@ -152,14 +157,14 @@ export function ReportBlock({ title, report, items, photos, reviewer, onChange }
   };
   return (
     <div className="space-y-2">
-      <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">{title}</p>
-      {report.raw_text && <p className="text-sm whitespace-pre-wrap break-words rounded-xl bg-muted/50 p-3">{report.raw_text}</p>}
-      {report.audio_path && (audioUrl
+      {!reviewDesk && <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">{title}</p>}
+      {!reviewDesk && report.raw_text && <p className="text-sm whitespace-pre-wrap break-words rounded-xl bg-muted/50 p-3">{report.raw_text}</p>}
+      {!reviewDesk && report.audio_path && (audioUrl
         ? <audio controls src={audioUrl} className="w-full" />
         : <Button variant="outline" size="sm" onClick={loadAudio}><Mic className="h-4 w-4 mr-1" />Play voice note</Button>)}
       <FieldReportPhotoGallery photos={photos} />
       {items.map(i => (
-        <ItemRow key={i.id} item={i}>
+        <ItemRow key={i.id} item={i} reviewDesk={reviewDesk}>
           {reviewer && onChange && i.status === 'crew_confirmed' && <ReviewActions item={i} onChange={onChange} />}
           {reviewer && onChange && conversionFor(i) && <ConvertAction item={i} onChange={onChange} />}
           {i.status === 'converted' && <ConvertedLink item={i} />}
