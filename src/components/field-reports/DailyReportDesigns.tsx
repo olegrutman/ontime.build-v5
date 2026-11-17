@@ -21,7 +21,7 @@ const designs: { id: Design; name: string; icon: typeof FileText }[] = [
   { id: 'C', name: 'Daily journal', icon: CalendarDays },
 ];
 function Status({ value }: { value: string }) {
-  return <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold', value === 'Released' ? 'bg-state-approved-bg text-state-approved-foreground' : 'bg-state-open-bg text-state-open-foreground')}><span className={cn('h-1.5 w-1.5 rounded-full', value === 'Released' ? 'bg-state-approved' : 'bg-state-open')} />{value}</span>;
+  return <span className={cn('inline-flex self-start items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold', value === 'Released' ? 'bg-state-approved-bg text-state-approved-foreground' : 'bg-state-open-bg text-state-open-foreground')}><span className={cn('h-1.5 w-1.5 rounded-full', value === 'Released' ? 'bg-state-approved' : 'bg-state-open')} />{value}</span>;
 }
 function Photo({ className = '' }: { className?: string }) {
   return <img src={framingPhoto} alt="Sample jobsite photo of two-story residential framing" width={1280} height={768} loading="lazy" className={cn('w-full object-cover', className)} />;
