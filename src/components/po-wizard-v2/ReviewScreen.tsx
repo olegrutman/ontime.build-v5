@@ -38,6 +38,7 @@ interface ReviewScreenProps {
   onSubmit: () => void;
   onCreateAndSend?: () => void;
   sendLabel?: string;
+  submitLabel?: string;
   isSubmitting: boolean;
   isSending?: boolean;
   hidePricing?: boolean;
@@ -53,6 +54,7 @@ export function ReviewScreen({
   onSubmit,
   onCreateAndSend,
   sendLabel,
+  submitLabel,
   isSubmitting,
   isSending = false,
   hidePricing = false,
@@ -380,7 +382,7 @@ export function ReviewScreen({
           {isSubmitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            'Create PO'
+            submitLabel || 'Create PO'
           )}
         </Button>
         {onCreateAndSend && (

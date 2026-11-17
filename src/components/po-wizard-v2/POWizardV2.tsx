@@ -527,6 +527,7 @@ export function POWizardV2({
             onEditItems={() => setScreen('items')}
             onBack={() => setScreen('items')}
             onSubmit={handleSubmit}
+            submitLabel={editMode ? 'Save changes' : undefined}
             onCreateAndSend={!editMode && onCreateAndSend ? handleCreateAndSend : undefined}
             isSubmitting={isSubmitting}
             isSending={isSending}

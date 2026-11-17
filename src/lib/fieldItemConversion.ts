@@ -53,11 +53,16 @@ export async function createMaterialOrderFromItem(item: any): Promise<string> {
   // No supplier on the project: fall back to the Ontime Master Catalog, like the order form does.
   if (!supplierId) supplierId = (await db.from('suppliers').select('id').eq('is_system', true).limit(1).maybeSingle()).data?.id ?? null;
   if (!supplierId) throw new Error('Add a supplier to this project first');
+  // Same payer rule as the order form: whoever the contract says handles materials.
+  const { data: contracts } = await db.from('project_contracts').select('material_responsibility, from_org_id, to_org_id')
+    .eq('project_id', item.project_id).not('material_responsibility', 'is', null);
+  const mr = (contracts || []).find((c: any) => c.material_responsibility);
+  const pricingOwnerOrgId = mr ? (mr.material_responsibility === 'GC' ? mr.to_org_id : mr.from_org_id) || orgId : orgId;
   const { data: poNumber, error: nErr } = await db.rpc('generate_po_number', { org_id: orgId });
   if (nErr || !poNumber) throw nErr || new Error('Could not number the order');
   const { data: po, error } = await db.from('purchase_orders').insert({
     organization_id: orgId, created_by_org_id: orgId, po_number: poNumber, po_name: `Field request · ${String(item.description).slice(0, 60)}`,
-    supplier_id: supplierId, project_id: item.project_id, status: 'ACTIVE', notes: orgIds.length ? 'From crew field report. Not yet sent to the supplier.' : FIELD_NO_SUPPLIER_NOTE,
+    supplier_id: supplierId, project_id: item.project_id, pricing_owner_org_id: pricingOwnerOrgId, status: 'ACTIVE', notes: orgIds.length ? 'From crew field report. Not yet sent to the supplier.' : FIELD_NO_SUPPLIER_NOTE,
   }).select('id').single();
   if (error) throw error;
   const { error: lErr } = await db.from('po_line_items').insert({
