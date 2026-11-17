@@ -48,6 +48,7 @@ interface MoreItem {
   featureKey?: string;
   hideForSupplier?: boolean;
   hideForFC?: boolean;
+  crewOnly?: boolean;
 }
 
 interface MoreGroup {
@@ -91,7 +92,7 @@ function getMoreGroups(isTM: boolean): MoreGroup[] {
       label: 'Field',
       items: [
         { label: 'Schedule', icon: CalendarDays, route: 'schedule', featureKey: 'schedule_gantt', hideForSupplier: true },
-        { label: 'Crew Tracker', icon: Users, route: 'crew-tracker', hideForSupplier: true },
+        { label: 'Crew Tracker', icon: Users, route: 'crew-tracker', hideForSupplier: true, crewOnly: true },
         { label: 'Purchase Orders', icon: Package, route: 'purchase-orders', hideForFC: true, hideForSupplier: true },
         { label: 'Daily Log', icon: PenLine, route: 'daily-log', featureKey: 'daily_logs', hideForSupplier: true },
       ],
@@ -215,7 +216,7 @@ export function ProjectBottomNav({ isSupplier = false, isTM = false, isFC = fals
           <DrawerTitle className="sr-only">More sections</DrawerTitle>
           <div className="flex flex-col gap-3 p-4 pb-8 overflow-y-auto">
             {groups.map((group) => {
-              const visible = group.items.filter((i) => !(i.hideForSupplier && isSupplier) && !(i.hideForFC && isFC));
+              const visible = group.items.filter((i) => !(i.hideForSupplier && isSupplier) && !(i.hideForFC && isFC) && !(i.crewOnly && !isFC));
               if (visible.length === 0) return null;
               return (
                 <div key={group.key} className="flex flex-col gap-0.5">
