@@ -1,3 +1,4 @@
+import { resolvePoPricingOwner } from '@/lib/poPricingOwner';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -163,6 +164,8 @@ export default function PurchaseOrders() {
         material_order_id: selectedMaterialOrderId || null,
         notes: poNotes.trim() || null,
         status: 'ACTIVE',
+        created_by_org_id: organizationId,
+        pricing_owner_org_id: await resolvePoPricingOwner(selectedProjectId || null, organizationId),
       })
       .select()
       .single();
