@@ -13,10 +13,11 @@ const MODEL = "openai/gpt-6-astra";
 const KINDS = ["progress", "material", "extra_work", "blocker", "hours"];
 
 const PROMPT = `You sort a construction crew's daily field update into separate items.
-Return strict JSON: { "items": [ { "kind": "progress"|"material"|"extra_work"|"blocker"|"hours", "description": string, "location": string|null, "quantity": number|null, "unit": string|null } ] }
+Return strict JSON: { "items": [ { "kind": "progress"|"material"|"extra_work"|"blocker"|"hours", "description": string, "location": string|null, "quantity": number|null, "unit": string|null, "material_context": { "application": "exterior"|"interior"|null, "window_count": number|null, "dimension": string|null }|null } ] }
 Kinds: progress = work done; material = material needed; extra_work = work outside the original scope; blocker = something stopping the work; hours = crew time worked (quantity = hours).
 Rules: use only facts stated; never invent items, quantities or locations. One item per distinct fact. Description <= 120 chars, plain, action-led. Never include prices, rates or costs, even if mentioned. Max 12 items.
-Materials: put the count in quantity and write lumber sizes as 2x4, 2x6 etc.; "N 2x4s by 16" means N pieces of 2x4 at 16 ft (quantity N, unit "pcs"). Hours: quantity = total crew hours (people x hours each), and say both in the description.`;
+Materials: put the stated material count in quantity and write lumber sizes as 2x4, 2x6 etc.; "N 2x4s by 16" means N pieces of 2x4 at 16 ft (quantity N, unit "pcs"). Hours: quantity = total crew hours (people x hours each), and say both in the description.
+Trim requests: material_context.application = exterior only for explicit outside/siding/flashing/brickmold cues, interior only for explicit inside/casing/paint-grade/drywall cues, otherwise null. window_count = only a stated whole number of windows/openings, never an estimated material quantity. dimension = only a stated board dimension such as 1x4 or 5/4x4, otherwise null. If only window count is stated, leave quantity null. Use material_context null for non-trim requests.`;
 
 const FIX = `You correct speech-to-text mistakes in a construction crew's spoken field update.
 Fix only words that were clearly misheard construction terms, using the sound and context, e.g. "port"/"poured" -> "framing" when about walls, "by fourths"/"by fours" -> "2x4s", "32x4s" -> "32 2x4s", "two by six" -> "2x6", "trust"/"trusts" -> "trusses", "sheeting" -> "sheathing", "joyce" -> "joists", "header"/"headers", "studs", "plates", "OSB", "LVL", "drywall", "rough-in".
@@ -97,6 +98,11 @@ Deno.serve(async (req) => {
         location: typeof i.location === "string" && i.location.trim() ? i.location.trim().slice(0, 120) : null,
         quantity: typeof i.quantity === "number" && isFinite(i.quantity) ? i.quantity : null,
         unit: typeof i.unit === "string" && i.unit.trim() ? i.unit.trim().slice(0, 20) : null,
+        material_context: i.kind === "material" && i.material_context && typeof i.material_context === "object" ? {
+          application: ["exterior", "interior"].includes(i.material_context.application) ? i.material_context.application : null,
+          window_count: Number.isInteger(i.material_context.window_count) && i.material_context.window_count > 0 && i.material_context.window_count <= 500 ? i.material_context.window_count : null,
+          dimension: typeof i.material_context.dimension === "string" && /^(?:5\/4|\d+(?:\.\d+)?)x\d+(?:\.\d+)?$/i.test(i.material_context.dimension.replace(/\s/g, "").replace("×", "x")) ? i.material_context.dimension.replace(/\s/g, "").replace("×", "x").toLowerCase().slice(0, 20) : null,
+        } : null,
       }));
     return json({ transcript, items });
   } catch (e: any) {

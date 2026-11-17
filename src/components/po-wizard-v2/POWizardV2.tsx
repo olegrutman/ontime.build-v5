@@ -20,6 +20,7 @@ import { SmartPicker as ProductPickerContent, SmartPickerHandle as ProductPicker
 import { UnmatchedItemPanel } from './UnmatchedItemEditor';
 import { StepIndicator } from './StepIndicator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { MaterialRequestContext } from '@/lib/trimMaterial';
 
 type Screen = 'header' | 'items' | 'review' | 'picker' | 'unmatched-editor';
 type PickerInitialStep = 'source' | 'estimate' | undefined;
@@ -70,6 +71,8 @@ interface POWizardV2Props {
   restrictToSupplierId?: string;
   /** Label for the primary send action on the review screen */
   sendLabel?: string;
+  /** Field-request context used to resolve an existing free-text line. */
+  materialRequest?: MaterialRequestContext | null;
 }
 
 export function POWizardV2({
@@ -90,6 +93,7 @@ export function POWizardV2({
   hidePricing = false,
   restrictToSupplierId,
   sendLabel,
+  materialRequest = null,
 }: POWizardV2Props) {
   const isMobile = useIsMobile();
   const pickerRef = useRef<ProductPickerHandle>(null);
@@ -207,7 +211,9 @@ export function POWizardV2({
   useEffect(() => {
     if (open) {
       if (editMode && initialData) {
-        setScreen('items');
+        const requestLine = materialRequest ? initialData.line_items?.[0] : null;
+        setEditingItem(requestLine ?? null);
+        setScreen(requestLine ? 'picker' : 'items');
         setFormData({
           ...INITIAL_PO_WIZARD_V2_DATA,
           project_id: projectId,
@@ -229,7 +235,7 @@ export function POWizardV2({
         setScreen('header');
       }
     }
-  }, [open, projectId, projectName, projectAddress, workOrderId, workOrderTitle, editMode, initialData]);
+  }, [open, projectId, projectName, projectAddress, workOrderId, workOrderTitle, editMode, initialData, materialRequest]);
 
   // Auto-advance past header for single supplier (non-edit mode)
   useEffect(() => {
@@ -489,7 +495,7 @@ export function POWizardV2({
             onAddItem={handleOpenPicker}
             onEditItem={(item) => {
               setEditingItem(item);
-              if (!item.catalog_item_id) {
+              if (!item.catalog_item_id && !materialRequest) {
                 setScreen('unmatched-editor');
               } else {
                 setScreen('picker');
@@ -560,6 +566,7 @@ export function POWizardV2({
             onExitPicker={handleExitPicker}
             initialStep={pickerInitialStep}
             onStateChange={(_step, title) => setPickerTitle(title)}
+            materialRequest={materialRequest}
           />
         )}
         {screen === 'unmatched-editor' && editingItem && (

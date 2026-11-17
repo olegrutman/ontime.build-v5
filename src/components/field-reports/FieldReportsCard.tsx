@@ -4,6 +4,7 @@ import { Mic, Square, Plus, Trash2, Send, Check, Pause, Loader2, ClipboardList, 
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { conversionFor, createWorkOrderFromItem, createMaterialOrderFromItem } from '@/lib/fieldItemConversion';
+import { trimRequestFromMaterialContext } from '@/lib/trimMaterial';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -189,9 +190,16 @@ function ConvertAction({ item, onChange }: { item: any; onChange: () => void }) 
         toast({ title: 'Draft order created', description: 'Add pricing on the order page, then submit it.' });
         onChange(); navigate(`/project/${item.project_id}/change-orders/${id}`);
       } else {
-        await createMaterialOrderFromItem(item);
-        toast({ title: 'Draft material order created', description: 'Review it under Orders before sending to the supplier.' });
+        const id = await createMaterialOrderFromItem(item);
+        const trimRequest = trimRequestFromMaterialContext(item.description, item.material_context);
+        toast({
+          title: 'Draft material order created',
+          description: trimRequest ? 'Choose the project-matched trim and confirm its quantity before sending.' : 'Review it under Orders before sending to the supplier.',
+        });
         onChange();
+        const params = new URLSearchParams({ tab: 'purchase-orders', edit_po: id });
+        if (trimRequest) params.set('field_item', item.id);
+        navigate(`/project/${item.project_id}/purchase-orders?${params.toString()}`);
       }
     } catch (e: any) {
       toast({ title: 'Could not create the order', description: e.message, variant: 'destructive' });
@@ -208,7 +216,12 @@ function ConvertAction({ item, onChange }: { item: any; onChange: () => void }) 
 function ConvertedLink({ item }: { item: any }) {
   const navigate = useNavigate();
   if (item.converted_co_id) return <Button size="sm" variant="link" className="px-0" onClick={() => navigate(`/project/${item.project_id}/change-orders/${item.converted_co_id}`)}>Open work order</Button>;
-  if (item.converted_po_id) return <Button size="sm" variant="link" className="px-0" onClick={() => navigate(`/project/${item.project_id}/purchase-orders`)}>Open material orders</Button>;
+  if (item.converted_po_id) {
+    const trimRequest = trimRequestFromMaterialContext(item.description, item.material_context);
+    const params = new URLSearchParams({ tab: 'purchase-orders', edit_po: item.converted_po_id });
+    if (trimRequest) params.set('field_item', item.id);
+    return <Button size="sm" variant="link" className="px-0" onClick={() => navigate(`/project/${item.project_id}/purchase-orders?${params.toString()}`)}>Open material order</Button>;
+  }
   return null;
 }
 
@@ -282,7 +295,7 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
       let serverMsg: string | undefined = data?.error;
       if (error && !serverMsg) { try { serverMsg = (await (error as any).context?.json?.())?.error; } catch { /* ignore */ } }
       if (error || serverMsg) throw new Error(serverMsg || 'Could not sort the update');
-      const found = (data?.items || []) as Array<{ kind: Kind; description: string; location: string | null; quantity: number | null; unit: string | null }>;
+      const found = (data?.items || []) as Array<{ kind: Kind; description: string; location: string | null; quantity: number | null; unit: string | null; material_context?: { application: 'exterior' | 'interior' | null; window_count: number | null; dimension: string | null } | null }>;
       if (data?.transcript && !report.transcript) await db.from('field_reports').update({ transcript: data.transcript }).eq('id', report.id);
       if (found.length) {
         // A new sort replaces earlier automatic drafts; items the crew typed by hand stay.
@@ -294,6 +307,7 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
       const { error: insErr } = await db.from('field_report_items').insert(found.map(f => ({
         report_id: report.id, project_id: report.project_id, crew_org_id: report.crew_org_id, reviewer_org_id: report.reviewer_org_id,
         kind: f.kind, description: f.description, location: f.location, quantity: f.quantity, unit: f.unit,
+        material_context: f.material_context ?? {},
         created_by: u.user?.id, status: 'draft', ai_generated: true,
       })));
       if (insErr) throw new Error(insErr.message);

@@ -7,6 +7,49 @@ export interface TrimRequestHints {
   searchQuery: string;
 }
 
+export interface MaterialRequestContext {
+  description: string;
+  hints: TrimRequestHints;
+}
+
+export interface StoredMaterialContext {
+  application?: "exterior" | "interior" | null;
+  window_count?: number | null;
+  dimension?: string | null;
+}
+
+function makeSearchQuery(kind: TrimKind, dimension: string | null) {
+  const kindLabel = kind === "unknown" ? "" : `${kind} `;
+  return `${kindLabel}window ${kind === "interior" ? "casing" : "trim"}${dimension ? ` ${dimension}` : ""}`.trim();
+}
+
+/** Prefer validated saved AI hints, while retaining manual-note parsing as a fallback. */
+export function trimRequestFromMaterialContext(
+  description: string,
+  stored?: StoredMaterialContext | null,
+): MaterialRequestContext | null {
+  const parsed = parseTrimRequest(description);
+  if (!parsed && !stored) return null;
+  const application = stored?.application === "exterior" || stored?.application === "interior"
+    ? stored.application
+    : null;
+  const kind = application ?? parsed?.kind ?? "unknown";
+  const savedCount = stored?.window_count;
+  const windowCount = Number.isInteger(savedCount) && (savedCount ?? 0) > 0
+    ? savedCount!
+    : parsed?.windowCount ?? null;
+  const savedDimensions = typeof stored?.dimension === "string"
+    ? dimensionsIn(stored.dimension)
+    : [];
+  const dimension = savedDimensions[0] ?? parsed?.dimension ?? null;
+  if (!parsed && !application && !windowCount && !dimension) return null;
+
+  return {
+    description,
+    hints: { kind, windowCount, dimension, searchQuery: makeSearchQuery(kind, dimension) },
+  };
+}
+
 export interface TrimMatchCandidate {
   catalogItemId: string;
   supplierId: string;
@@ -16,6 +59,9 @@ export interface TrimMatchCandidate {
   source: "project_estimate" | "project_order";
   sourceLabel: string;
   lastOrderedAt?: string | null;
+  estimateItemId?: string | null;
+  estimateUnitPrice?: number | null;
+  estimatePackName?: string | null;
 }
 
 export interface RankedTrimMatch extends TrimMatchCandidate {
@@ -68,13 +114,12 @@ export function parseTrimRequest(text: string): TrimRequestHints | null {
     ? NUMBER_WORDS[rawCount] ?? Number.parseInt(rawCount, 10)
     : null;
   const dimension = dimensionsIn(normalized)[0] ?? null;
-  const kindLabel = kind === "unknown" ? "" : `${kind} `;
 
   return {
     kind,
     windowCount: windowCount && windowCount > 0 ? windowCount : null,
     dimension,
-    searchQuery: `${kindLabel}window ${kind === "interior" ? "casing" : "trim"}${dimension ? ` ${dimension}` : ""}`.trim(),
+    searchQuery: makeSearchQuery(kind, dimension),
   };
 }
 
@@ -185,12 +230,21 @@ export function rankProjectTrimMatches(
 
     const ranked = { ...candidate, score, reasons };
     const existing = byCatalogItem.get(candidate.catalogItemId);
-    if (
-      !existing ||
-      ranked.score > existing.score ||
-      (ranked.score === existing.score &&
-        (ranked.lastOrderedAt ?? "") > (existing.lastOrderedAt ?? ""))
-    ) {
+    if (existing) {
+      const preferred = ranked.score > existing.score ||
+        (ranked.score === existing.score && (ranked.lastOrderedAt ?? "") > (existing.lastOrderedAt ?? ""))
+        ? ranked
+        : existing;
+      const other = preferred === ranked ? existing : ranked;
+      byCatalogItem.set(candidate.catalogItemId, {
+        ...preferred,
+        sourceLabel: Array.from(new Set([preferred.sourceLabel, other.sourceLabel])).join(" + "),
+        reasons: Array.from(new Set([...preferred.reasons, ...other.reasons])),
+        estimateItemId: preferred.estimateItemId ?? other.estimateItemId,
+        estimateUnitPrice: preferred.estimateUnitPrice ?? other.estimateUnitPrice,
+        estimatePackName: preferred.estimatePackName ?? other.estimatePackName,
+      });
+    } else {
       byCatalogItem.set(candidate.catalogItemId, ranked);
     }
   }

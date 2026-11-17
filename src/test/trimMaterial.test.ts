@@ -4,6 +4,7 @@ import {
   parseBoardLengthFeet,
   parseTrimRequest,
   rankProjectTrimMatches,
+  trimRequestFromMaterialContext,
   type TrimMatchCandidate,
 } from "@/lib/trimMaterial";
 
@@ -40,6 +41,29 @@ describe("field trim request parsing", () => {
 
   it("does not treat an unrelated material note as trim", () => {
     expect(parseTrimRequest("Need 20 sheets of drywall")).toBeNull();
+  });
+
+  it("uses saved AI context without replacing the original crew description", () => {
+    expect(trimRequestFromMaterialContext("Need window trim upstairs", {
+      application: "exterior",
+      window_count: 5,
+      dimension: "1 x 4",
+    })).toEqual({
+      description: "Need window trim upstairs",
+      hints: {
+        kind: "exterior",
+        windowCount: 5,
+        dimension: "1x4",
+        searchQuery: "exterior window trim 1x4",
+      },
+    });
+  });
+
+  it("ignores an invalid saved window count instead of ordering fractions of windows", () => {
+    expect(trimRequestFromMaterialContext("Need trim for 5 windows", {
+      application: "exterior",
+      window_count: 2.5,
+    })?.hints.windowCount).toBe(5);
   });
 });
 
@@ -107,11 +131,19 @@ describe("project trim matching", () => {
   it("deduplicates estimate and order evidence for the same catalog item", () => {
     const hints = parseTrimRequest("Exterior trim for 5 windows, 1x4")!;
     const matches = rankProjectTrimMatches([
-      candidate({ source: "project_estimate", sourceLabel: "Approved project estimate" }),
+      candidate({
+        source: "project_estimate",
+        sourceLabel: "Approved project estimate",
+        estimateItemId: "estimate-line-1",
+        estimateUnitPrice: 12.5,
+      }),
       candidate({ source: "project_order", sourceLabel: "Earlier project order" }),
     ], hints, "supplier-1");
 
     expect(matches).toHaveLength(1);
     expect(matches[0].source).toBe("project_order");
+    expect(matches[0].estimateItemId).toBe("estimate-line-1");
+    expect(matches[0].estimateUnitPrice).toBe(12.5);
+    expect(matches[0].sourceLabel).toContain("Approved project estimate");
   });
 });

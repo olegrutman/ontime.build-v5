@@ -157,3 +157,39 @@ describe('single-option funnel steps', () => {
     expect(computeBackStep(seq, new Set(), 2)).toBe(1);
   });
 });
+
+describe('window trim quantities', () => {
+  const trimProduct = {
+    ...product,
+    id: 'trim-1',
+    name: 'LP SmartSide Exterior Trim 1x4x16\'',
+    description: 'LP SmartSide Exterior Trim 1x4x16\'',
+    category: 'Exterior',
+    bundle_type: null,
+    bundle_qty: null,
+    uom_default: 'EA',
+  } as CatalogProduct;
+
+  it('applies five windows as seven individual 16-foot boards', () => {
+    const add = vi.fn();
+    render(<QuantityPanel product={trimProduct} trimWindowCount={5} onAdd={add} onClose={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Use 7 pieces' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to PO' }));
+    expect(add.mock.calls[0][0]).toMatchObject({ quantity: 7, unit_mode: 'EACH', uom: 'EA' });
+  });
+
+  it('rounds seven calculated pieces up to one whole ten-piece bundle and explains the overage', () => {
+    const add = vi.fn();
+    render(<QuantityPanel product={{ ...trimProduct, bundle_type: 'Bundle', bundle_qty: 10 }} trimWindowCount={5} onAdd={add} onClose={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Use 7 pieces' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Calculator requested 7 pieces. Ordering 10 pieces (1 bundle × 10)');
+    fireEvent.click(screen.getByRole('button', { name: 'Add to PO' }));
+    expect(add.mock.calls[0][0]).toMatchObject({ quantity: 10, unit_mode: 'BUNDLE', bundle_count: 10 });
+  });
+
+  it('does not show the calculator for non-trim products', () => {
+    render(<QuantityPanel product={product} trimWindowCount={5} onAdd={() => {}} onClose={() => {}} />);
+    expect(screen.queryByRole('region', { name: 'Window trim calculator' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Use 7 pieces' })).not.toBeInTheDocument();
+  });
+});

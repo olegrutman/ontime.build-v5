@@ -3830,6 +3830,7 @@ export type Database = {
           id: string
           kind: string
           location: string | null
+          material_context: Json
           project_id: string
           quantity: number | null
           released_at: string | null
@@ -3856,6 +3857,7 @@ export type Database = {
           id?: string
           kind: string
           location?: string | null
+          material_context?: Json
           project_id: string
           quantity?: number | null
           released_at?: string | null
@@ -3882,6 +3884,7 @@ export type Database = {
           id?: string
           kind?: string
           location?: string | null
+          material_context?: Json
           project_id?: string
           quantity?: number | null
           released_at?: string | null

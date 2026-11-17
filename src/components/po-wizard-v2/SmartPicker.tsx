@@ -33,6 +33,9 @@ import { ProductList } from './ProductList';
 import { QuantityPanel } from './QuantityPanel';
 import { EstimateSubTabs } from './EstimateSubTabs';
 import { SelectionRail, WorkspaceProducts, SpecificationChips } from './GuidedWorkspace';
+import { ProjectTrimMatchCard } from './ProjectTrimMatchCard';
+import { loadProjectTrimMatches } from '@/lib/projectTrimMatches';
+import type { MaterialRequestContext, RankedTrimMatch } from '@/lib/trimMaterial';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -101,6 +104,7 @@ interface SmartPickerProps {
   libraryMode?: boolean;
   workspaceMode?: boolean;
   supplierControl?: React.ReactNode;
+  materialRequest?: MaterialRequestContext | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -111,7 +115,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
   {
     supplierId, projectId, editingItem, hasApprovedEstimate = false, hidePricing = false,
     onAddItem, onUpdateItem, onLoadPack, onAddPSMItem, onClearEdit, onClose, onExitPicker,
-    initialStep, onStateChange, libraryMode = false, workspaceMode = false, supplierControl,
+    initialStep, onStateChange, libraryMode = false, workspaceMode = false, supplierControl, materialRequest = null,
   },
   ref,
 ) {
@@ -140,6 +144,13 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
   const [secondaries, setSecondaries] = useState<SecondaryFacet[]>([]);
   const [recent, setRecent] = useState<RecentItem[]>([]);
   const [landingLoading, setLandingLoading] = useState(false);
+  const [trimMatches, setTrimMatches] = useState<RankedTrimMatch[]>([]);
+  const [trimMatchesLoading, setTrimMatchesLoading] = useState(false);
+  const [quantityEstimate, setQuantityEstimate] = useState<{
+    unitPrice: number | null;
+    itemId: string | null;
+    packName: string | null;
+  } | null>(null);
 
   // Search state (lives at the shell so it's available everywhere)
   const [searchQuery, setSearchQuery] = useState('');
@@ -155,7 +166,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
   // Edit-mode: skip straight to quantity
   // -------------------------------------------------------------------------
   useEffect(() => {
-    if (!editingItem || !supplierId) return;
+    if (!editingItem?.catalog_item_id || !supplierId) return;
     let cancelled = false;
     (async () => {
       const { data } = await supabase
@@ -204,6 +215,24 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
       })
       .finally(() => setLandingLoading(false));
   }, [supplierId, projectId, editingItem, step]);
+
+  useEffect(() => {
+    if (!supplierId || !projectId || !materialRequest) {
+      setTrimMatches([]);
+      setTrimMatchesLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setTrimMatchesLoading(true);
+    loadProjectTrimMatches(projectId, supplierId, materialRequest.hints)
+      .then((matches) => { if (!cancelled) setTrimMatches(matches); })
+      .catch((error) => {
+        console.error('Project trim matching failed:', error);
+        if (!cancelled) setTrimMatches([]);
+      })
+      .finally(() => { if (!cancelled) setTrimMatchesLoading(false); });
+    return () => { cancelled = true; };
+  }, [supplierId, projectId, materialRequest]);
 
   // -------------------------------------------------------------------------
   // Global search: debounced, scoped to current category context (Bug 4).
@@ -259,19 +288,27 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
   // Helper: hydrate a partial recent-item row into a full CatalogProduct
   // before opening the QuantityPanel (Bug 1: bundle_type/qty must be present).
   // -------------------------------------------------------------------------
-  const openQuantityForId = useCallback(async (catalogItemId: string) => {
+  const openQuantityForId = useCallback(async (catalogItemId: string, match?: RankedTrimMatch) => {
+    if (!supplierId) return;
     const { data, error } = await supabase
       .from('catalog_items')
       .select('*')
       .eq('id', catalogItemId)
+      .eq('supplier_id', supplierId)
+      .eq('is_active', true)
       .single();
     if (error || !data) {
       console.error('Failed to hydrate catalog item:', error);
       return;
     }
+    setQuantityEstimate(match ? {
+      unitPrice: match.estimateUnitPrice ?? null,
+      itemId: match.estimateItemId ?? null,
+      packName: match.estimatePackName ?? null,
+    } : null);
     setSelectedProduct(data as unknown as CatalogProduct);
     setStep('quantity');
-  }, []);
+  }, [supplierId]);
 
   // -------------------------------------------------------------------------
   // Navigation handlers
@@ -335,6 +372,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
   }, [supplierId, selectedCategoryKey, selectedSecondary]);
 
   const handleProductSelect = useCallback((p: CatalogProduct) => {
+    setQuantityEstimate(null);
     setSelectedProduct(p);
     setSearchQuery(''); // leave search mode so the quantity step can render
     setStep('quantity');
@@ -446,6 +484,14 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
     void openQuantityForId(item.id);
   }, [openQuantityForId]);
 
+  const handleTrimMatchSelect = useCallback((match: RankedTrimMatch) => {
+    void openQuantityForId(match.catalogItemId, match);
+  }, [openQuantityForId]);
+
+  const browseTrimCatalog = useCallback(() => {
+    void enterCategory(materialRequest?.hints.kind === 'interior' ? 'FINISH_LUMBER' : 'EXTERIOR');
+  }, [enterCategory, materialRequest]);
+
   const showSearchBar = workspaceMode || step !== 'quantity';
   const showWorkspace = workspaceMode && !searchActive && !['landing', 'estimate'].includes(step);
   const showWorkspaceProducts = showWorkspace && selectedCategoryKey !== 'HARDWARE' && (step === 'products' || step === 'quantity');
@@ -529,6 +575,11 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
                 onRecentSelect={handleRecentSelect}
                 onCategorySelect={enterCategory}
                 onOpenEstimate={() => setStep('estimate')}
+                materialRequest={materialRequest}
+                trimMatches={trimMatches}
+                trimMatchesLoading={trimMatchesLoading}
+                onTrimMatchSelect={handleTrimMatchSelect}
+                onBrowseTrim={browseTrimCatalog}
               />
             )}
 
@@ -612,7 +663,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
                   <div className="lg:max-w-[55%]"><p className="text-[11px] text-muted-foreground mb-1.5">Selected specifications</p><SpecificationChips filters={displayFilters} /></div>
                 </header>
                 {productsLoading ? <Skeleton className="h-48 w-full" /> : <WorkspaceProducts products={products.length ? products : selectedProduct ? [selectedProduct] : []} selected={selectedProduct} onSelect={handleProductSelect} />}
-                {step === 'quantity' && selectedProduct && <QuantityPanel key={selectedProduct.id} workspaceMode product={selectedProduct} onAdd={onAddItem} onUpdate={onUpdateItem} onClose={onExitPicker} editingItem={editingItem} hidePricing={hidePricing} />}
+                {step === 'quantity' && selectedProduct && <QuantityPanel key={selectedProduct.id} workspaceMode product={selectedProduct} onAdd={onAddItem} onUpdate={onUpdateItem} onClose={onExitPicker} editingItem={editingItem} hidePricing={hidePricing} trimWindowCount={materialRequest?.hints.windowCount} estimateUnitPrice={quantityEstimate?.unitPrice} estimateItemId={quantityEstimate?.itemId} estimatePackName={quantityEstimate?.packName} />}
                 {!productsLoading && products.length === 0 && !selectedProduct && <p className="text-sm text-muted-foreground py-8">No products found.</p>}
               </section>
             )}
@@ -625,6 +676,10 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
                 onClose={onExitPicker}
                 editingItem={editingItem}
                 hidePricing={hidePricing}
+                trimWindowCount={materialRequest?.hints.windowCount}
+                estimateUnitPrice={quantityEstimate?.unitPrice}
+                estimateItemId={quantityEstimate?.itemId}
+                estimatePackName={quantityEstimate?.packName}
               />
             )}
           </>
@@ -648,11 +703,17 @@ interface LandingViewProps {
   onRecentSelect: (item: RecentItem) => void;
   onCategorySelect: (key: string) => void;
   onOpenEstimate: () => void;
+  materialRequest?: MaterialRequestContext | null;
+  trimMatches: RankedTrimMatch[];
+  trimMatchesLoading: boolean;
+  onTrimMatchSelect: (match: RankedTrimMatch) => void;
+  onBrowseTrim: () => void;
 }
 
 function LandingView({
   loading, recent, categories, hasApprovedEstimate, libraryMode = false,
-  onRecentSelect, onCategorySelect, onOpenEstimate,
+  onRecentSelect, onCategorySelect, onOpenEstimate, materialRequest,
+  trimMatches, trimMatchesLoading, onTrimMatchSelect, onBrowseTrim,
 }: LandingViewProps) {
   if (loading) {
     return (
@@ -709,6 +770,15 @@ function LandingView({
   );
   return (
     <div className={libraryMode ? "px-4 sm:px-6 py-5 space-y-7" : "p-4 space-y-6"}>
+      {materialRequest && (
+        <ProjectTrimMatchCard
+          request={materialRequest}
+          matches={trimMatches}
+          loading={trimMatchesLoading}
+          onSelect={onTrimMatchSelect}
+          onBrowse={onBrowseTrim}
+        />
+      )}
       {!libraryMode && hasApprovedEstimate && <Button variant="outline" className="w-full justify-start h-auto p-3" onClick={onOpenEstimate}><Package /><span className="flex-1 text-left">From Project Estimate<span className="block text-xs text-muted-foreground">Packs & matched materials</span></span><ChevronRight /></Button>}
       {libraryMode ? <>{categorySection}{recentSection}</> : <>{recentSection}{categorySection}</>}
     </div>

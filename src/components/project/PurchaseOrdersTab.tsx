@@ -1,5 +1,5 @@
 import { estimateItemAmount } from '@/lib/supplierMetrics';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Plus, Package } from 'lucide-react';
@@ -24,6 +24,7 @@ import { POWizardV2 } from '@/components/po-wizard-v2';
 import { SupplierEmailPrompt } from '@/components/purchase-orders/SupplierEmailPrompt';
 import { PurchaseOrder, POStatus } from '@/types/purchaseOrder';
 import { POWizardV2Data, POWizardV2LineItem } from '@/types/poWizardV2';
+import { trimRequestFromMaterialContext, type MaterialRequestContext } from '@/lib/trimMaterial';
 
 const STATUS_PRIORITY: Record<POStatus, number> = {
   DRAFT: 0,
@@ -62,6 +63,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const [editingPO, setEditingPO] = useState<PurchaseOrder | null>(null);
   const [editWizardOpen, setEditWizardOpen] = useState(false);
   const [editInitialData, setEditInitialData] = useState<Partial<POWizardV2Data> | null>(null);
+  const [editMaterialRequest, setEditMaterialRequest] = useState<MaterialRequestContext | null>(null);
+  const fieldEditHandled = useRef<string | null>(null);
   const [materialResponsibility, setMaterialResponsibility] = useState<string | null>(null);
   const [poRequiresApproval, setPORequiresApproval] = useState(true);
   const [emailPromptOpen, setEmailPromptOpen] = useState(false);
@@ -84,6 +87,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const requiresGCApproval = isTC && (poRequiresApproval || materialResponsibility === 'GC');
   const showDirectionalTabs = isGC || isTC;
   const poParam = searchParams.get('po');
+  const editPoParam = searchParams.get('edit_po');
+  const fieldItemParam = searchParams.get('field_item');
 
   const updatePOSearchParam = useCallback((poId: string | null) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -692,7 +697,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     }
   };
 
-  const handleEditPO = async (po: PurchaseOrder) => {
+  const handleEditPO = async (po: PurchaseOrder, fieldItemId?: string | null) => {
     try {
       const { data: lineItems, error } = await supabase
         .from('po_line_items')
@@ -702,9 +707,24 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
 
       if (error) throw error;
 
+      const skus = Array.from(new Set((lineItems || []).map((line: any) => line.supplier_sku).filter(Boolean)));
+      const [{ data: catalogRows }, fieldItemResult] = await Promise.all([
+        skus.length
+          ? supabase.from('catalog_items').select('id,supplier_sku').eq('supplier_id', po.supplier_id).eq('is_active', true).in('supplier_sku', skus)
+          : Promise.resolve({ data: [] as { id: string; supplier_sku: string }[] }),
+        fieldItemId
+          ? (supabase as any).from('field_report_items').select('description,material_context').eq('id', fieldItemId).eq('project_id', projectId).single()
+          : Promise.resolve({ data: null, error: null }),
+      ]);
+      if (fieldItemResult.error) throw fieldItemResult.error;
+      const catalogBySku = new Map((catalogRows || []).map(item => [item.supplier_sku, item.id]));
+      const materialRequest = fieldItemResult.data
+        ? trimRequestFromMaterialContext(fieldItemResult.data.description, fieldItemResult.data.material_context)
+        : null;
+
       const wizardItems: POWizardV2LineItem[] = (lineItems || []).map((lineItem: any) => ({
         id: crypto.randomUUID(),
-        catalog_item_id: '',
+        catalog_item_id: catalogBySku.get(lineItem.supplier_sku) || '',
         supplier_sku: lineItem.supplier_sku || '',
         name: lineItem.description,
         specs: [lineItem.dimension, lineItem.length_ft ? `${lineItem.length_ft}ft` : null].filter(Boolean).join(' | '),
@@ -725,6 +745,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
       }));
 
       setEditingPO(po);
+      setEditMaterialRequest(materialRequest);
       setEditInitialData({
         project_id: projectId,
         project_name: projectName || '',
@@ -744,6 +765,26 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
       toast.error('Failed to load PO for editing');
     }
   };
+
+  useEffect(() => {
+    if (!editPoParam || loading) return;
+    const requestKey = `${editPoParam}:${fieldItemParam ?? ''}`;
+    if (fieldEditHandled.current === requestKey) return;
+    fieldEditHandled.current = requestKey;
+    const po = purchaseOrders.find(item => item.id === editPoParam);
+    const clearRequestParams = () => {
+      const next = new URLSearchParams(searchParams);
+      next.delete('edit_po');
+      next.delete('field_item');
+      setSearchParams(next, { replace: true });
+    };
+    if (!po) {
+      toast.error('The requested material order is not available to this company');
+      clearRequestParams();
+      return;
+    }
+    void handleEditPO(po, fieldItemParam).finally(clearRequestParams);
+  }, [editPoParam, fieldItemParam, loading, purchaseOrders, searchParams, setSearchParams]);
 
   const handleEditComplete = async (data: POWizardV2Data) => {
     if (!editingPO) return;
@@ -829,6 +870,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
       setEditWizardOpen(false);
       setEditingPO(null);
       setEditInitialData(null);
+      setEditMaterialRequest(null);
       fetchPurchaseOrders();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -1098,6 +1140,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
             if (!open) {
               setEditingPO(null);
               setEditInitialData(null);
+              setEditMaterialRequest(null);
             }
           }}
           projectId={projectId}
@@ -1108,6 +1151,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           editMode
           initialData={editInitialData}
           hidePricing={hidePricing}
+          materialRequest={editMaterialRequest}
         />
       )}
 

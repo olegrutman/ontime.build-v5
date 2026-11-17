@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Minus, Plus, Check, Package, Ruler } from 'lucide-react';
 import { CatalogProduct, POWizardV2LineItem } from '@/types/poWizardV2';
+import { TrimQuantityCalculator } from '@/components/purchase-orders/TrimQuantityCalculator';
+import { parseBoardLengthFeet } from '@/lib/trimMaterial';
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -25,9 +27,10 @@ interface QuantityPanelProps {
   estimatePackName?: string | null;
   hidePricing?: boolean;
   workspaceMode?: boolean;
+  trimWindowCount?: number | null;
 }
 
-export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, estimateUnitPrice, estimateItemId, estimatePackName, hidePricing = false, workspaceMode = false }: QuantityPanelProps) {
+export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, estimateUnitPrice, estimateItemId, estimatePackName, hidePricing = false, workspaceMode = false, trimWindowCount = null }: QuantityPanelProps) {
   const isEditing = !!editingItem;
   
   const isEngineered = product.category === 'Engineered' && product.uom_default === 'LF';
@@ -57,10 +60,20 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
   const isPackageOrder = hasBundle && orderMode === 'bundle';
   const baseQuantity = isPackageOrder ? quantity * bundleQty : quantity;
   const quantityUnitLabel = product.uom_default === 'EA' ? 'pieces' : product.uom_default;
+  const [appliedTrimPieces, setAppliedTrimPieces] = useState<number | null>(null);
+  const trimBoardLengthFeet = trimWindowCount && !isEngineered && product.uom_default === 'EA' && /\b(trim|casing|brick\s*mou?ld)\b/i.test(`${product.name || ''} ${product.description}`)
+    ? parseBoardLengthFeet(`${product.name || ''} ${product.description} ${product.dimension || ''} ${product.length || ''}`)
+    : null;
+
+  const applyTrimPieces = (requestedPieces: number) => {
+    setQuantity(isPackageOrder ? Math.max(1, Math.ceil(requestedPieces / bundleQty)) : requestedPieces);
+    setAppliedTrimPieces(requestedPieces);
+  };
 
   const changeOrderMode = (mode: 'bundle' | 'each') => {
     setOrderMode(mode);
     setQuantity(1);
+    setAppliedTrimPieces(null);
   };
 
   const formatSpecs = () => {
@@ -137,8 +150,8 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
   const decrementPieces = () => setPieces(p => Math.max(1, p - 1));
   const incrementLength = () => setLengthFt(l => Math.min(60, l + 1));
   const decrementLength = () => setLengthFt(l => Math.max(1, l - 1));
-  const incrementQty = () => setQuantity(q => q + 1);
-  const decrementQty = () => setQuantity(q => Math.max(1, q - 1));
+  const incrementQty = () => { setAppliedTrimPieces(null); setQuantity(q => q + 1); };
+  const decrementQty = () => { setAppliedTrimPieces(null); setQuantity(q => Math.max(1, q - 1)); };
 
   return (
     <div className={workspaceMode ? "border-t pt-5" : "h-full overflow-y-auto min-h-0"}>
@@ -154,6 +167,21 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
             </p>
           )}
         </div>
+
+        {trimBoardLengthFeet && trimWindowCount && (
+          <div className={workspaceMode ? 'lg:col-span-2' : ''}>
+            <TrimQuantityCalculator
+              initialWindowCount={trimWindowCount}
+              boardLengthFeet={trimBoardLengthFeet}
+              onApply={applyTrimPieces}
+            />
+            {appliedTrimPieces !== null && appliedTrimPieces !== baseQuantity && (
+              <p className="mt-2 text-xs text-muted-foreground" role="status">
+                Calculator requested {appliedTrimPieces} pieces. Ordering {baseQuantity} pieces ({quantity} {product.bundle_type?.toLowerCase()}{quantity === 1 ? '' : 's'} × {bundleQty}) to keep whole packages.
+              </p>
+            )}
+          </div>
+        )}
 
         {isEngineered ? (
           <>
@@ -240,6 +268,7 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
                   id="package-quantity" type="number" value={baseQuantity}
                   onChange={(e) => {
                     const entered = Math.max(1, Number(e.target.value) || 1);
+                    setAppliedTrimPieces(null);
                     setQuantity(isPackageOrder ? Math.max(1, Math.ceil(entered / bundleQty)) : entered);
                   }}
                   onBlur={() => { if (!quantity || quantity < 1) setQuantity(1); }}
@@ -269,7 +298,7 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
               </Button>
               <Input
                 type="number" value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 0))}
+                onChange={(e) => { setAppliedTrimPieces(null); setQuantity(Math.max(1, parseInt(e.target.value) || 0)); }}
                 onBlur={() => { if (!quantity || quantity < 1) setQuantity(1); }}
                 className="text-2xl font-bold w-20 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 min={1}
