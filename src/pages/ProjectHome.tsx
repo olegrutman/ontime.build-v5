@@ -12,6 +12,7 @@ import { getDemoProjectById } from '@/data/demoData';
 import { DemoProjectOverview, DemoPurchaseOrdersTab, DemoInvoicesTab, DemoSOVTab, DemoRFIsTab } from '@/components/demo';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { StatusPill } from '@/components/ui/status-pill';
 import { NotificationSheet } from '@/components/notifications';
 import { Bell } from 'lucide-react';
@@ -58,6 +59,7 @@ import { RFIsTab } from '@/components/rfi';
 import RFIListPage from '@/pages/RFIListPage';
 import { ScheduleTab } from '@/components/schedule/ScheduleTab';
 import { DailyLogPanel } from '@/components/daily-log/DailyLogPanel';
+import { DailyReportDesigns } from '@/components/field-reports/DailyReportDesigns';
 import { useToast } from '@/hooks/use-toast';
 import { FeatureGate, useFeatureEnabled } from '@/components/auth/FeatureGate';
 import { useProjectFinancials } from '@/hooks/useProjectFinancials';
@@ -371,6 +373,15 @@ export default function ProjectHome() {
 
 
             {/* Overview Tab */}
+            {activeTab === 'overview' && !isSupplier && (
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-y border-border py-3">
+                <div><h2 className="font-heading text-xl font-semibold">Daily Progress Reports</h2><p className="text-xs text-muted-foreground">Three design options</p></div>
+                <Button variant="outline" onClick={() => handleTabChange('daily-report-designs')}><ClipboardList />Compare designs</Button>
+              </div>
+            )}
+            {activeTab === 'daily-report-designs' && (
+              <DailyReportDesigns onClose={() => handleTabChange('overview')} onOpenReports={() => handleTabChange('daily-log')} />
+            )}
             {activeTab === 'crew-tracker' && isFC && !isInDemoMode && (
               <CrewTracker projectId={project.id} onBack={() => handleTabChange('overview')} />
             )}
