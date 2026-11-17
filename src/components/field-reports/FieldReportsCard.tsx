@@ -144,7 +144,7 @@ function ItemRow({ item, children }: { item: any; children?: React.ReactNode }) 
   );
 }
 
-function ReportBlock({ title, report, items, photos, reviewer, onChange }: { title: string; report: any; items: any[]; photos: FieldReportPhoto[]; reviewer?: boolean; onChange?: () => void }) {
+export function ReportBlock({ title, report, items, photos, reviewer, onChange }: { title: string; report: any; items: any[]; photos: FieldReportPhoto[]; reviewer?: boolean; onChange?: () => void }) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const loadAudio = async () => {
     const { data } = await supabase.storage.from('field-audio').createSignedUrl(report.audio_path, 600);
@@ -160,8 +160,8 @@ function ReportBlock({ title, report, items, photos, reviewer, onChange }: { tit
       <FieldReportPhotoGallery photos={photos} />
       {items.map(i => (
         <ItemRow key={i.id} item={i}>
-          {reviewer && i.status === 'crew_confirmed' && <ReviewActions item={i} onChange={onChange!} />}
-          {reviewer && conversionFor(i) && <ConvertAction item={i} onChange={onChange!} />}
+          {reviewer && onChange && i.status === 'crew_confirmed' && <ReviewActions item={i} onChange={onChange} />}
+          {reviewer && onChange && conversionFor(i) && <ConvertAction item={i} onChange={onChange} />}
           {i.status === 'converted' && <ConvertedLink item={i} />}
         </ItemRow>
       ))}
@@ -174,9 +174,9 @@ function ConvertAction({ item, onChange }: { item: any; onChange: () => void }) 
   const { user } = useAuth();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
-  const kind = conversionFor(item)!;
+  const kind = conversionFor(item);
   const run = async () => {
-    if (!user) return;
+    if (!user || !kind) return;
     setBusy(true);
     try {
       if (kind === 'work_order') {
@@ -236,7 +236,7 @@ function ReviewActions({ item, onChange }: { item: any; onChange: () => void }) 
   );
 }
 
-function DraftEditor({ report, items, photos, onChange }: { report: any; items: any[]; photos: FieldReportPhoto[]; onChange: () => void }) {
+export function DraftEditor({ report, items, photos, onChange }: { report: any; items: any[]; photos: FieldReportPhoto[]; onChange: () => void }) {
   const { toast } = useToast();
   const [text, setText] = useState(report.raw_text || '');
   const [kind, setKind] = useState<Kind>('progress');
