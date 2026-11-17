@@ -771,7 +771,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     const requestKey = `${editPoParam}:${fieldItemParam ?? ''}`;
     if (fieldEditHandled.current === requestKey) return;
     fieldEditHandled.current = requestKey;
-    const po = purchaseOrders.find(item => item.id === editPoParam);
+    const availableOrders = poData?.pos ?? purchaseOrders;
+    const po = availableOrders.find(item => item.id === editPoParam);
     const clearRequestParams = () => {
       const next = new URLSearchParams(searchParams);
       next.delete('edit_po');
@@ -784,7 +785,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
       return;
     }
     void handleEditPO(po, fieldItemParam).finally(clearRequestParams);
-  }, [editPoParam, fieldItemParam, loading, purchaseOrders, searchParams, setSearchParams]);
+  }, [editPoParam, fieldItemParam, loading, poData?.pos, purchaseOrders, searchParams, setSearchParams]);
 
   const handleEditComplete = async (data: POWizardV2Data) => {
     if (!editingPO) return;

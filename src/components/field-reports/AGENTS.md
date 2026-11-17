@@ -2,3 +2,4 @@
 - Daily Reports reuses the existing draft/review controls; the register paginates authorized sources and redacts non-party report text and unreleased items, preserving the subcontractor release boundary.
 - Individual-report design previews use isolated sample state and the existing project shell; they never save reports or decisions, so comparison cannot alter live work.
 - Live individual reports use the review-desk layout with shared draft/review actions; source notes stay in the party-only sidebar and item filters never change report-wide counts, preserving workflow and context.
+- Material requests store only validated, explicit trim hints; conversion opens their editable free-text line in the supplier-scoped picker, where project evidence and an optional board calculator assist without guessing specifications or duplicating lines.
