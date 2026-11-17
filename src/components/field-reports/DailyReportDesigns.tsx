@@ -38,7 +38,15 @@ export function DailyReportDesigns({ onClose, onOpenReports }: { onClose?: () =>
   const reports = sampleReports.filter(r => (audience !== 'General Contractor' || r.status === 'Released') && (filter !== 'Awaiting review' || r.status === 'Awaiting review') && (filter !== 'Released' || r.status === 'Released') && `${r.crew} ${r.title} ${r.id}`.toLowerCase().includes(search.toLowerCase()));
   const active = audience === 'General Contractor' ? sampleReports[1] : selected;
   const actionText = audience === 'Subcontractor' ? 'Review report' : 'Open report';
-  const reportItems = [
+  const reportItems = active.id === 'DR-016' ? [
+    { icon: CheckCircle2, label: 'Progress', text: 'North wall sheathing completed. Exterior work is ready for the next phase.', color: 'text-state-approved', bg: 'bg-state-approved-bg' },
+    { icon: Truck, label: 'Materials needed', text: '12 sheets of 7/16 OSB needed for the remaining exterior walls.', color: 'text-type-sov', bg: 'bg-type-sov/10' },
+    { icon: Plus, label: 'Extra work', text: 'Additional bedroom window opening reported to the project.', color: 'text-state-open-foreground', bg: 'bg-state-open-bg' },
+  ] : active.id === 'DR-015' ? [
+    { icon: CheckCircle2, label: 'Progress', text: 'First-floor framing completed. Second-floor work starts tomorrow.', color: 'text-state-approved', bg: 'bg-state-approved-bg' },
+    { icon: Truck, label: 'Materials needed', text: 'Second-floor framing lumber requested for the next workday.', color: 'text-type-sov', bg: 'bg-type-sov/10' },
+    { icon: Clock3, label: 'Crew hours', text: 'Four crew members reported eight hours each: 32 crew hours.', color: 'text-type-sov', bg: 'bg-type-sov/10' },
+  ] : [
     { icon: CheckCircle2, label: 'Progress', text: 'Second-floor framing started. North wall framing is 80% complete.', color: 'text-state-approved', bg: 'bg-state-approved-bg' },
     { icon: Truck, label: 'Materials needed', text: '30 pieces of 2×6 lumber, 16 ft long. Needed for remaining wall framing.', color: 'text-type-sov', bg: 'bg-type-sov/10' },
     { icon: TriangleAlert, label: 'Blocking problem', text: 'Three L35 hangers are missing for the stair opening.', color: 'text-destructive', bg: 'bg-destructive/10' },
