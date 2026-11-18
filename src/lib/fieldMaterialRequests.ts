@@ -19,7 +19,9 @@ export function isStructuredMaterialItem(item: any): boolean {
 }
 
 export function fieldMaterialDescription(line: POWizardV2LineItem): string {
-  return [line.name.trim(), line.specs.trim()].filter(Boolean).join(' — ');
+  const name = line.name.trim();
+  const missingSpecs = line.specs.split('·').map(part => part.trim()).filter(part => part && !name.toLowerCase().includes(part.toLowerCase()));
+  return [name, ...missingSpecs].filter(Boolean).join(' — ');
 }
 
 /** Only product identity, quantity and fulfillment details cross into a crew's report. */

@@ -14,7 +14,7 @@ SUPA = "https://gzqgbfazwvmwmirbqfwf.supabase.co"
 ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6cWdiZmF6d3Ztd21pcmJxZndmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwNTI2MzAsImV4cCI6MjA4NDYyODYzMH0.SBoesmRP0SCtKBBrF9ime8QxJI_hLCGF5Th0cS6F34w"
 KEY = "sb-gzqgbfazwvmwmirbqfwf-auth-token"
 OUT = Path("/tmp/browser/audit"); OUT.mkdir(parents=True, exist_ok=True)
-SECTIONS = ["overview", "change-orders", "invoices", "purchase-orders", "team", "setup", "scope", "sov",
+SECTIONS = ["overview", "daily-reports", "change-orders", "invoices", "purchase-orders", "team", "setup", "scope", "sov",
             "rfis", "estimates", "money", "returns", "backcharges", "payment-apps", "field", "schedule",
             "daily-log", "crew-tracker", "docs", "pulse", "settings"]
 GLOBAL = ["/dashboard", "/org/team", "/partners", "/projects/archive", "/catalog", "/estimates",

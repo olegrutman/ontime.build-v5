@@ -24,7 +24,7 @@ async function allRows(table: string, projectId: string) {
     if ((data || []).length < 1000) return rows;
   }
 }
-const labels: Record<string, string> = { draft: 'Draft', crew_confirmed: 'Awaiting review', reviewed: 'Reviewed', released: 'Released' };
+const labels: Record<string, string> = { draft: 'Draft', submitted: 'Awaiting review', crew_confirmed: 'Awaiting review', reviewed: 'Reviewed', released: 'Released' };
 export function DailyReportsPage({ projectId }: { projectId: string }) {
   const { user, userOrgRoles } = useAuth();
   const { toast } = useToast();

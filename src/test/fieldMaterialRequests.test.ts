@@ -4,7 +4,7 @@ import { fieldMaterialOrderStatusLabel, fieldMaterialSelection, pickerLineForFie
 
 const line: POWizardV2LineItem = {
   id: 'draft-1', catalog_item_id: 'catalog-1', supplier_sku: 'OTB-00165',
-  name: 'Cedar appearance board', specs: '10 ft · Cedar', quantity: 588,
+  name: 'Cedar appearance board — 1-7/16×10 × 16 ft', specs: '1-7/16×10 · 16 ft · CEDAR', quantity: 588,
   unit_mode: 'BUNDLE', bundle_count: 294, bundle_name: 'Bundle', uom: 'EA',
   item_notes: 'Front windows', unit_price: 125, line_total: 73500,
   source_estimate_item_id: 'estimate-1', price_source: 'FROM_ESTIMATE', original_unit_price: 125,
@@ -17,7 +17,7 @@ describe('daily report material requests', () => {
     expect(saved.quantity).toBe(588);
     expect(saved.unit).toBe('EA');
     expect(saved.material_context.bundle_count).toBe(294);
-    expect(saved.description).toBe('Cedar appearance board — 10 ft · Cedar');
+    expect(saved.description).toBe('Cedar appearance board — 1-7/16×10 × 16 ft');
     expect(JSON.stringify(saved)).not.toMatch(/unit_price|line_total|original_unit_price|price_source|source_estimate/);
     expect(JSON.stringify(saved)).not.toContain('125');
   });

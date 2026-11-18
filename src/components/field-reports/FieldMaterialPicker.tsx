@@ -102,7 +102,7 @@ export function FieldMaterialPicker({ report, item, onSaved }: Props) {
   return <>
     {item ? <Button size="sm" variant="outline" onClick={() => setOpen(true)}><Pencil />Edit request</Button> : <Button size="sm" onClick={() => setOpen(true)}><Plus />Choose materials</Button>}
     <Dialog open={open} onOpenChange={next => { if (!next) close(); else setOpen(true); }}>
-      <DialogContent className="flex h-[100dvh] w-full max-w-none flex-col gap-0 overflow-hidden rounded-none p-0 sm:h-[92dvh] sm:max-w-[calc(100vw-2rem)] sm:rounded-2xl lg:max-w-6xl">
+      <DialogContent className="flex h-[100dvh] w-full max-w-none flex-col gap-0 overflow-hidden rounded-none p-0 sm:h-[92dvh] sm:max-w-[calc(100vw-2rem)] sm:rounded-2xl lg:max-w-[calc(100vw-240px)] xl:max-w-[calc(100vw-260px)] 2xl:max-w-6xl">
         <DialogHeader className="border-b border-border px-4 py-3 pr-12 text-left sm:px-6">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="shrink-0" aria-label="Back in material picker" onClick={() => pickerRef.current?.goBack()}><ChevronLeft /></Button>
