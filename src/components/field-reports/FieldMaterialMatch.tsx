@@ -58,7 +58,7 @@ export function FieldMaterialMatch({ report, item, onSaved }: { report: any; ite
     if (!picked || !(Number(qty) > 0)) return;
     setSaving(true);
     const { error } = await db.from('field_report_items').update({
-      description: picked.name, quantity: Number(qty), unit: picked.uom_default,
+      description: (() => { const m = item.description.match(/\bfor\s+([^.,;]{2,60})/i); return m ? `${picked.name} — for ${m[1].trim()}` : picked.name; })(), quantity: Number(qty), unit: picked.uom_default,
       catalog_item_id: picked.id, supplier_id: picked.supplier_id, ai_generated: false,
       material_context: { source: 'daily_report_ai_match', catalog_item_id: picked.id, sku: picked.supplier_sku, unit_mode: 'EACH', is_engineered: false },
     }).eq('id', item.id).eq('status', 'draft');
