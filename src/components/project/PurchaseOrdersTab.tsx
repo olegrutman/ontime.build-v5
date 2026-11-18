@@ -707,6 +707,15 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
 
       if (error) throw error;
 
+      // Field-report orders keep the crew's exact catalog pick on the report item; recover it if a line lost its SKU.
+      const { data: fieldPicks } = await (supabase as any).from('field_report_items')
+        .select('catalog_item_id').eq('converted_po_id', po.id).not('catalog_item_id', 'is', null);
+      const pickIds = (fieldPicks || []).map((r: any) => r.catalog_item_id);
+      const { data: pickRows } = pickIds.length
+        ? await supabase.from('catalog_items').select('id,supplier_sku').in('id', pickIds)
+        : { data: [] as { id: string; supplier_sku: string }[] };
+      const fallbackPick = (lineItems || []).length === 1 && (pickRows || []).length === 1 ? pickRows![0] : null;
+      if (fallbackPick && lineItems && !lineItems[0].supplier_sku) lineItems[0].supplier_sku = fallbackPick.supplier_sku;
       const skus = Array.from(new Set((lineItems || []).map((line: any) => line.supplier_sku).filter(Boolean)));
       const [{ data: catalogRows }, fieldItemResult] = await Promise.all([
         skus.length
@@ -717,7 +726,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           : Promise.resolve({ data: null, error: null }),
       ]);
       if (fieldItemResult.error) throw fieldItemResult.error;
-      const catalogBySku = new Map((catalogRows || []).map(item => [item.supplier_sku, item.id]));
+      const catalogBySku = new Map([...(pickRows || []), ...(catalogRows || [])].map(item => [item.supplier_sku, item.id]));
       const materialRequest = fieldItemResult.data
         ? trimRequestFromMaterialContext(fieldItemResult.data.description, fieldItemResult.data.material_context)
         : null;
