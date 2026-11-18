@@ -36,7 +36,7 @@ export function DailyReportsPage({ projectId }: { projectId: string }) {
   const [busy, setBusy] = useState(false);
   const today = format(new Date(), 'yyyy-MM-dd');
   const orgIds = userOrgRoles.map(r => r.organization_id);
-  const crewIds = userOrgRoles.filter(r => r.organization?.type === 'FC').map(r => r.organization_id);
+  const crewIds = userOrgRoles.filter(r => ['FC', 'TC'].includes(r.organization?.type as string)).map(r => r.organization_id);
   const key = ['daily-report-register', projectId, user?.id];
   const refresh = () => { qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ['field-reports', projectId] }); qc.invalidateQueries({ queryKey: ['field-summary', projectId] }); };
   const { data, isLoading, error } = useQuery({ queryKey: key, enabled: !!user, queryFn: async () => {
