@@ -27,6 +27,7 @@ import { PO_STATUS_LABELS } from '@/types/purchaseOrder';
 import type { POWizardV2LineItem } from '@/types/poWizardV2';
 import { SmartPicker as ProductPickerContent, SmartPickerHandle as ProductPickerHandle } from '@/components/po-wizard-v2/SmartPicker';
 import { getNteEntryStatus } from '@/lib/coPricingPresentation';
+import { fillMissingSkus } from '@/lib/poLineSku';
 
 const UOM_OPTIONS = ['ea', 'LF', 'SF', 'SQ', 'bag', 'box', 'sheet', 'roll', 'gal', 'lb', 'ton', 'hr'];
 
@@ -573,13 +574,14 @@ export function COMaterialsPanel({
       return;
     }
     try {
+      const [resolvedItem] = await fillMissingSkus([item]);
       const { error } = await supabase.from('co_material_items').insert({
         co_id: coId,
         org_id: orgId,
         added_by_role: addedByRole,
-        description: item.name,
-        supplier_sku: item.supplier_sku || null,
-        quantity: item.quantity,
+        description: resolvedItem.name,
+        supplier_sku: resolvedItem.supplier_sku || null,
+        quantity: resolvedItem.quantity,
         uom: item.uom || 'ea',
         unit_cost: item.unit_price ?? null,
         markup_percent: 0,
