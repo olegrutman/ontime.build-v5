@@ -50,4 +50,4 @@
 - Remodel/T&M setup stores the material default on the creator's project_participants row; ensure_tm_project_contracts copies it onto auto-created work-order contracts, because those contracts are created later at invite acceptance.
 - Multi-item CO/WO review persists protected per-line decisions and a final approved_amount; parent finalization, contract deltas, SOVs and invoice paths must exclude rejected scope because whole-order status alone cannot represent partial approval.
 
-- Field reports: crew+hiring Sub only, no prices, status via RPCs; others see released items (Sub is the firewall).
+- Field reports: no prices, status via RPCs; others see released items (Sub is the firewall).
