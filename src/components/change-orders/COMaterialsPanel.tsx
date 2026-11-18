@@ -1146,7 +1146,7 @@ export function COMaterialsPanel({
                       variant="outline"
                       size="sm"
                       className="h-8 text-xs"
-                      onClick={() => navigate(`/project/${projectId}/purchase-orders&po=${activePricingRequest.id}`)}
+                      onClick={() => navigate(`/project/${projectId}/purchase-orders?po=${activePricingRequest.id}`)}
                     >
                       Open linked PO
                     </Button>

@@ -44,4 +44,18 @@ describe('catalog product-code preservation', () => {
     ]);
     expect(lines.map(line => line.supplier_sku ?? null)).toEqual(['OTB-00285', 'OTB-00689', null]);
   });
+
+  it('treats a whitespace-only code as missing', async () => {
+    const [line] = await fillMissingSkus([{ catalog_item_id: 'catalog-2x4-16', supplier_sku: '   ' }]);
+    expect(line.supplier_sku).toBe('OTB-00285');
+  });
+
+  it('blocks an unmatched catalog save instead of silently losing the code', async () => {
+    await expect(fillMissingSkus([{ catalog_item_id: 'retired-or-missing', supplier_sku: '' }])).rejects.toThrow('no verifiable product code');
+  });
+
+  it('blocks the save when the catalog lookup fails', async () => {
+    inIds.mockResolvedValueOnce({ data: null, error: { message: 'temporarily unavailable' } });
+    await expect(fillMissingSkus([{ catalog_item_id: 'catalog-2x4-16', supplier_sku: '' }])).rejects.toThrow('temporarily unavailable');
+  });
 });

@@ -1,4 +1,5 @@
 import { resolvePoPricingOwner } from '@/lib/poPricingOwner';
+import { fillMissingSkus } from '@/lib/poLineSku';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -183,7 +184,8 @@ export default function PurchaseOrders() {
         .eq('order_id', selectedMaterialOrderId);
 
       if (orderItems && orderItems.length > 0) {
-        const lineItems = orderItems.map((item, idx) => ({
+        const resolvedItems = await fillMissingSkus(orderItems);
+        const lineItems = resolvedItems.map((item, idx) => ({
           po_id: newPO.id,
           line_number: idx + 1,
           supplier_sku: item.supplier_sku,

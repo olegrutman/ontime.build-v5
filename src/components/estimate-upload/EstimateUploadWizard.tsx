@@ -12,6 +12,7 @@ import { PackReviewStep } from './PackReviewStep';
 import { PdfUploadStep } from './PdfUploadStep';
 import { CatalogMatchStep, MatchedPack } from './CatalogMatchStep';
 import { supabase } from '@/integrations/supabase/client';
+import { fillMissingSkus } from '@/lib/poLineSku';
 
 type WizardStep = 'upload' | 'review' | 'match';
 
@@ -110,8 +111,9 @@ export function EstimateUploadWizard({
     setSaving(true);
 
     try {
-      const items = matchedPacks.flatMap((pack) =>
-        pack.items.map((item) => ({
+      const items = (await Promise.all(matchedPacks.map(async (pack) => {
+        const resolvedItems = await fillMissingSkus(pack.items);
+        return resolvedItems.map((item) => ({
           estimate_id: estimateId,
           supplier_sku: item.supplier_sku,
           description: item.description,
@@ -120,8 +122,8 @@ export function EstimateUploadWizard({
           unit_price: item.unit_price || 0,
           pack_name: pack.name,
           catalog_item_id: item.catalog_item_id,
-        }))
-      );
+        }));
+      }))).flat();
 
       await supabase
         .from('supplier_estimate_items')

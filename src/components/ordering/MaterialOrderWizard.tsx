@@ -15,6 +15,7 @@ import { Package, ShoppingCart, Plus, Trash2, Lock, Unlock, Send, ArrowRight, Ar
 import { WorkItem, MaterialOrder, OrderItem, OrderingMode, WORK_ITEM_TYPE_LABELS } from '@/types/materialOrder';
 import { EstimatePack, PackItem, PACK_TYPE_LABELS } from '@/types/estimate';
 import { ItemPicker } from './ItemPicker';
+import { fillMissingSkus } from '@/lib/poLineSku';
 
 interface MaterialOrderWizardProps {
   workItem: WorkItem;
@@ -161,8 +162,9 @@ export function MaterialOrderWizard({ workItem, onComplete, onCancel }: Material
       return;
     }
 
-    // Insert order items
-    const itemsToInsert = orderItems.map(item => ({
+    // Insert order items without losing the catalog product code.
+    const resolvedItems = await fillMissingSkus(orderItems);
+    const itemsToInsert = resolvedItems.map(item => ({
       order_id: order.id,
       pack_id: item.pack_id,
       catalog_item_id: item.catalog_item_id,
