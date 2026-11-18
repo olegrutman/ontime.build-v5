@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FieldReportPhotoEditor } from './FieldReportPhotoEditor';
 import { FieldReportPhotoGallery, type FieldReportPhoto } from './FieldReportPhotoGallery';
 import { FieldMaterialPicker } from './FieldMaterialPicker';
+import { FieldMaterialMatch } from './FieldMaterialMatch';
 import { fieldMaterialOrderStatusLabel, isStructuredMaterialItem } from '@/lib/fieldMaterialRequests';
 
 const db = supabase as any;
@@ -330,7 +331,7 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
         created_by: u.user?.id, status: 'draft', ai_generated: true,
       })));
       if (insErr) throw new Error(insErr.message);
-      toast({ title: `${found.length} item${found.length === 1 ? '' : 's'} added`, description: 'Check each one. Remove anything that is wrong before sending.' });
+      toast({ title: `${found.length} item${found.length === 1 ? '' : 's'} added`, description: found.some(f => f.kind === 'material') ? 'Materials found — choose the exact product for each before sending.' : 'Check each one. Remove anything that is wrong before sending.' });
       onChange();
     } catch (e: any) {
       toast({ title: 'Could not sort the update', description: e.message, variant: 'destructive' });
@@ -420,6 +421,7 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
         <ItemRow key={i.id} item={i}>
           <div className="flex flex-wrap gap-2">
             {isStructuredMaterialItem(i) && <FieldMaterialPicker report={report} item={i} onSaved={onChange} />}
+            {i.kind === 'material' && !isStructuredMaterialItem(i) && <FieldMaterialMatch report={report} item={i} onSaved={onChange} />}
             <Button size="sm" variant="ghost" onClick={() => removeItem(i.id)}><Trash2 className="h-4 w-4 mr-1" />Remove</Button>
           </div>
         </ItemRow>

@@ -13,7 +13,7 @@ import { fieldMaterialSelection, pickerLineForFieldItem } from '@/lib/fieldMater
 
 const db = supabase as any;
 
-async function loadSuppliers(projectId: string): Promise<ProjectSupplier[]> {
+export async function loadSuppliers(projectId: string): Promise<ProjectSupplier[]> {
   const { data: team, error: teamError } = await db.from('project_team').select('org_id').eq('project_id', projectId).eq('role', 'Supplier');
   if (teamError) throw teamError;
   const orgIds = (team || []).map((row: any) => row.org_id);
@@ -31,10 +31,12 @@ async function loadSuppliers(projectId: string): Promise<ProjectSupplier[]> {
 interface Props {
   report: any;
   item?: any;
+  /** Free-text material item this catalog pick replaces. */
+  replaceItemId?: string;
   onSaved: () => void;
 }
 
-export function FieldMaterialPicker({ report, item, onSaved }: Props) {
+export function FieldMaterialPicker({ report, item, replaceItemId, onSaved }: Props) {
   const { toast } = useToast();
   const pickerRef = useRef<SmartPickerHandle>(null);
   const savingRef = useRef(false);
@@ -88,6 +90,7 @@ export function FieldMaterialPicker({ report, item, onSaved }: Props) {
           ai_generated: false,
         });
         if (error) throw error;
+        if (replaceItemId) await db.from('field_report_items').delete().eq('id', replaceItemId).eq('status', 'draft');
       }
       toast({ title: item ? 'Material request updated' : 'Material added to report', description: 'The reviewing company will create and send the order.' });
       onSaved();
