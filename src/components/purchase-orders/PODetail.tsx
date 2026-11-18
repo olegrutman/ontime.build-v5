@@ -189,7 +189,8 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
         .select(`
           *,
           supplier:suppliers(id, name, supplier_code, contact_info, organization_id),
-          project:projects(id, name)
+          project:projects(id, name),
+          organization:organizations!purchase_orders_organization_id_fkey(name, org_code)
         `)
         .eq('id', poId)
         .maybeSingle(),
