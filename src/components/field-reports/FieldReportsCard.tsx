@@ -112,7 +112,7 @@ export function FieldReportsCard({ projectId, date }: Props) {
 
       {releasedOnly.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">Released by Subcontractor</p>
+          <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">Released by reviewer</p>
           {releasedOnly.map(i => <ItemRow key={i.id} item={i} />)}
         </div>
       )}
@@ -370,12 +370,12 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
     const { error } = await db.rpc('submit_field_report', { p_report_id: report.id });
     setBusy(false);
     if (error) toast({ title: 'Could not send report', description: error.message, variant: 'destructive' });
-    else { toast({ title: 'Report sent to your Subcontractor' }); onChange(); }
+    else { toast({ title: 'Report sent for review' }); onChange(); }
   };
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Tell your Subcontractor what happened today. Only they see this until they release each item. Don't include prices.</p>
+      <p className="text-sm text-muted-foreground">Tell your reviewing company what happened today. Only they see this until they release each item. Don't include prices.</p>
       <Textarea rows={3} placeholder="What got done, what you need, what's stopping you…" value={text} onChange={e => setText(e.target.value)} onBlur={saveText} />
       <div className="flex items-center gap-2 flex-wrap">
         <Button type="button" variant={recording ? 'destructive' : 'outline'} size="sm" onClick={toggleRecord}>
@@ -426,7 +426,7 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
       ))}
 
       <Button className="w-full" onClick={submit} disabled={busy || items.length === 0}>
-        {busy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}Send to Subcontractor
+        {busy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}Send for review
       </Button>
       {items.length === 0 && <p className="text-xs text-muted-foreground text-center">Add at least one item to send.</p>}
     </div>
