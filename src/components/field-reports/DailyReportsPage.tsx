@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
-import { ArrowLeft, ArrowRight, CalendarDays, Camera, ClipboardList, Clock3, FileText, Layers3, Loader2, Plus, Search, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, Camera, ClipboardList, Clock3, FileText, Loader2, Plus, Search, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -12,7 +12,6 @@ import { C, KpiCard } from '@/components/shared/KpiCard';
 import { FieldReportPhotoGallery, type FieldReportPhoto } from './FieldReportPhotoGallery';
 import { cn } from '@/lib/utils';
 import { DailyReportDetailPage } from './DailyReportDetailPage';
-import { DailyReportDetailDesigns } from './DailyReportDetailDesigns';
 
 const db = supabase as any;
 // Read every authorized page, not only the API's first 1,000 rows.
