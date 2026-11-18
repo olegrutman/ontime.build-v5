@@ -380,7 +380,7 @@ export default function ProjectHome() {
               </div>
             )}
             {(activeTab === 'daily-reports' || activeTab === 'daily-report-designs') && (
-              <DailyReportsPage projectId={project.id} />
+              <DailyReportsPage projectId={project.id} projectName={project.name} projectAddress={formattedAddress || undefined} />
             )}
             {activeTab === 'crew-tracker' && isFC && !isInDemoMode && (
               <CrewTracker projectId={project.id} onBack={() => handleTabChange('overview')} />

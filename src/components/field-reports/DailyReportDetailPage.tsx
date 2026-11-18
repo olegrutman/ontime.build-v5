@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { format } from 'date-fns';
 import {
   ArrowLeft,
@@ -5,6 +6,8 @@ import {
   CheckCircle2,
   ClipboardList,
   Clock3,
+  Columns3,
+  FileText,
   Inbox,
   ShieldCheck,
   TriangleAlert,
@@ -12,11 +15,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { DraftEditor, ReportBlock } from './FieldReportsCard';
 import { FieldReportPhotoGallery, type FieldReportPhoto } from './FieldReportPhotoGallery';
+import { TypedFieldReport } from './TypedFieldReport';
 
 interface Props {
   report: any;
   items: any[];
   photos: FieldReportPhoto[];
+  projectName: string;
+  projectAddress?: string;
   crewName: string;
   reviewerName: string;
   isCrewDraft: boolean;
@@ -27,7 +33,8 @@ interface Props {
   onBack: () => void;
 }
 
-export function DailyReportDetailPage({ report, items, photos, crewName, reviewerName, isCrewDraft, reviewer, privateParty, status, onChange, onBack }: Props) {
+export function DailyReportDetailPage({ report, items, photos, projectName, projectAddress, crewName, reviewerName, isCrewDraft, reviewer, privateParty, status, onChange, onBack }: Props) {
+  const [view, setView] = useState<'board' | 'typed'>('board');
   const released = items.filter(item => ['released', 'converted'].includes(item.status)).length;
   const pending = items.filter(item => item.status === 'crew_confirmed').length;
   const hours = items.filter(item => item.kind === 'hours').reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
@@ -85,6 +92,16 @@ export function DailyReportDetailPage({ report, items, photos, crewName, reviewe
         </div>
       </header>
 
+      {!isCrewDraft && (
+        <div className="no-print flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card p-2">
+          <div className="grid grid-cols-2 gap-1" role="group" aria-label="Field Report layout">
+            <Button size="sm" variant={view === 'board' ? 'default' : 'ghost'} aria-pressed={view === 'board'} onClick={() => setView('board')}><Columns3 />Review board</Button>
+            <Button size="sm" variant={view === 'typed' ? 'default' : 'ghost'} aria-pressed={view === 'typed'} onClick={() => setView('typed')}><FileText />Typed report</Button>
+          </div>
+          <p className="px-2 text-xs text-muted-foreground">{view === 'board' ? 'Review and release each field item' : 'A familiar typed jobsite report, ready to print'}</p>
+        </div>
+      )}
+
       {isCrewDraft ? (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
           <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm sm:p-5">
@@ -92,6 +109,8 @@ export function DailyReportDetailPage({ report, items, photos, crewName, reviewe
           </div>
           <DraftSummary crewName={crewName} reviewerName={reviewerName} items={items} />
         </div>
+      ) : view === 'typed' ? (
+        <TypedFieldReport report={safeReport} items={items} photos={photos} projectName={projectName} projectAddress={projectAddress} crewName={crewName} reviewerName={reviewerName} reviewer={reviewer} status={status} onChange={onChange} />
       ) : (
         <>
           <div className="grid items-start gap-3 xl:grid-cols-3 xl:items-stretch">
