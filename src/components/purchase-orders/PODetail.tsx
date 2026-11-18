@@ -58,6 +58,7 @@ import { CreateSupplierInvoiceFromPO } from './CreateSupplierInvoiceFromPO';
 import { SupplierEmailPrompt } from './SupplierEmailPrompt';
 import { PurchaseOrder, POLineItem, POStatus } from '@/types/purchaseOrder';
 import { EmailPODialog } from './EmailPODialog';
+import { TypedPOSheet } from './TypedPOSheet';
 import { buildPOCsv, poFileName, downloadCsv } from '@/lib/poExport';
 
 interface PODetailProps {
@@ -118,6 +119,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
   const [emailPromptOpen, setEmailPromptOpen] = useState(false);
   const [emailSending, setEmailSending] = useState(false);
   const [scheduleDeliveryOpen, setScheduleDeliveryOpen] = useState(false);
+  const [sheetView, setSheetView] = useState<'standard' | 'typed'>('standard');
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
@@ -1070,8 +1072,15 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
         </Card>
       )}
 
+      <div className="no-print flex flex-wrap gap-1 rounded-xl border border-border bg-card p-1 w-fit">
+        <Button size="sm" variant={sheetView === 'standard' ? 'default' : 'ghost'} aria-pressed={sheetView === 'standard'} onClick={() => setSheetView('standard')}>Standard view</Button>
+        <Button size="sm" variant={sheetView === 'typed' ? 'default' : 'ghost'} aria-pressed={sheetView === 'typed'} onClick={() => setSheetView('typed')}>Typed sheet</Button>
+      </div>
+
+      {sheetView === 'typed' && <TypedPOSheet po={po} lineItems={lineItems} showPricing={canViewPricing && hasPricing} />}
+
       {/* Line Items */}
-      <Card>
+      <Card className={sheetView === 'typed' ? 'hidden' : undefined}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
