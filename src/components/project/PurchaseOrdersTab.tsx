@@ -1,3 +1,4 @@
+import { fillMissingSkus } from '@/lib/poLineSku';
 import { estimateItemAmount } from '@/lib/supplierMetrics';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -362,7 +363,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
       let estimateSubtotal = 0;
       let additionalSubtotal = 0;
 
-      const lineItems = data.line_items.map((item, index) => {
+      const lineItems = (await fillMissingSkus(data.line_items)).map((item, index) => {
         const lineTotal = item.unit_price != null ? item.quantity * item.unit_price : null;
         if (item.source_estimate_item_id) {
           estimateSubtotal += lineTotal ?? 0;
@@ -811,7 +812,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         let estimateSubtotal = 0;
         let additionalSubtotal = 0;
 
-        const lineItems = data.line_items.map((item, index) => {
+        const lineItems = (await fillMissingSkus(data.line_items)).map((item, index) => {
           const lineTotal = item.unit_price != null ? item.quantity * item.unit_price : null;
           if (item.source_estimate_item_id) {
             estimateSubtotal += lineTotal ?? 0;
