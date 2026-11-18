@@ -3818,6 +3818,7 @@ export type Database = {
       field_report_items: {
         Row: {
           ai_generated: boolean
+          catalog_item_id: string | null
           confirmed_at: string | null
           confirmed_by: string | null
           converted_co_id: string | null
@@ -3840,11 +3841,13 @@ export type Database = {
           reviewed_by: string | null
           reviewer_org_id: string
           status: string
+          supplier_id: string | null
           unit: string | null
           updated_at: string
         }
         Insert: {
           ai_generated?: boolean
+          catalog_item_id?: string | null
           confirmed_at?: string | null
           confirmed_by?: string | null
           converted_co_id?: string | null
@@ -3867,11 +3870,13 @@ export type Database = {
           reviewed_by?: string | null
           reviewer_org_id: string
           status?: string
+          supplier_id?: string | null
           unit?: string | null
           updated_at?: string
         }
         Update: {
           ai_generated?: boolean
+          catalog_item_id?: string | null
           confirmed_at?: string | null
           confirmed_by?: string | null
           converted_co_id?: string | null
@@ -3894,10 +3899,18 @@ export type Database = {
           reviewed_by?: string | null
           reviewer_org_id?: string
           status?: string
+          supplier_id?: string | null
           unit?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "field_report_items_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "field_report_items_converted_co_id_fkey"
             columns: ["converted_co_id"]
@@ -3945,6 +3958,13 @@ export type Database = {
             columns: ["reviewer_org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_report_items_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -9980,6 +10000,10 @@ export type Database = {
         Args: { item_row: Database["public"]["Tables"]["catalog_items"]["Row"] }
         Returns: string
       }
+      create_field_material_order: {
+        Args: { p_item_id: string }
+        Returns: string
+      }
       create_organization_and_set_admin: {
         Args: {
           _address?: Json
@@ -10037,6 +10061,14 @@ export type Database = {
       ensure_tm_project_contracts: {
         Args: { _project_id: string }
         Returns: undefined
+      }
+      field_material_order_status: {
+        Args: { p_item_id: string }
+        Returns: {
+          po_id: string
+          status: Database["public"]["Enums"]["po_status"]
+          supplier_name: string
+        }[]
       }
       field_report_party: {
         Args: { _report: string; _user: string }

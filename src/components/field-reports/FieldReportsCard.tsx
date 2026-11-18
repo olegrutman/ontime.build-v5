@@ -14,6 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FieldReportPhotoEditor } from './FieldReportPhotoEditor';
 import { FieldReportPhotoGallery, type FieldReportPhoto } from './FieldReportPhotoGallery';
+import { FieldMaterialPicker } from './FieldMaterialPicker';
+import { fieldMaterialOrderStatusLabel, isStructuredMaterialItem } from '@/lib/fieldMaterialRequests';
 
 const db = supabase as any;
 type Kind = 'progress' | 'material' | 'extra_work' | 'blocker' | 'hours';
@@ -128,7 +130,7 @@ function ItemRow({ item, children, reviewDesk }: { item: any; children?: React.R
   if (reviewDesk) {
     const Icon = item.kind === 'progress' ? CheckCircle2 : item.kind === 'material' ? Package : item.kind === 'blocker' ? TriangleAlert : item.kind === 'hours' ? Clock3 : Plus;
     const tone = item.kind === 'blocker' ? 'bg-destructive/10 text-destructive' : item.kind === 'progress' ? 'bg-state-approved-bg text-state-approved' : item.kind === 'material' || item.kind === 'hours' ? 'bg-type-sov/10 text-type-sov' : 'bg-state-open-bg text-state-open-foreground';
-    return <article className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm"><div className="flex gap-3"><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tone}`}><Icon size={17} /></span><div className="min-w-0 flex-1 space-y-2"><div className="flex flex-wrap justify-between items-start gap-2"><p className="text-[11px] font-semibold uppercase text-muted-foreground">{KIND_LABEL[item.kind as Kind] || item.kind}</p><Badge variant="outline" className="max-w-full whitespace-normal text-[11px]">{STATUS_LABEL[item.status] || item.status}</Badge></div><p className="break-words text-sm leading-relaxed">{item.description}</p>{(item.location || item.quantity != null) && <p className="flex items-start gap-1.5 text-xs text-muted-foreground"><MapPin size={13} className="shrink-0" /><span className="min-w-0 break-words">{item.location}{item.location && item.quantity != null ? ' · ' : ''}{item.quantity != null ? `${item.quantity} ${item.unit || ''}` : ''}</span></p>}{item.hold_reason && <p className="break-words text-xs text-destructive">Held: {item.hold_reason}</p>}<div className="flex flex-wrap gap-2 pt-1">{children}</div></div></div></article>;
+    return <article className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm"><div className="flex gap-3"><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tone}`}><Icon size={17} /></span><div className="min-w-0 flex-1 space-y-2"><div className="flex flex-wrap justify-between items-start gap-2"><p className="text-[11px] font-semibold uppercase text-muted-foreground">{KIND_LABEL[item.kind as Kind] || item.kind}</p><Badge variant="outline" className="max-w-full whitespace-normal text-[11px]">{STATUS_LABEL[item.status] || item.status}</Badge></div><p className="break-words text-sm leading-relaxed">{item.description}</p>{isStructuredMaterialItem(item) && <p className="font-mono text-[11px] text-muted-foreground">SKU {item.material_context?.sku || 'Catalog selection'} · Exact catalog product</p>}{(item.location || item.quantity != null) && <p className="flex items-start gap-1.5 text-xs text-muted-foreground"><MapPin size={13} className="shrink-0" /><span className="min-w-0 break-words">{item.location}{item.location && item.quantity != null ? ' · ' : ''}{item.quantity != null ? `${item.quantity} ${item.unit || ''}` : ''}</span></p>}{item.hold_reason && <p className="break-words text-xs text-destructive">Held: {item.hold_reason}</p>}<div className="flex flex-wrap gap-2 pt-1">{children}</div></div></div></article>;
   }
   return (
     <div className="rounded-xl border p-3 space-y-2">
@@ -136,6 +138,7 @@ function ItemRow({ item, children, reviewDesk }: { item: any; children?: React.R
         <div className="min-w-0 space-y-1">
           <Badge variant="outline" className="text-[0.7rem]">{KIND_LABEL[item.kind as Kind] || item.kind}</Badge>
           <p className="text-sm break-words">{item.description}</p>
+          {isStructuredMaterialItem(item) && <p className="font-mono text-[11px] text-muted-foreground">SKU {item.material_context?.sku || 'Catalog selection'} · Exact catalog product</p>}
           {(item.location || item.quantity != null) && (
             <p className="text-xs text-muted-foreground break-words">
               {item.location}{item.location && item.quantity != null ? ' · ' : ''}{item.quantity != null ? `${item.quantity} ${item.unit || ''}` : ''}
@@ -217,12 +220,28 @@ function ConvertedLink({ item }: { item: any }) {
   const navigate = useNavigate();
   if (item.converted_co_id) return <Button size="sm" variant="link" className="px-0" onClick={() => navigate(`/project/${item.project_id}/change-orders/${item.converted_co_id}`)}>Open work order</Button>;
   if (item.converted_po_id) {
-    const trimRequest = trimRequestFromMaterialContext(item.description, item.material_context);
-    const params = new URLSearchParams({ tab: 'purchase-orders', edit_po: item.converted_po_id });
-    if (trimRequest) params.set('field_item', item.id);
-    return <Button size="sm" variant="link" className="px-0" onClick={() => navigate(`/project/${item.project_id}/purchase-orders?${params.toString()}`)}>Open material order</Button>;
+    return <MaterialOrderLink item={item} />;
   }
   return null;
+}
+
+function MaterialOrderLink({ item }: { item: any }) {
+  const navigate = useNavigate();
+  const { data } = useQuery({
+    queryKey: ['field-material-order-status', item.id, item.converted_po_id],
+    queryFn: async () => {
+      const { data, error } = await db.rpc('field_material_order_status', { p_item_id: item.id });
+      if (error) throw error;
+      return (data || [])[0] as { status: string; supplier_name: string } | undefined;
+    },
+  });
+  const trimRequest = trimRequestFromMaterialContext(item.description, item.material_context);
+  const params = new URLSearchParams({ tab: 'purchase-orders', edit_po: item.converted_po_id });
+  if (trimRequest) params.set('field_item', item.id);
+  return <div className="flex flex-wrap items-center gap-2">
+    {data && <Badge variant="outline" className="whitespace-normal" title={data.supplier_name}>{fieldMaterialOrderStatusLabel(data.status)}</Badge>}
+    <Button size="sm" variant="link" className="px-0" onClick={() => navigate(`/project/${item.project_id}/purchase-orders?${params.toString()}`)}>Open material order</Button>
+  </div>;
 }
 
 function ReviewActions({ item, onChange }: { item: any; onChange: () => void }) {
@@ -367,16 +386,26 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
           {sorting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}Sort into items
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">Sort into items reads your update or voice note and adds items below. Check them before sending.</p>
+      <p className="text-xs text-muted-foreground">Sort into items reads your update or voice note and adds items below. For exact products and quantities, use Choose materials instead—it does not use AI.</p>
       {report.transcript && <p className="text-xs rounded-lg bg-muted p-2"><span className="font-medium">Voice note text:</span> {report.transcript}</p>}
 
       <FieldReportPhotoEditor report={report} photos={photos} onChange={onChange} />
 
+      <div className="rounded-xl border border-type-sov/30 bg-type-sov/5 p-3 space-y-2">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="min-w-0 space-y-1">
+            <p className="flex items-center gap-1.5 text-[0.7rem] uppercase tracking-wide text-muted-foreground"><Package className="h-3.5 w-3.5" />Material request</p>
+            <p className="text-xs text-muted-foreground">Pick exact products and quantities from a project catalog. Your reviewing company will create and send the order.</p>
+          </div>
+          <FieldMaterialPicker report={report} onSaved={onChange} />
+        </div>
+      </div>
+
       <div className="rounded-xl border p-3 space-y-2">
-        <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">Add an item</p>
+        <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">Add another update</p>
         <Select value={kind} onValueChange={v => setKind(v as Kind)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>{(Object.keys(KIND_LABEL) as Kind[]).map(k => <SelectItem key={k} value={k}>{KIND_LABEL[k]}</SelectItem>)}</SelectContent>
+          <SelectContent>{(Object.keys(KIND_LABEL) as Kind[]).filter(k => k !== 'material').map(k => <SelectItem key={k} value={k}>{KIND_LABEL[k]}</SelectItem>)}</SelectContent>
         </Select>
         <Input placeholder="Describe it" value={desc} onChange={e => setDesc(e.target.value)} />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -389,7 +418,10 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
 
       {items.map(i => (
         <ItemRow key={i.id} item={i}>
-          <Button size="sm" variant="ghost" onClick={() => removeItem(i.id)}><Trash2 className="h-4 w-4 mr-1" />Remove</Button>
+          <div className="flex flex-wrap gap-2">
+            {isStructuredMaterialItem(i) && <FieldMaterialPicker report={report} item={i} onSaved={onChange} />}
+            <Button size="sm" variant="ghost" onClick={() => removeItem(i.id)}><Trash2 className="h-4 w-4 mr-1" />Remove</Button>
+          </div>
         </ItemRow>
       ))}
 

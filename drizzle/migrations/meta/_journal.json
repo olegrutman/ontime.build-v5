@@ -575,6 +575,13 @@
       "when": 1794936088786,
       "tag": "0081_add_field_material_request_context",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1794974861211,
+      "tag": "0082_structured_daily_material_requests",
+      "breakpoints": true
     }
   ]
 }

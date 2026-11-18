@@ -1,4 +1,3 @@
-import { resolvePoPricingOwner } from '@/lib/poPricingOwner';
 import { supabase } from '@/integrations/supabase/client';
 import { generateCONumber } from '@/lib/generateCONumber';
 
@@ -44,31 +43,12 @@ export async function createWorkOrderFromItem(item: any, userId: string): Promis
   return co.id;
 }
 
-/** Creates an unpriced draft material order for the project's supplier from a crew's material item. */
+/** Creates one unpriced draft order and preserves the crew's exact catalog selection. */
 export async function createMaterialOrderFromItem(item: any): Promise<string> {
-  const orgId = item.reviewer_org_id;
-  const { data: team } = await db.from('project_team').select('org_id').eq('project_id', item.project_id).eq('role', 'Supplier');
-  const orgIds = (team || []).map((t: any) => t.org_id);
-  let supplierId: string | null = null;
-  if (orgIds.length) supplierId = (await db.from('suppliers').select('id').in('organization_id', orgIds).limit(1).maybeSingle()).data?.id ?? null;
-  // No supplier on the project: fall back to the Ontime Master Catalog, like the order form does.
-  if (!supplierId) supplierId = (await db.from('suppliers').select('id').eq('is_system', true).limit(1).maybeSingle()).data?.id ?? null;
-  if (!supplierId) throw new Error('Add a supplier to this project first');
-  const pricingOwnerOrgId = await resolvePoPricingOwner(item.project_id, orgId);
-  const { data: poNumber, error: nErr } = await db.rpc('generate_po_number', { org_id: orgId });
-  if (nErr || !poNumber) throw nErr || new Error('Could not number the order');
-  const { data: po, error } = await db.from('purchase_orders').insert({
-    organization_id: orgId, created_by_org_id: orgId, po_number: poNumber, po_name: `Field request · ${String(item.description).slice(0, 60)}`,
-    supplier_id: supplierId, project_id: item.project_id, pricing_owner_org_id: pricingOwnerOrgId, status: 'ACTIVE', notes: orgIds.length ? 'From crew field report. Not yet sent to the supplier.' : FIELD_NO_SUPPLIER_NOTE,
-  }).select('id').single();
+  const { data, error } = await db.rpc('create_field_material_order', { p_item_id: item.id });
   if (error) throw error;
-  const { error: lErr } = await db.from('po_line_items').insert({
-    po_id: po.id, line_number: 1, description: item.description, quantity: item.quantity ?? 1, uom: item.unit || 'EA',
-    notes: item.location ? `Location: ${item.location}` : null,
-  });
-  if (lErr) { await db.from('purchase_orders').delete().eq('id', po.id); throw lErr; }
-  try { await link(item.id, { po: po.id }); } catch (e) { await db.from('purchase_orders').delete().eq('id', po.id); throw e; }
-  return po.id;
+  if (!data) throw new Error('Could not create the material order');
+  return data as string;
 }
 
 export const FIELD_NO_SUPPLIER_NOTE = 'From crew field report. No supplier on this project yet — add one, then pick it with Edit before sending.';

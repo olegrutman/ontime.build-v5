@@ -105,6 +105,7 @@ interface SmartPickerProps {
   workspaceMode?: boolean;
   supplierControl?: React.ReactNode;
   materialRequest?: MaterialRequestContext | null;
+  submitLabel?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -115,7 +116,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
   {
     supplierId, projectId, editingItem, hasApprovedEstimate = false, hidePricing = false,
     onAddItem, onUpdateItem, onLoadPack, onAddPSMItem, onClearEdit, onClose, onExitPicker,
-    initialStep, onStateChange, libraryMode = false, workspaceMode = false, supplierControl, materialRequest = null,
+    initialStep, onStateChange, libraryMode = false, workspaceMode = false, supplierControl, materialRequest = null, submitLabel,
   },
   ref,
 ) {
@@ -436,9 +437,9 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
       case 'funnel':   return selectedSecondary ?? config?.displayName ?? 'Filter';
       case 'hardware': return 'Select Hardware';
       case 'products': return selectedSecondary ?? config?.displayName ?? 'Products';
-      case 'quantity': return editingItem ? 'Edit Item' : 'Add to PO';
+      case 'quantity': return editingItem ? (submitLabel || 'Edit Item') : (submitLabel || 'Add to PO');
     }
-  }, [step, searchActive, searchQuery, selectedCategoryKey, selectedSecondary, editingItem]);
+  }, [step, searchActive, searchQuery, selectedCategoryKey, selectedSecondary, editingItem, submitLabel]);
 
   // Notify parent of step/title changes so the outer header re-renders (Bug 2).
   useEffect(() => {
@@ -663,7 +664,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
                   <div className="lg:max-w-[55%]"><p className="text-[11px] text-muted-foreground mb-1.5">Selected specifications</p><SpecificationChips filters={displayFilters} /></div>
                 </header>
                 {productsLoading ? <Skeleton className="h-48 w-full" /> : <WorkspaceProducts products={products.length ? products : selectedProduct ? [selectedProduct] : []} selected={selectedProduct} onSelect={handleProductSelect} />}
-                {step === 'quantity' && selectedProduct && <QuantityPanel key={selectedProduct.id} workspaceMode product={selectedProduct} onAdd={onAddItem} onUpdate={onUpdateItem} onClose={onExitPicker} editingItem={editingItem} hidePricing={hidePricing} trimWindowCount={materialRequest?.hints.windowCount} estimateUnitPrice={quantityEstimate?.unitPrice} estimateItemId={quantityEstimate?.itemId} estimatePackName={quantityEstimate?.packName} />}
+                {step === 'quantity' && selectedProduct && <QuantityPanel key={selectedProduct.id} workspaceMode product={selectedProduct} onAdd={onAddItem} onUpdate={onUpdateItem} onClose={onExitPicker} editingItem={editingItem} hidePricing={hidePricing} trimWindowCount={materialRequest?.hints.windowCount} estimateUnitPrice={quantityEstimate?.unitPrice} estimateItemId={quantityEstimate?.itemId} estimatePackName={quantityEstimate?.packName} submitLabel={submitLabel} />}
                 {!productsLoading && products.length === 0 && !selectedProduct && <p className="text-sm text-muted-foreground py-8">No products found.</p>}
               </section>
             )}
@@ -679,7 +680,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
                 trimWindowCount={materialRequest?.hints.windowCount}
                 estimateUnitPrice={quantityEstimate?.unitPrice}
                 estimateItemId={quantityEstimate?.itemId}
-                estimatePackName={quantityEstimate?.packName}
+                estimatePackName={quantityEstimate?.packName} submitLabel={submitLabel}
               />
             )}
           </>

@@ -28,9 +28,10 @@ interface QuantityPanelProps {
   hidePricing?: boolean;
   workspaceMode?: boolean;
   trimWindowCount?: number | null;
+  submitLabel?: string;
 }
 
-export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, estimateUnitPrice, estimateItemId, estimatePackName, hidePricing = false, workspaceMode = false, trimWindowCount = null }: QuantityPanelProps) {
+export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, estimateUnitPrice, estimateItemId, estimatePackName, hidePricing = false, workspaceMode = false, trimWindowCount = null, submitLabel }: QuantityPanelProps) {
   const isEditing = !!editingItem;
   
   const isEngineered = product.category === 'Engineered' && product.uom_default === 'LF';
@@ -332,7 +333,7 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
         {/* Submit */}
         <Button variant={workspaceMode ? 'secondary' : 'default'} className={`w-full h-12 text-sm ${workspaceMode ? 'lg:col-start-2 lg:self-end' : ''}`} onClick={handleSubmit}>
           <Check className="h-4 w-4 mr-2" />
-          {isEditing ? 'Update Item' : 'Add to PO'}
+          {isEditing ? (submitLabel || 'Update Item') : (submitLabel || 'Add to PO')}
         </Button>
       </div>
     </div>
