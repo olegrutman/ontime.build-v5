@@ -33,6 +33,7 @@ export function DailyReportDetailPage({ report, items, photos, crewName, reviewe
   const hours = items.filter(item => item.kind === 'hours').reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
   const blockers = items.filter(item => item.kind === 'blocker').length;
   const safeReport = privateParty ? report : { ...report, raw_text: null, audio_path: null, transcript: null };
+  const hasSource = privateParty && (report.raw_text || report.audio_path);
   const itemProps = { report: safeReport, photos: [], reviewer, onChange, reviewDesk: true };
   const columns = [
     {
@@ -93,10 +94,10 @@ export function DailyReportDetailPage({ report, items, photos, crewName, reviewe
         </div>
       ) : (
         <>
-          <div className="grid items-start gap-3 2xl:grid-cols-3">
+          <div className="grid items-start gap-3 xl:grid-cols-3 xl:items-stretch">
             {columns.map(column => (
-              <section key={column.id} className="min-w-0 rounded-2xl border border-border/60 bg-muted/30 p-3" aria-label={column.title}>
-                <div className="mb-3 flex items-start justify-between gap-3 px-1 pt-1">
+              <section key={column.id} className="min-w-0 rounded-2xl border border-border/60 bg-muted/30 p-3 xl:flex xl:h-[50vh] xl:min-h-[440px] xl:max-h-[600px] xl:flex-col" aria-label={column.title}>
+                <div className="mb-3 flex shrink-0 items-start justify-between gap-3 px-1 pt-1">
                   <div className="flex min-w-0 gap-2">
                     <column.icon size={17} className="mt-0.5 shrink-0 text-muted-foreground" />
                     <div>
@@ -106,22 +107,24 @@ export function DailyReportDetailPage({ report, items, photos, crewName, reviewe
                   </div>
                   <span className="rounded-full bg-background px-2 py-1 font-mono text-xs font-semibold shadow-sm">{column.items.length}</span>
                 </div>
-                <ReportBlock title={column.title} {...itemProps} items={column.items} itemStyle="card" />
-                {!column.items.length && <p className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">No items here.</p>}
+                <div className="min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1 xl:pb-1">
+                  <ReportBlock title={column.title} {...itemProps} items={column.items} itemStyle="card" />
+                  {!column.items.length && <p className="flex min-h-24 items-center justify-center rounded-xl border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground xl:h-[calc(100%-4px)]">No items here.</p>}
+                </div>
               </section>
             ))}
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_280px]">
-            {privateParty && (report.raw_text || report.audio_path) && (
-              <div className="rounded-2xl border border-border/60 bg-card p-4">
+          <div className={hasSource ? 'grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_280px]' : 'grid items-stretch gap-4 lg:grid-cols-2'}>
+            {hasSource && (
+              <div className="h-full rounded-2xl border border-border/60 bg-card p-4">
                 <ReportBlock title="Original update" report={safeReport} items={[]} photos={[]} />
               </div>
             )}
-            <div className="rounded-2xl border border-border/60 bg-card p-4">
+            <div className="h-full rounded-2xl border border-border/60 bg-card p-4">
               <PhotoSection photos={photos} />
             </div>
-            <div className="rounded-2xl border border-border/60 bg-card p-4">
+            <div className="h-full rounded-2xl border border-border/60 bg-card p-4">
               <ReviewSummary released={released} total={items.length} privateParty={privateParty} crewName={crewName} reviewerName={reviewerName} />
             </div>
           </div>
