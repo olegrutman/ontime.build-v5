@@ -375,8 +375,8 @@ export default function ProjectHome() {
             {/* Overview Tab */}
             {activeTab === 'overview' && !isSupplier && (
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-y border-border py-3">
-                <div><h2 className="font-heading text-xl font-semibold">Daily Progress Reports</h2></div>
-                <Button onClick={() => handleTabChange('daily-reports')}><ClipboardList />Daily reports</Button>
+                <div><h2 className="font-heading text-xl font-semibold">Field Reports</h2></div>
+                <Button onClick={() => handleTabChange('daily-reports')}><ClipboardList />Field Reports</Button>
               </div>
             )}
             {(activeTab === 'daily-reports' || activeTab === 'daily-report-designs') && (

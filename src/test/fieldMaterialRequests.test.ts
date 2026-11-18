@@ -10,7 +10,7 @@ const line: POWizardV2LineItem = {
   source_estimate_item_id: 'estimate-1', price_source: 'FROM_ESTIMATE', original_unit_price: 125,
 };
 
-describe('daily report material requests', () => {
+describe('field report material requests', () => {
   it('preserves exact product, base quantity and package details without any pricing', () => {
     const saved = fieldMaterialSelection(line);
     expect(saved.catalog_item_id).toBe('catalog-1');

@@ -58,7 +58,7 @@ const ITEMS = {
   estimates: { key: 'estimates', label: 'Estimates', icon: FileText, route: 'estimates', featureKey: 'supplier_estimates' },
   schedule: { key: 'schedule', label: 'Schedule', icon: CalendarDays, route: 'schedule', featureKey: 'schedule_gantt', premium: true },
   dailyLog: { key: 'daily-log', label: 'Daily Log', icon: PenLine, route: 'daily-log', featureKey: 'daily_logs' },
-  dailyReports: { key: 'daily-reports', label: 'Daily Reports', icon: PenLine, route: 'daily-reports' },
+  dailyReports: { key: 'daily-reports', label: 'Field Reports', icon: PenLine, route: 'daily-reports' },
   crewTracker: { key: 'crew-tracker', label: 'Crew Tracker', icon: Receipt, route: 'crew-tracker' },
   rfis: { key: 'rfis', label: 'RFIs', icon: MessageSquareMore, route: 'rfis', premium: true },
   returns: { key: 'returns', label: 'Returns', icon: RotateCcw, route: 'returns', featureKey: 'returns_tracking' },

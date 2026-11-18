@@ -32,7 +32,7 @@ describe('project sidebar nav — all user types', () => {
         expect(new Set(routes).size).toBe(routes.length);
       });
 
-      it('leads with an unlabeled primary block and promotes daily reports for non-suppliers', () => {
+      it('leads with an unlabeled primary block and promotes field reports for non-suppliers', () => {
         const { groups } = getNavGroups(isTM, isSupplier);
         expect(groups[0].label).toBeUndefined();
         expect(groups[0].items).toHaveLength(isSupplier ? 3 : 4);

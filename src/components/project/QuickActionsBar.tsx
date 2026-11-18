@@ -58,7 +58,7 @@ export function QuickActionsBar({ projectId, role, isTM = false, onNavigate }: P
   if (role === 'GC' || role === 'TC') actions = [invoiceAction, coAction, poAction, rfiAction];
   else actions = isTM ? [invoiceAction, coAction, rfiAction] : [invoiceAction, rfiAction];
   if (role === 'FC') actions.push({key:'tracker',label:'Crew Tracker',icon:Users,onClick:()=>onNavigate('crew-tracker')});
-  actions.unshift({ key: 'daily-report', label: 'Daily Report', icon: ClipboardList, onClick: () => onNavigate('daily-reports') });
+  actions.unshift({ key: 'daily-report', label: 'Field Report', icon: ClipboardList, onClick: () => onNavigate('daily-reports') });
 
   return (
     <div

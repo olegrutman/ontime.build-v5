@@ -34,7 +34,7 @@ interface BottomItem {
 function getPrimaryItems(isTM: boolean, isFC = false, isSupplier = false): BottomItem[] {
   return [
     { label: 'Overview', icon: LayoutDashboard, route: 'overview' },
-    ...(!isSupplier ? [{ label: 'Reports', icon: PenLine, route: 'daily-reports' }] : []),
+    ...(!isSupplier ? [{ label: 'Field Reports', icon: PenLine, route: 'daily-reports' }] : []),
     { label: isTM ? 'WOs' : 'COs', icon: AlertTriangle, route: 'change-orders' },
     { label: 'Invoices', icon: Receipt, route: 'invoices' },
     ...(isSupplier ? [{ label: 'Orders', icon: Package, route: 'purchase-orders' } as BottomItem] : []),
