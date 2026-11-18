@@ -37,9 +37,9 @@ export function extractMaterial(text: string): ExtractedMaterial {
   return { nominal: thickness && width ? `${thickness}x${width}` : null, thickness, width, lengthFt, quantity, keywords };
 }
 
-/** Catalog lumber stores dimension as `2 in. x 8 in.` and length as `16 ft.` */
-export function catalogDimension(m: ExtractedMaterial): string | null {
-  return m.thickness && m.width ? `${m.thickness} in. x ${m.width} in.` : null;
+/** Catalogs store lumber size as `2×8`, `2x8` or `2 in. x 8 in.`; lengths as `16 ft` / `16 ft.` */
+export function catalogDimensions(m: ExtractedMaterial): string[] {
+  return m.thickness && m.width ? [`${m.thickness}×${m.width}`, `${m.thickness}x${m.width}`, `${m.thickness} in. x ${m.width} in.`] : [];
 }
 
 export function catalogLengthFt(length: string | null | undefined): number | null {

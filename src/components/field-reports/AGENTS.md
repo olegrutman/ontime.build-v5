@@ -4,3 +4,4 @@
 - Live individual reports use the review-desk layout with shared draft/review actions; source notes stay in the party-only sidebar and item filters never change report-wide counts, preserving workflow and context.
 - Material requests can store a validated, price-free catalog identity and quantity from the shared picker; one atomic conversion preserves that selection, while free-text trim hints retain the existing project-match and editable board-calculator path.
 - Any company with an upstream contract on the project (crew or Subcontractor) can author daily reports; the contract's upstream party reviews, so self-performing Subcontractors report directly to the General Contractor.
+- Free-text material items offer the picker or a guided catalog match; matching uses only explicitly stated size/length/count from a pure extractor and the user confirms the product, so nothing is guessed.

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { extractMaterial, catalogDimension, catalogLengthFt } from '@/lib/fieldMaterialExtract';
+import { extractMaterial, catalogDimensions, catalogLengthFt } from '@/lib/fieldMaterialExtract';
 import { FieldMaterialPicker, loadSuppliers } from './FieldMaterialPicker';
 
 const db = supabase as any;
@@ -33,8 +33,8 @@ export function FieldMaterialMatch({ report, item, onSaved }: { report: any; ite
       const ids = list.map(s => s.id);
       if (!ids.length) { setProducts([]); return; }
       let q = db.from('catalog_items').select('id,supplier_id,supplier_sku,name,description,length,wood_species,uom_default').eq('is_active', true).in('supplier_id', ids).limit(200);
-      const dim = catalogDimension(facts);
-      if (dim) q = q.eq('category', 'FramingLumber').ilike('dimension', `${dim}%`);
+      const dims = catalogDimensions(facts);
+      if (dims.length) q = q.eq('category', 'FramingLumber').in('dimension', dims);
       else if (facts.keywords.length) for (const k of facts.keywords.slice(0, 4)) q = q.ilike('normalized_search', `%${k}%`);
       else { setProducts([]); return; }
       const { data, error } = await q;
@@ -48,8 +48,11 @@ export function FieldMaterialMatch({ report, item, onSaved }: { report: any; ite
   };
 
   const lengths = useMemo(() => [...new Set(products.map(p => catalogLengthFt(p.length)).filter((n): n is number => n != null))].sort((a, b) => a - b), [products]);
-  const needsLength = !!catalogDimension(facts) && lengths.length > 1;
+  const needsLength = catalogDimensions(facts).length > 0 && lengths.length > 1;
   const shown = needsLength ? (length != null ? products.filter(p => catalogLengthFt(p.length) === length) : []) : products;
+
+  const only = shown.length === 1 ? shown[0] : null;
+  if (only && !picked) setTimeout(() => setPicked(only), 0);
 
   const save = async () => {
     if (!picked || !(Number(qty) > 0)) return;
