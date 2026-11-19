@@ -79,3 +79,14 @@ describe('unified Field Operations overview', () => {
     expect(model.actionLabel).toBe('Continue today’s report');
   });
 });
+
+import { rankPortfolioRows } from '@/hooks/useFieldOperationsPortfolio';
+describe('dashboard Field Operations ranking', () => {
+  it('lists blocker projects before review and quiet projects', () => {
+    const blocker = { ...progress, id: 'b', kind: 'blocker' as const };
+    const quiet = { projectId: 'q', projectName: 'A quiet', model: build('TC', [], []) };
+    const review = { projectId: 'r', projectName: 'B review', model: build('TC') };
+    const blocked = { projectId: 'x', projectName: 'C blocked', model: build('TC', [blocker]) };
+    expect(rankPortfolioRows([quiet, review, blocked]).map((r) => r.projectId)).toEqual(['x', 'r', 'q']);
+  });
+});

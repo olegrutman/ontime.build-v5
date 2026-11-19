@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
 import { PendingInvitesPanel } from '@/components/dashboard/PendingInvitesPanel';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
+import { DashboardFieldOperations } from '@/components/dashboard/DashboardFieldOperations';
 import { DashboardHero } from '@/components/dashboard/DashboardHero';
 import type { RecentDoc, ProjectFinancialDetail } from '@/hooks/useDashboardData';
 import { C, fontVal, fontMono, fontLabel, fmt, fmtSigned, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, WarnItem, ProjectCard, BAR_COLORS, type PillType } from '@/components/shared/KpiCard';
@@ -137,6 +138,8 @@ export function TCDashboardView({
           activeProjectCount={activeProjects.length}
           variant="compact-hero"
         />
+
+        <DashboardFieldOperations projects={projects} role="TC" />
 
         {/* PROJECTS — focal point of the dashboard */}
         <MyProjectsHero

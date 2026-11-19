@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
 import { PendingInvitesPanel } from '@/components/dashboard/PendingInvitesPanel';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
+import { DashboardFieldOperations } from '@/components/dashboard/DashboardFieldOperations';
 import { DashboardHero } from '@/components/dashboard/DashboardHero';
 import type { RecentDoc, ProjectFinancialDetail } from '@/hooks/useDashboardData';
 import type { DashboardPendingInvoice } from '@/lib/dashboardPendingInvoices';
@@ -172,6 +173,8 @@ export function GCDashboardView({
           activeProjectCount={activeProjects.length}
           variant="compact-hero"
         />
+
+        <DashboardFieldOperations projects={projects} role="GC" />
 
         {/* PROJECTS — focal point of the dashboard */}
         <MyProjectsHero
