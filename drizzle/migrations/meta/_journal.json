@@ -582,6 +582,13 @@
       "when": 1794974861211,
       "tag": "0082_structured_daily_material_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1795108577407,
+      "tag": "0083_field_material_receipt",
+      "breakpoints": true
     }
   ]
 }

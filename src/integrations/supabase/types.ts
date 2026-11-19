@@ -3834,6 +3834,9 @@ export type Database = {
           material_context: Json
           project_id: string
           quantity: number | null
+          received_at: string | null
+          received_by: string | null
+          received_quantity: number | null
           released_at: string | null
           released_by: string | null
           report_id: string
@@ -3863,6 +3866,9 @@ export type Database = {
           material_context?: Json
           project_id: string
           quantity?: number | null
+          received_at?: string | null
+          received_by?: string | null
+          received_quantity?: number | null
           released_at?: string | null
           released_by?: string | null
           report_id: string
@@ -3892,6 +3898,9 @@ export type Database = {
           material_context?: Json
           project_id?: string
           quantity?: number | null
+          received_at?: string | null
+          received_by?: string | null
+          received_quantity?: number | null
           released_at?: string | null
           released_by?: string | null
           report_id?: string
@@ -9999,6 +10008,10 @@ export type Database = {
       compute_catalog_normalized_search: {
         Args: { item_row: Database["public"]["Tables"]["catalog_items"]["Row"] }
         Returns: string
+      }
+      confirm_field_material_receipt: {
+        Args: { p_item_id: string; p_quantity: number }
+        Returns: undefined
       }
       create_field_material_order: {
         Args: { p_item_id: string }

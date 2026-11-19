@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Mic, Square, Plus, Trash2, Send, Check, Pause, Loader2, ClipboardList, Sparkles, FileText, Package, CheckCircle2, TriangleAlert, Clock3, MapPin } from 'lucide-react';
+import { Mic, Square, Plus, Trash2, Send, Check, Pause, Loader2, ClipboardList, Sparkles, FileText, Package, CheckCircle2, TriangleAlert, Clock3, MapPin, Truck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { conversionFor, createWorkOrderFromItem, createMaterialOrderFromItem } from '@/lib/fieldItemConversion';
@@ -247,10 +247,51 @@ function MaterialOrderLink({ item }: { item: any }) {
   const trimRequest = trimRequestFromMaterialContext(item.description, item.material_context);
   const params = new URLSearchParams({ tab: 'purchase-orders', edit_po: item.converted_po_id });
   if (trimRequest) params.set('field_item', item.id);
-  return <div className="flex flex-wrap items-center gap-2">
-    {data && <Badge variant="outline" className="whitespace-normal" title={data.supplier_name}>{fieldMaterialOrderStatusLabel(data.status)}</Badge>}
-    <Button size="sm" variant="link" className="px-0" onClick={() => navigate(`/project/${item.project_id}/purchase-orders?${params.toString()}`)}>Open material order</Button>
+  return <div className="space-y-2">
+    <div className="flex flex-wrap items-center gap-2">
+      {data && <Badge variant="outline" className="whitespace-normal" title={data.supplier_name}>{fieldMaterialOrderStatusLabel(data.status)}</Badge>}
+      <Button size="sm" variant="link" className="px-0" onClick={() => navigate(`/project/${item.project_id}/purchase-orders?${params.toString()}`)}>Open material order</Button>
+    </div>
+    <MaterialReceipt item={item} orderStatus={data?.status} />
   </div>;
+}
+
+const SENT_STATUSES = ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED'];
+
+function MaterialReceipt({ item, orderStatus }: { item: any; orderStatus?: string }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [qty, setQty] = useState(String(item.received_quantity ?? item.quantity ?? ''));
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState<{ q: number; at: string } | null>(null);
+  const received = saved ?? (item.received_quantity != null ? { q: Number(item.received_quantity), at: item.received_at } : null);
+  if (!orderStatus || !SENT_STATUSES.includes(orderStatus)) return null;
+  const unit = item.unit || 'pcs';
+  const save = async () => {
+    setBusy(true);
+    const { error } = await db.rpc('confirm_field_material_receipt', { p_item_id: item.id, p_quantity: Number(qty) });
+    setBusy(false);
+    if (error) { toast({ title: 'Could not record delivery', description: error.message, variant: 'destructive' }); return; }
+    setSaved({ q: Number(qty), at: new Date().toISOString() });
+    setOpen(false);
+    toast({ title: 'Delivery recorded' });
+    qc.invalidateQueries({ queryKey: ['field-reports'] });
+  };
+  if (open) return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Input aria-label="Quantity received" type="number" inputMode="decimal" min="0" className="w-24" value={qty} onChange={e => setQty(e.target.value)} />
+      <span className="text-xs text-muted-foreground">{unit} arrived on site</span>
+      <Button size="sm" disabled={busy || !(Number(qty) > 0)} onClick={save}>Save</Button>
+      <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+    </div>
+  );
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {received && <Badge variant="secondary" className="whitespace-normal"><Truck className="h-3 w-3 mr-1" />Received {received.q} {unit} on site{received.at ? ` · ${new Date(received.at).toLocaleDateString()}` : ''}</Badge>}
+      <Button size="sm" variant="outline" onClick={() => setOpen(true)}><Truck className="h-4 w-4 mr-1" />{received ? 'Change received amount' : 'Confirm delivery'}</Button>
+    </div>
+  );
 }
 
 function ReviewActions({ item, onChange }: { item: any; onChange: () => void }) {
@@ -294,6 +335,8 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
   const [busy, setBusy] = useState(false);
   const recRef = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
+  const autoSortRef = useRef(false);
+  const dictate = () => { if (!recording) autoSortRef.current = true; void toggleRecord(); };
 
   const saveText = async () => {
     if (text === (report.raw_text || '')) return;
@@ -366,6 +409,7 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
         await db.from('field_reports').update({ audio_path: path, transcript: null }).eq('id', report.id);
         toast({ title: 'Voice note saved' });
         onChange();
+        if (autoSortRef.current) { autoSortRef.current = false; void sortWithAi(); }
       };
       rec.start(); recRef.current = rec; setRecording(true);
     } catch {
@@ -384,6 +428,12 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
 
   return (
     <div className="space-y-3">
+      <Button type="button" onClick={dictate} disabled={sorting} variant={recording ? 'destructive' : 'default'}
+        aria-label={recording ? 'Stop and sort site update' : 'Dictate site update'}
+        className="lg:hidden fixed right-4 bottom-24 z-30 h-14 rounded-full px-5 shadow-lg">
+        {sorting ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : recording ? <Square className="h-5 w-5 mr-2" /> : <Mic className="h-5 w-5 mr-2" />}
+        {sorting ? 'Sorting…' : recording ? 'Stop & sort' : 'Dictate'}
+      </Button>
       <p className="text-sm text-muted-foreground">Tell your reviewing company what happened today. Only they see this until they release each item. Don't include prices.</p>
       <Textarea rows={3} placeholder="What got done, what you need, what's stopping you…" value={text} onChange={e => setText(e.target.value)} onBlur={saveText} />
       <div className="flex items-center gap-2 flex-wrap">
