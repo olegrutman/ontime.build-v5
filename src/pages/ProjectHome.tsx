@@ -12,7 +12,6 @@ import { getDemoProjectById } from '@/data/demoData';
 import { DemoProjectOverview, DemoPurchaseOrdersTab, DemoInvoicesTab, DemoSOVTab, DemoRFIsTab } from '@/components/demo';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
 import { StatusPill } from '@/components/ui/status-pill';
 import { NotificationSheet } from '@/components/notifications';
 import { Bell } from 'lucide-react';
@@ -373,12 +372,6 @@ export default function ProjectHome() {
 
 
             {/* Overview Tab */}
-            {activeTab === 'overview' && !isSupplier && (
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-y border-border py-3">
-                <div><h2 className="font-heading text-xl font-semibold">Field Reports</h2></div>
-                <Button onClick={() => handleTabChange('daily-reports')}><ClipboardList />Field Reports</Button>
-              </div>
-            )}
             {(activeTab === 'daily-reports' || activeTab === 'daily-report-designs') && (
               <DailyReportsPage projectId={project.id} projectName={project.name} projectAddress={formattedAddress || undefined} />
             )}

@@ -6,6 +6,8 @@ import { C, fontLabel, fmt, WarnItem, type PillType } from '@/components/shared/
 import { CanonicalKpiGrid } from '@/components/project/kpi/CanonicalKpiGrid';
 
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
+import { FieldOperationsCard } from '@/components/field-reports/FieldOperationsCard';
+import { useFieldOperations } from '@/hooks/useFieldOperations';
 import { useCrewTracker } from '@/hooks/useCrewTracker';
 import { CrewBudgetOverview } from '@/components/project/CrewBudgetOverview';
 import { crewBudgetComparison, withCrewSpending } from '@/lib/crewTracker';
@@ -33,6 +35,7 @@ const pctTxt = (p: number | null) => (p === null ? NOT_SET : `${p}%`);
 export function FCProjectOverview({ projectId, projectName = 'Project', financials, onNavigate, isTM = false }: Props) {
   const { userOrgRoles } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization?.id;
+  const fieldOperations = useFieldOperations(projectId, 'FC');
   const tracker = useCrewTracker(projectId);
   const spending = crewBudgetComparison(tracker.entries, tracker.budget);
   const crewLedger = withCrewSpending(financials.ledger, spending.totalActual, spending.forecast);
@@ -249,6 +252,14 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
       {contractNotice}
 
       <CrewBudgetOverview tracker={tracker} onNavigate={onNavigate} />
+
+      <FieldOperationsCard
+        model={fieldOperations.model}
+        isLoading={fieldOperations.isLoading}
+        isError={fieldOperations.isError}
+        onRetry={() => { void fieldOperations.refetch(); }}
+        onNavigate={onNavigate}
+      />
 
       {/* ─── Canonical financial cards — one ledger, one formula per number ─── */}
       <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700, paddingTop: 4 }}>

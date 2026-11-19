@@ -17,6 +17,8 @@ import { BuyerMaterialsAnalyticsSection } from '@/components/project/BuyerMateri
 import { OverviewAttentionStrip } from '@/components/project/OverviewAttentionStrip';
 import { ProjectHealthHero, computeHealthStatus, buildHealthSummary } from '@/components/project/overview/ProjectHealthHero';
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
+import { FieldOperationsCard, fieldOperationsWarnings } from '@/components/field-reports/FieldOperationsCard';
+import { useFieldOperations } from '@/hooks/useFieldOperations';
 
 
 import { parseMoney } from '@/lib/money';
@@ -80,6 +82,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const { user, userOrgRoles } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization?.id;
   const viewerOrgType = (userOrgRoles[0]?.organization?.type as OrgType) ?? null;
+  const fieldOperations = useFieldOperations(projectId, 'TC');
 
   // ─── Buyer materials analytics (only when TC is materials-responsible) ───
   const matEstimateForAnalytics = financials.materialEstimate || financials.approvedEstimateSum || 0;
@@ -417,7 +420,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const myCostBasisPill = financials.isTCMaterialResponsible ? 'Incl. materials' : 'Labor + my COs';
 
   // ─── Warnings ───
-  const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = [];
+  const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = fieldOperationsWarnings(fieldOperations.model);
   if (totalPendingSubmittedFromGC > 0) {
     warnings.push({ color: C.yellow, icon: '💰', title: `Invoice Awaiting ${gcName} Approval`, sub: `${pendingFromGCCount} invoice${pendingFromGCCount > 1 ? 's' : ''} pending`, value: fmt(totalPendingSubmittedFromGC), pill: `Chasing ${gcName}`, pillType: 'pw', tab: 'invoices' });
   }
@@ -506,6 +509,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
             projectedMarginPct={ledger.forecastMarginPct}
             awaitingUpstream={!ledger.forecastMargin.known}
             summary={summary}
+            detail={<p className="text-xs font-semibold text-white/70">Field: {fieldOperations.model?.healthLabel || (fieldOperations.isLoading ? 'Loading Field Reports…' : 'Field Reports unavailable')}</p>}
             miniStats={[
               { label: 'Cash Position', value: fmt(cashPosition), tone: cashPosition >= 0 ? 'pos' : 'neg' },
               { label: isTM ? 'Approved WO Net' : 'Approved CO Net', value: fmt(approvedNet), tone: approvedNet >= 0 ? 'pos' : 'neg' },
@@ -514,6 +518,14 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           />
         );
       })()}
+
+      <FieldOperationsCard
+        model={fieldOperations.model}
+        isLoading={fieldOperations.isLoading}
+        isError={fieldOperations.isError}
+        onRetry={() => { void fieldOperations.refetch(); }}
+        onNavigate={onNavigate}
+      />
 
       {/* ─── Canonical financial cards — one ledger, one formula per number ─── */}
       <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700, paddingTop: 4 }}>

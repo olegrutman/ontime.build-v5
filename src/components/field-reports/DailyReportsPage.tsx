@@ -38,7 +38,7 @@ export function DailyReportsPage({ projectId, projectName = 'Project', projectAd
   const orgIds = userOrgRoles.map(r => r.organization_id);
   const crewIds = userOrgRoles.filter(r => ['FC', 'TC'].includes(r.organization?.type as string)).map(r => r.organization_id);
   const key = ['daily-report-register', projectId, user?.id];
-  const refresh = () => { qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ['field-reports', projectId] }); qc.invalidateQueries({ queryKey: ['field-summary', projectId] }); };
+  const refresh = () => { qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ['field-reports', projectId] }); qc.invalidateQueries({ queryKey: ['field-summary', projectId] }); qc.invalidateQueries({ queryKey: ['field-operations-overview', projectId] }); };
   const { data, isLoading, error } = useQuery({ queryKey: key, enabled: !!user, queryFn: async () => {
     const [headers, sourceItems, photos] = await Promise.all([allRows('field_reports', projectId), allRows('field_report_items', projectId), allRows('field_report_photos', projectId)]);
     const own = (r: any) => orgIds.includes(r.crew_org_id) || orgIds.includes(r.reviewer_org_id);

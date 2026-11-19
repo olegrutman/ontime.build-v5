@@ -18,6 +18,8 @@ import { OverviewAttentionStrip } from '@/components/project/OverviewAttentionSt
 import { OwnerBillingsPanel } from '@/components/project/gc/OwnerBillingsPanel';
 import { ProjectHealthHero, computeHealthStatus, buildHealthSummary } from '@/components/project/overview/ProjectHealthHero';
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
+import { FieldOperationsCard, fieldOperationsWarnings } from '@/components/field-reports/FieldOperationsCard';
+import { useFieldOperations } from '@/hooks/useFieldOperations';
 import { APPROVED_CO_STATUSES } from '@/hooks/coAggregation';
 import { baseContractSum } from '@/lib/contractSums';
 
@@ -89,6 +91,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const canInvite = viewerOrgType === 'GC' || viewerOrgType === 'TC';
   const myOrgName = userOrgRoles[0]?.organization?.name || 'Your Company';
   const currentOrgId = userOrgRoles[0]?.organization?.id;
+  const fieldOperations = useFieldOperations(projectId, 'GC');
 
   const ownerBudgetReal = financials.ownerContractValue || 0;
   const upContract = financials.upstreamContract;
@@ -292,7 +295,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   });
 
   // ─── Warnings ───
-  const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = [];
+  const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = fieldOperationsWarnings(fieldOperations.model);
   if (pendingPayableCount > 0) {
     warnings.push({ color: C.red, icon: '💰', title: `${pendingPayableCount} Invoice${pendingPayableCount > 1 ? 's' : ''} Awaiting Your Approval`, sub: `From ${tcName} + suppliers`, value: fmt(pendingPayableAmount), pill: 'Action Needed', pillType: 'pr', tab: 'invoices' });
   }
@@ -357,7 +360,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
             projectedMarginPct={ledger.forecastMarginPct}
             awaitingUpstream={!ledger.forecastMargin.known}
             summary={summary}
-            
+            detail={<p className="text-xs font-semibold text-white/70">Field: {fieldOperations.model?.healthLabel || (fieldOperations.isLoading ? 'Loading Field Reports…' : 'Field Reports unavailable')}</p>}
             miniStats={[
               { label: 'Cash Position', value: fmt(cashPosition), tone: cashPosition >= 0 ? 'pos' : 'neg' },
               { label: `Approved ${coWord} Net`, value: fmt(approvedNet), tone: approvedNet >= 0 ? 'pos' : 'neg' },
@@ -375,6 +378,14 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
           busy={savingOwner}
         />
       )}
+
+      <FieldOperationsCard
+        model={fieldOperations.model}
+        isLoading={fieldOperations.isLoading}
+        isError={fieldOperations.isError}
+        onRetry={() => { void fieldOperations.refetch(); }}
+        onNavigate={onNavigate}
+      />
 
       {/* ─── Canonical financial cards — one ledger, one formula per number ─── */}
       <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700, paddingTop: 4 }}>
