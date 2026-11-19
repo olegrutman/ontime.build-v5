@@ -430,7 +430,7 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
     <div className="space-y-3">
       <Button type="button" onClick={dictate} disabled={sorting} variant={recording ? 'destructive' : 'default'}
         aria-label={recording ? 'Stop and sort site update' : 'Dictate site update'}
-        className="lg:hidden fixed right-4 bottom-24 z-30 h-14 rounded-full px-5 shadow-lg">
+        className="lg:hidden fixed left-4 bottom-24 z-30 h-14 rounded-full px-5 shadow-lg">
         {sorting ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : recording ? <Square className="h-5 w-5 mr-2" /> : <Mic className="h-5 w-5 mr-2" />}
         {sorting ? 'Sorting…' : recording ? 'Stop & sort' : 'Dictate'}
       </Button>
