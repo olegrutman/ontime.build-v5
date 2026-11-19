@@ -525,6 +525,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         isError={fieldOperations.isError}
         onRetry={() => { void fieldOperations.refetch(); }}
         onNavigate={onNavigate}
+        projectId={projectId}
       />
 
       {/* ─── Canonical financial cards — one ledger, one formula per number ─── */}

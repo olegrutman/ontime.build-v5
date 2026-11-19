@@ -385,6 +385,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
         isError={fieldOperations.isError}
         onRetry={() => { void fieldOperations.refetch(); }}
         onNavigate={onNavigate}
+        projectId={projectId}
       />
 
       {/* ─── Canonical financial cards — one ledger, one formula per number ─── */}
