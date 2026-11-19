@@ -92,6 +92,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const [activityOpen, setActivityOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
   const [externalInviteOpen, setExternalInviteOpen] = useState(false);
+  const [outsideApprovalOpen, setOutsideApprovalOpen] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [pdfPerspectiveOpen, setPdfPerspectiveOpen] = useState(false);
   const [entryRequest, setEntryRequest] = useState<{ itemId: string; token: number } | null>(null);
@@ -642,6 +643,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                 <Receipt className="h-3.5 w-3.5" /> {linkedInvoice.invoice_number}
               </Button>
             ) : null}
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => setOutsideApprovalOpen(true)}>
+              <ShieldCheck className="h-3.5 w-3.5" /> Outside approval
+            </Button>
             {isGC && (
               <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-muted-foreground" onClick={() => setExternalInviteOpen(true)}>
                 <ExternalLink className="h-3.5 w-3.5" /> Invite External
@@ -1066,6 +1070,21 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           </div>
         </div>
       </div>
+
+      <Dialog open={outsideApprovalOpen} onOpenChange={setOutsideApprovalOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Outside approval</DialogTitle>
+            <DialogDescription>
+              Send a secure signing link. The person signs without an Ontime account. Don't share the address from your browser bar — that page asks for a login.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <COExternalApprovalBanner co={co} projectId={projectId} role={role} />
+            <COOwnerApprovalCard co={co} role={role} projectId={projectId} coTotal={isGC ? tcBillableTotal : financials.viewer.totalToUpstream} onRefresh={refreshDetail} />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <COExternalInviteDialog
         open={externalInviteOpen}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Check, X, Loader2, ShieldCheck, AlertTriangle, FileDown, Lock, Clock, FileCheck2, ArrowRight } from 'lucide-react';
+import { Check, X, Loader2, ShieldCheck, AlertTriangle, FileDown, Lock, Clock, FileCheck2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -334,25 +334,7 @@ export default function COApprovalPage() {
           )}
         </div>
         </>)}
-        <div className="no-print"><ValueCard /></div>
       </div>
-    </div>
-  );
-}
-
-function ValueCard() {
-  return (
-    <div className="bg-card border border-border rounded-2xl p-5 text-left">
-      <p className="text-[0.7rem] uppercase tracking-wider text-primary font-semibold">Powered by Ontime.Build</p>
-      <h3 className="text-base font-bold text-foreground mt-1">Change orders without the disputes</h3>
-      <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-        <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />Signed approvals with a permanent, timestamped audit trail</li>
-        <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />Contract totals update the moment work is approved</li>
-        <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />Owners, contractors and crews on one live project ledger</li>
-      </ul>
-      <a href="https://ontime.build" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 mt-3 text-sm font-semibold text-primary hover:underline">
-        Run your projects on Ontime.Build <ArrowRight className="h-4 w-4" />
-      </a>
     </div>
   );
 }

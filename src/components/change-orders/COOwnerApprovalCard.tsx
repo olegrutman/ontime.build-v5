@@ -130,7 +130,7 @@ export function COOwnerApprovalCard({ co, role = 'GC', projectId, projectName, c
     const token = type === 'owner' ? anyCo.owner_approval_token : anyCo.architect_approval_token;
     if (!token) return;
     navigator.clipboard.writeText(`${window.location.origin}/external/co-approve/${token}`);
-    toast.success('Approval link copied');
+    toast.success('Signing link copied — no account needed to open it');
   }
 
   function renderRow(type: ApprovalType) {
@@ -172,8 +172,8 @@ export function COOwnerApprovalCard({ co, role = 'GC', projectId, projectName, c
         </div>
         <div className="flex items-center gap-1.5 shrink-0 ml-auto">
           {token && status !== 'not_required' && (
-            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => copyLink(type)}>
-              <Copy className="h-3 w-3" />
+            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={() => copyLink(type)} aria-label="Copy signing link">
+              <Copy className="h-3 w-3" /> Copy link
             </Button>
           )}
           <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => openDialog(type)}>
