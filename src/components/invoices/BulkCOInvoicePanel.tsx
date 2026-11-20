@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { BillingPeriodPicker, validateBillingPeriod } from './BillingPeriodPicker';
 import { splitBulkInvoiceOrders, validateCoInvoiceRows, type BillableInvoiceRow } from '@/lib/coInvoiceRows';
+import { canBillCrewLaborEntry } from '@/lib/crewHourReview';
 
 export interface BulkBillableCO {
   co_id: string;
@@ -124,18 +125,24 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
   // Preserve scope and source IDs; mismatched approval totals must be reviewed.
   const itemRowsFor = async (co: BulkBillableCO, billingOrgId: string | null) => {
     if (!billingOrgId) throw new Error('The invoicing company could not be resolved.');
-    const [li, le, mat, eq] = await Promise.all([
-      supabase.from('co_line_items').select('id, item_name, sort_order').eq('co_id', co.co_id).eq('approval_status', 'approved'),
-      supabase.from('co_labor_entries').select('id, co_line_item_id, line_total, org_id, is_actual_cost').eq('co_id', co.co_id).eq('is_actual_cost', false).eq('org_id', billingOrgId),
+    const [li, le, mat, eq, orderRes] = await Promise.all([
+      supabase.from('co_line_items').select('id, item_name, sort_order, approval_status').eq('co_id', co.co_id),
+      supabase.from('co_labor_entries').select('id, co_line_item_id, line_total, org_id, is_actual_cost, entered_by_role, crew_review_status').eq('co_id', co.co_id).eq('is_actual_cost', false).eq('org_id', billingOrgId),
       supabase.from('co_material_items').select('id, description, quantity, uom, billed_amount, line_number').eq('co_id', co.co_id).eq('org_id', billingOrgId),
       supabase.from('co_equipment_items').select('id, description, billed_amount').eq('co_id', co.co_id).eq('org_id', billingOrgId),
+      supabase.from('change_orders').select('id, status, pricing_type').eq('id', co.co_id).single(),
     ]);
-    for (const result of [li, le, mat, eq]) if (result.error) throw result.error;
+    for (const result of [li, le, mat, eq, orderRes]) if (result.error) throw result.error;
     // Partial draws use the entry-aware progress dialog; do not consume the
     // whole order again through the bulk path.
     if (co.already_billed > 0.005) throw new Error('Use progress billing for a work order that is already partially billed.');
-    const labor = (le.data || []).filter(e => !billingOrgId || e.org_id === billingOrgId);
+    const order = orderRes.data;
+    const labor = (le.data || []).filter(e => (!billingOrgId || e.org_id === billingOrgId)
+      && (e.entered_by_role !== 'FC' || canBillCrewLaborEntry(e, order)));
+    const approvedLaborItemIds = new Set(labor.filter(e => e.crew_review_status === 'approved').map(e => e.co_line_item_id));
     const lines = (li.data || [])
+      .filter(l => l.approval_status === 'approved'
+        || (order.pricing_type === 'tm' && approvedLaborItemIds.has(l.id)))
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       .map(l => ({
         label: l.item_name || 'Labor',
@@ -143,11 +150,12 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
         entryIds: labor.filter(e => e.co_line_item_id === l.id).map(e => e.id),
       }))
       .filter(r => r.amount > 0.005);
-    const mats = (mat.data || [])
+    const awaitingOverallApproval = order.pricing_type === 'tm' && !['approved', 'contracted'].includes(order.status);
+    const mats = awaitingOverallApproval ? [] : (mat.data || [])
       .sort((a, b) => a.line_number - b.line_number)
       .map(m => ({ label: `Material: ${m.description}${m.quantity ? ` (${m.quantity} ${m.uom || ''})`.replace(' )', ')') : ''}`, amount: Number(m.billed_amount || 0), entryIds: [m.id] }))
       .filter(r => r.amount > 0.005);
-    const eqs = (eq.data || [])
+    const eqs = awaitingOverallApproval ? [] : (eq.data || [])
       .map(e => ({ label: `Equipment: ${e.description}`, amount: Number(e.billed_amount || 0), entryIds: [e.id] }))
       .filter(r => r.amount > 0.005);
     const sum = (rows: { amount: number }[]) => rows.reduce((s, r) => s + r.amount, 0);

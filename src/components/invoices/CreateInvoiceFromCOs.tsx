@@ -20,6 +20,7 @@ import { buildInvoiceNumber } from '@/lib/invoiceNumber';
 import { fetchWoBilledToDate, type WoBilledInfo } from '@/lib/woProgressBillingData';
 import { woBillingSummary, fixedProgressAmount } from '@/lib/woProgressBilling';
 import { completedItemClaims, isCompletedBillableItem } from '@/lib/coItemCompletion';
+import { canBillCrewLaborEntry, canCrewBillOrder } from '@/lib/crewHourReview';
 
 
 interface CreateInvoiceFromCOsProps {
@@ -32,6 +33,10 @@ interface CreateInvoiceFromCOsProps {
 
 interface ApprovedCO {
   id: string;
+  status: string;
+  org_id: string | null;
+  originating_org_id?: string | null;
+  assigned_to_org_id?: string | null;
   title: string | null;
   co_number: string | null;
   location_tag: string | null;
@@ -114,13 +119,27 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
     (async () => {
       setLoading(true);
       try {
-        // Get approved COs on this project filtered by org involvement
-        const { data: cos, error: cosErr } = await supabase
+        // Overall approval preserves existing billing. For crews, subcontractor-approved
+        // T&M hours also open billing while the order is still submitted upstream.
+        const hourApprovedCoIds = new Set<string>();
+        if (invoicingRole === 'FC') {
+          const { data: approvedHours, error: hoursError } = await supabase
+            .from(t.labor)
+            .select('co_id')
+            .eq('org_id', currentOrgId)
+            .eq('entered_by_role', 'FC')
+            .eq('is_actual_cost', false)
+            .eq('crew_review_status', 'approved');
+          if (hoursError) throw hoursError;
+          for (const entry of approvedHours ?? []) hourApprovedCoIds.add(entry.co_id);
+        }
+
+        let orderQuery = supabase
           .from(t.co)
-          .select('id, title, co_number, location_tag, reason, reason_note, problem_summary, pricing_type, tc_submitted_price, approved_amount, nte_cap, org_id, originating_org_id, assigned_to_org_id, completion_acknowledged_at')
-          .eq('project_id', projectId)
-          .in('status', ['approved', 'contracted'])
-          .order('created_at', { ascending: false });
+          .select('id, status, title, co_number, location_tag, reason, reason_note, problem_summary, pricing_type, tc_submitted_price, approved_amount, nte_cap, org_id, originating_org_id, assigned_to_org_id, completion_acknowledged_at')
+          .eq('project_id', projectId);
+        if (invoicingRole !== 'FC') orderQuery = orderQuery.in('status', ['approved', 'contracted']);
+        const { data: cos, error: cosErr } = await orderQuery.order('created_at', { ascending: false });
         if (cosErr) throw cosErr;
 
         // Crews stay billable after their work order is forwarded upstream: once a
@@ -146,10 +165,12 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
             return co.assigned_to_org_id === currentOrgId || co.org_id === currentOrgId;
           }
           if (invoicingRole === 'FC') {
-            // FC invoices TC: COs they created, originated, or collaborated on
-            return co.org_id === currentOrgId
-              || (co as any).originating_org_id === currentOrgId
+            // FC invoices TC for its own work once the order is approved overall,
+            // or earlier when its T&M hours have been approved by the reviewer.
+            const involved = co.org_id === currentOrgId
+              || co.originating_org_id === currentOrgId
               || collabCoIds.has(co.id);
+            return involved && canCrewBillOrder(co, hourApprovedCoIds.has(co.id));
           }
           return false; // GC doesn't create invoices from COs
         });
@@ -257,10 +278,12 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       if (invoicingRole) {
         equipmentQuery = equipmentQuery.eq('added_by_role', invoicingRole);
       }
+      let scopeQuery = supabase.from(t.line).select('*').in('co_id', ids).order('sort_order');
+      if (invoicingRole !== 'FC') scopeQuery = scopeQuery.eq('approval_status', 'approved');
 
       const [laborRes, lineItemsRes, materialsRes, equipmentRes, cosRes] = await Promise.all([
         laborQuery,
-        supabase.from(t.line).select('*').in('co_id', ids).eq('approval_status', 'approved').order('sort_order'),
+        scopeQuery,
         materialsQuery,
         equipmentQuery,
         supabase.from(t.co)
@@ -274,12 +297,27 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       if (equipmentRes.error) throw equipmentRes.error;
       if (cosRes.error) throw cosRes.error;
 
-      const scopeItems = (lineItemsRes.data ?? []) as unknown as COLineItem[];
+      const orderById = new Map(approvedCOs.map(co => [co.id, co]));
+      const rawScopeItems = (lineItemsRes.data ?? []) as unknown as COLineItem[];
+      const allLabor = (laborRes.data ?? []) as unknown as COLaborEntry[];
+      const labor = allLabor.filter(entry => {
+        const order = orderById.get(entry.co_id);
+        return order && (invoicingRole !== 'FC' || canBillCrewLaborEntry(entry, order));
+      });
+      const scopeItems = rawScopeItems.filter(item => {
+        if (item.approval_status === 'approved') return true;
+        const order = orderById.get(item.co_id);
+        return invoicingRole === 'FC' && order?.pricing_type === 'tm'
+          && labor.some(entry => entry.co_line_item_id === item.id && entry.crew_review_status === 'approved');
+      });
       const scopeMap = new Map(scopeItems.map(s => [s.id, s]));
-      const labor = ((laborRes.data ?? []) as unknown as COLaborEntry[])
-        .filter(entry => scopeMap.has(entry.co_line_item_id));
-      const materials = (materialsRes.data ?? []) as unknown as COMaterialItem[];
-      const equipment = (equipmentRes.data ?? []) as unknown as COEquipmentItem[];
+      const billableLabor = labor.filter(entry => scopeMap.has(entry.co_line_item_id));
+      // Before overall approval, only the reviewed hours bill; other cost buckets
+      // still wait for their normal order approval.
+      const materials = ((materialsRes.data ?? []) as unknown as COMaterialItem[])
+        .filter(item => ['approved', 'contracted'].includes(orderById.get(item.co_id)?.status ?? ''));
+      const equipment = ((equipmentRes.data ?? []) as unknown as COEquipmentItem[])
+        .filter(item => ['approved', 'contracted'].includes(orderById.get(item.co_id)?.status ?? ''));
 
       // Per-CO procurement responsibility — when GC procures, the supplier bills GC
       // directly via PO. The TC must NOT invoice GC for those buckets or it double-charges.
@@ -321,7 +359,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         const co = coById.get(id);
         if (!co) continue;
         const info = billedMap.get(id);
-        const ownEntries = labor.filter(e => e.co_id === id);
+        const ownEntries = billableLabor.filter(e => e.co_id === id);
         // Tagged labor is already reserved; only unitemized historical progress needs a credit.
         const reservedValue = ownEntries.filter(e => info?.entryIds.has(e.id)).reduce((sum, e) => sum + Number(e.line_total ?? 0), 0);
         const priorProgress = Math.max(0, (info?.billed ?? 0) + (info?.draft ?? 0) - reservedValue);
@@ -354,10 +392,12 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       }
 
       // Labor entries → line items (T&M / NTE: only entries not on an earlier invoice)
-      for (const entry of labor) {
+      for (const entry of billableLabor) {
         if (fixedIds.has(entry.co_id) || alreadyBilled(entry.co_id, entry.id)) continue;
         const scope = scopeMap.get(entry.co_line_item_id);
-        if (!scope || !isCompletedBillableItem(scope)) continue;
+        if (!scope) continue;
+        const order = coById.get(entry.co_id);
+        if (order?.pricing_type === 'fixed' && !isCompletedBillableItem(scope)) continue;
         const itemName = scope?.item_name ?? 'Labor';
         let desc: string;
         if (entry.pricing_mode === 'lump_sum' && entry.lump_sum) {
@@ -567,7 +607,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         {step === 'select' && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Select approved {isTM ? 'work orders' : 'change orders'} to include in this invoice.
+              Select {isTM ? 'work orders' : 'change orders'} available for billing. Crew hours appear here after subcontractor approval.
             </p>
 
             {(
@@ -616,7 +656,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
               </div>
             ) : availableCOs.length === 0 ? (
               <div className="text-center py-8 text-sm text-muted-foreground">
-                No unbilled approved {isTM ? 'work orders' : 'change orders'} available.
+                No {isTM ? 'work orders' : 'change orders'} with billable items available.
               </div>
             ) : (
               <div className="space-y-2">
