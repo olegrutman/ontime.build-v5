@@ -4,6 +4,23 @@ export interface BillableInvoiceRow {
   entryIds: string[];
 }
 
+export interface BulkInvoiceBalance {
+  already_billed: number;
+  remaining: number;
+}
+
+/** Bulk billing creates full itemized invoices; partially billed orders use progress billing. */
+export function splitBulkInvoiceOrders<T extends BulkInvoiceBalance>(orders: T[]) {
+  const billable: T[] = [];
+  const partiallyBilled: T[] = [];
+  for (const order of orders) {
+    if (order.remaining <= 0.005) continue;
+    if (order.already_billed > 0.005) partiallyBilled.push(order);
+    else billable.push(order);
+  }
+  return { billable, partiallyBilled };
+}
+
 /** Never silently replace missing scope with a summary or increase approved billing. */
 export function validateCoInvoiceRows(rows: BillableInvoiceRow[], remaining: number): BillableInvoiceRow[] {
   const positive = rows.filter(row => row.amount > 0.005);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { submittedLaborTotal, validateCoInvoiceRows } from '@/lib/coInvoiceRows';
+import { splitBulkInvoiceOrders, submittedLaborTotal, validateCoInvoiceRows } from '@/lib/coInvoiceRows';
 
 describe('subcontractor-added invoice work', () => {
   it('freezes saved crew-derived and manual billable labor once', () => {
@@ -11,5 +11,25 @@ describe('subcontractor-added invoice work', () => {
   });
   it('does not silently discard added work or exceed frozen approval', () => {
     expect(() => validateCoInvoiceRows([{ label: 'Steel angles', amount: 3120, entryIds: ['derived'] }, { label: 'Weld studs', amount: 1000, entryIds: ['manual'] }], 3120)).toThrow('approved remaining amount is $3120.00');
+  });
+});
+
+describe('bulk re-invoicing eligibility', () => {
+  it('makes every reopened $4,120 order available after its deleted invoice no longer bills it', () => {
+    const reopened = { co_id: 'reopened', already_billed: 0, remaining: 4120 };
+    expect(splitBulkInvoiceOrders([reopened]).billable).toEqual([reopened]);
+  });
+
+  it('keeps a $1,170 partially billed order out of the full itemized batch', () => {
+    const partial = { co_id: 'partial', already_billed: 1170, remaining: 1170 };
+    const result = splitBulkInvoiceOrders([partial]);
+    expect(result.billable).toEqual([]);
+    expect(result.partiallyBilled).toEqual([partial]);
+  });
+
+  it('does not offer a fully billed $650 order in either invoice path', () => {
+    const result = splitBulkInvoiceOrders([{ co_id: 'paid', already_billed: 650, remaining: 0 }]);
+    expect(result.billable).toEqual([]);
+    expect(result.partiallyBilled).toEqual([]);
   });
 });

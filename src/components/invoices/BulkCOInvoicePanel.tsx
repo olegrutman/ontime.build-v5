@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { BillingPeriodPicker, validateBillingPeriod } from './BillingPeriodPicker';
-import { validateCoInvoiceRows, type BillableInvoiceRow } from '@/lib/coInvoiceRows';
+import { splitBulkInvoiceOrders, validateCoInvoiceRows, type BillableInvoiceRow } from '@/lib/coInvoiceRows';
 
 export interface BulkBillableCO {
   co_id: string;
@@ -73,7 +73,7 @@ function coLabel(co: BulkBillableCO) {
 }
 
 export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel, onDone }: Props) {
-  const billable = useMemo(() => cos.filter(c => c.remaining > 0.005), [cos]);
+  const { billable, partiallyBilled } = useMemo(() => splitBulkInvoiceOrders(cos), [cos]);
   const [selected, setSelected] = useState<Set<string>>(() => new Set(billable.map(c => c.co_id)));
   const [combine, setCombine] = useState(true);
   const [periodStart, setPeriodStart] = useState<Date | undefined>();
@@ -306,6 +306,18 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
             ))}
           </div>
         </div>
+        {partiallyBilled.length > 0 && (
+          <div className="mt-3 rounded-lg border border-state-open/30 bg-state-open-bg p-3 text-state-open-foreground">
+            <p className="text-sm font-medium">
+              {partiallyBilled.length === 1
+                ? '1 partially billed order is not included in this bulk invoice.'
+                : `${partiallyBilled.length} partially billed orders are not included in this bulk invoice.`}
+            </p>
+            <p className="mt-1 text-xs">
+              Use New Invoice for progress billing: {partiallyBilled.map(co => invoiceOrderReference(co.co_number)).join(', ')}.
+            </p>
+          </div>
+        )}
       </div>
 
       <div>
