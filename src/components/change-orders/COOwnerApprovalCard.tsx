@@ -90,7 +90,7 @@ export function COOwnerApprovalCard({ co, role = 'GC', projectId, projectName, c
 
       const approveUrl = `${window.location.origin}/external/co-approve/${token}`;
 
-      const { error: fnErr } = await supabase.functions.invoke('send-co-approval-email', {
+      const { data: delivery, error: fnErr } = await supabase.functions.invoke('send-co-approval-email', {
         body: {
           co_id: co.id,
           approval_type: type,
@@ -105,18 +105,22 @@ export function COOwnerApprovalCard({ co, role = 'GC', projectId, projectName, c
         },
       });
       if (fnErr) throw fnErr;
+      const delivered = delivery?.sent !== false;
 
       await supabase.from('co_activity').insert({
         co_id: co.id,
         project_id: projectId,
         actor_user_id: user.id,
         actor_role: role,
-        action: 'external_approval_sent',
-        detail: `Sent for ${TYPE_LABEL[type].toLowerCase()} approval to ${email.trim()}`,
+        action: delivered ? 'external_approval_sent' : 'external_approval_link_created',
+        detail: delivered
+          ? `Sent for ${TYPE_LABEL[type].toLowerCase()} approval to ${email.trim()}`
+          : `Signing link created for ${TYPE_LABEL[type].toLowerCase()} approval; email to ${email.trim()} was not delivered`,
         amount: coTotal,
       });
 
-      toast.success(`Approval request sent to ${email.trim()}`);
+      if (delivered) toast.success(`Approval request sent to ${email.trim()}`);
+      else toast.warning('Signing link created, but the email was not delivered. Copy the link and send it directly.');
       setDialogType(null);
       onRefresh?.();
     } catch (err: any) {

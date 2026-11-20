@@ -82,10 +82,9 @@ Deno.serve(async (req) => {
   ].filter(Boolean).join('\n');
 
   try {
-    await queueEmail(supabase, { to: recipient, subject, html, text, label: 'co_external_approval' });
+    const delivery = await queueEmail(supabase, { to: recipient, subject, html, text, label: 'co_external_approval' });
+    return json({ ok: true, sent: delivery.sent });
   } catch (err) {
     return json({ error: err instanceof Error ? err.message : 'Failed to queue email' }, 500);
   }
-
-  return json({ ok: true });
 });

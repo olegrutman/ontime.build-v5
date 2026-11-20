@@ -73,7 +73,7 @@ export function COExternalApprovalBanner({ co, projectId, role = 'GC' }: Props) 
       }
 
       const approveUrl = `${window.location.origin}/external/co-approve/${token}`;
-      await supabase.functions.invoke('send-co-approval-email', {
+      const { data: delivery, error: fnErr } = await supabase.functions.invoke('send-co-approval-email', {
         body: {
           co_id: co.id,
           approval_type: type,
@@ -87,7 +87,12 @@ export function COExternalApprovalBanner({ co, projectId, role = 'GC' }: Props) 
           approve_url: approveUrl,
         },
       });
-      toast.success(`Approval email resent to ${type}`);
+      if (fnErr) throw fnErr;
+      if (delivery?.sent === false) {
+        toast.warning('The email was not delivered. Copy the signing link and send it directly.');
+      } else {
+        toast.success(`Approval email resent to ${type}`);
+      }
     } catch {
       toast.error('Failed to resend');
     }
