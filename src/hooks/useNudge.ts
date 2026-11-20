@@ -11,23 +11,17 @@ export function useNudge() {
   const sendNudge = async (entityType: EntityType, entityId: string) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('send_nudge', {
+      const { error } = await supabase.rpc('send_nudge', {
         _entity_type: entityType,
         _entity_id: entityId,
       });
 
-      if (error) throw error;
-
-      const result = data as { success?: boolean; error?: string; message?: string };
-
-      if (result.error === 'cooldown') {
-        toast.info(result.message || 'A reminder was already sent recently.');
-        return false;
-      }
-
-      if (result.error) {
-        toast.error(result.error);
-        return false;
+      if (error) {
+        if (error.message.includes('cooldown:')) {
+          toast.info(error.message.replace('cooldown:', '').trim());
+          return false;
+        }
+        throw error;
       }
 
       toast.success('Reminder sent');

@@ -278,6 +278,20 @@ export type Database = {
             foreignKeyName: "actual_cost_entries_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "actual_cost_entries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "actual_cost_entries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -376,6 +390,20 @@ export type Database = {
             foreignKeyName: "backcharges_responsible_org_id_fkey"
             columns: ["responsible_org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "backcharges_responsible_org_id_fkey"
+            columns: ["responsible_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "backcharges_responsible_org_id_fkey"
+            columns: ["responsible_org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -463,6 +491,20 @@ export type Database = {
           unit?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "catalog_definitions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "catalog_definitions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "catalog_definitions_org_id_fkey"
             columns: ["org_id"]
@@ -736,6 +778,13 @@ export type Database = {
             foreignKeyName: "change_order_collaborators_completed_by_user_id_fkey"
             columns: ["completed_by_user_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["contact_user_id"]
+          },
+          {
+            foreignKeyName: "change_order_collaborators_completed_by_user_id_fkey"
+            columns: ["completed_by_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
@@ -743,8 +792,29 @@ export type Database = {
             foreignKeyName: "change_order_collaborators_invited_by_user_id_fkey"
             columns: ["invited_by_user_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["contact_user_id"]
+          },
+          {
+            foreignKeyName: "change_order_collaborators_invited_by_user_id_fkey"
+            columns: ["invited_by_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "change_order_collaborators_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "change_order_collaborators_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "change_order_collaborators_organization_id_fkey"
@@ -1032,6 +1102,20 @@ export type Database = {
             foreignKeyName: "change_orders_assigned_to_org_id_fkey"
             columns: ["assigned_to_org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "change_orders_assigned_to_org_id_fkey"
+            columns: ["assigned_to_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "change_orders_assigned_to_org_id_fkey"
+            columns: ["assigned_to_org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1060,6 +1144,13 @@ export type Database = {
             foreignKeyName: "change_orders_created_by_user_id_fkey"
             columns: ["created_by_user_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["contact_user_id"]
+          },
+          {
+            foreignKeyName: "change_orders_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
@@ -1067,8 +1158,36 @@ export type Database = {
             foreignKeyName: "change_orders_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "change_orders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "change_orders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_originating_org_id_fkey"
+            columns: ["originating_org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "change_orders_originating_org_id_fkey"
+            columns: ["originating_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "change_orders_originating_org_id_fkey"
@@ -1135,6 +1254,13 @@ export type Database = {
           project_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "co_activity_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["contact_user_id"]
+          },
           {
             foreignKeyName: "co_activity_actor_user_id_fkey"
             columns: ["actor_user_id"]
@@ -1228,6 +1354,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "change_orders_role_view"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_ai_intakes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_ai_intakes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "co_ai_intakes_org_id_fkey"
@@ -1417,6 +1557,20 @@ export type Database = {
             foreignKeyName: "co_corrections_from_org_id_fkey"
             columns: ["from_org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_corrections_from_org_id_fkey"
+            columns: ["from_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_corrections_from_org_id_fkey"
+            columns: ["from_org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1433,6 +1587,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "co_price_revisions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_corrections_to_org_id_fkey"
+            columns: ["to_org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_corrections_to_org_id_fkey"
+            columns: ["to_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "co_corrections_to_org_id_fkey"
@@ -1500,6 +1668,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "change_orders_role_view"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_equipment_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_equipment_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "co_equipment_items_org_id_fkey"
@@ -1759,6 +1941,20 @@ export type Database = {
             foreignKeyName: "co_labor_entries_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_labor_entries_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_labor_entries_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1893,6 +2089,20 @@ export type Database = {
             foreignKeyName: "co_line_items_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_line_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_line_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1975,6 +2185,20 @@ export type Database = {
             foreignKeyName: "co_material_items_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_material_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_material_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -2028,6 +2252,13 @@ export type Database = {
             foreignKeyName: "co_nte_log_approved_by_user_id_fkey"
             columns: ["approved_by_user_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["contact_user_id"]
+          },
+          {
+            foreignKeyName: "co_nte_log_approved_by_user_id_fkey"
+            columns: ["approved_by_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
@@ -2044,6 +2275,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "change_orders_role_view"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_nte_log_requested_by_user_id_fkey"
+            columns: ["requested_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["contact_user_id"]
           },
           {
             foreignKeyName: "co_nte_log_requested_by_user_id_fkey"
@@ -2187,8 +2425,36 @@ export type Database = {
             foreignKeyName: "co_price_revisions_from_org_id_fkey"
             columns: ["from_org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_price_revisions_from_org_id_fkey"
+            columns: ["from_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_price_revisions_from_org_id_fkey"
+            columns: ["from_org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_price_revisions_to_org_id_fkey"
+            columns: ["to_org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_price_revisions_to_org_id_fkey"
+            columns: ["to_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "co_price_revisions_to_org_id_fkey"
@@ -2406,6 +2672,20 @@ export type Database = {
             foreignKeyName: "co_proposals_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_proposals_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_proposals_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -2415,6 +2695,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_proposals_recipient_org_id_fkey"
+            columns: ["recipient_org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_proposals_recipient_org_id_fkey"
+            columns: ["recipient_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "co_proposals_recipient_org_id_fkey"
@@ -2563,6 +2857,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "co_scenarios_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_scenarios_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "co_scenarios_org_id_fkey"
             columns: ["org_id"]
@@ -2732,6 +3040,20 @@ export type Database = {
             foreignKeyName: "co_sov_items_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_sov_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_sov_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -2857,6 +3179,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "co_v4_feature_flags_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_v4_feature_flags_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "co_v4_feature_flags_org_id_fkey"
             columns: ["org_id"]
@@ -3106,6 +3442,20 @@ export type Database = {
             foreignKeyName: "crew_hired_crews_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "crew_hired_crews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "crew_hired_crews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -3149,6 +3499,20 @@ export type Database = {
           task_name?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "crew_job_tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "crew_job_tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "crew_job_tasks_organization_id_fkey"
             columns: ["organization_id"]
@@ -3204,6 +3568,20 @@ export type Database = {
             foreignKeyName: "crew_project_budgets_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "crew_project_budgets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "crew_project_budgets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -3245,6 +3623,20 @@ export type Database = {
           rate?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "crew_workers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "crew_workers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "crew_workers_organization_id_fkey"
             columns: ["organization_id"]
@@ -3363,6 +3755,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "daily_logs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_log_manpower_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "daily_log_manpower_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "daily_log_manpower_org_id_fkey"
@@ -3815,6 +4221,20 @@ export type Database = {
             foreignKeyName: "field_captures_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "field_captures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "field_captures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -3957,6 +4377,20 @@ export type Database = {
             foreignKeyName: "field_report_items_crew_org_id_fkey"
             columns: ["crew_org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "field_report_items_crew_org_id_fkey"
+            columns: ["crew_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "field_report_items_crew_org_id_fkey"
+            columns: ["crew_org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -3973,6 +4407,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "field_reports"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_report_items_reviewer_org_id_fkey"
+            columns: ["reviewer_org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "field_report_items_reviewer_org_id_fkey"
+            columns: ["reviewer_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "field_report_items_reviewer_org_id_fkey"
@@ -4086,6 +4534,20 @@ export type Database = {
             foreignKeyName: "field_reports_crew_org_id_fkey"
             columns: ["crew_org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "field_reports_crew_org_id_fkey"
+            columns: ["crew_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "field_reports_crew_org_id_fkey"
+            columns: ["crew_org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -4095,6 +4557,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_reports_reviewer_org_id_fkey"
+            columns: ["reviewer_org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "field_reports_reviewer_org_id_fkey"
+            columns: ["reviewer_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "field_reports_reviewer_org_id_fkey"
@@ -4149,6 +4625,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "gc_owner_billings_gc_org_id_fkey"
+            columns: ["gc_org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "gc_owner_billings_gc_org_id_fkey"
+            columns: ["gc_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "gc_owner_billings_gc_org_id_fkey"
             columns: ["gc_org_id"]
@@ -4846,6 +5336,20 @@ export type Database = {
             foreignKeyName: "notifications_recipient_org_id_fkey"
             columns: ["recipient_org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_org_id_fkey"
+            columns: ["recipient_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_org_id_fkey"
+            columns: ["recipient_org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -4877,6 +5381,20 @@ export type Database = {
           sent_to_org?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "nudge_log_sent_to_org_fkey"
+            columns: ["sent_to_org"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "nudge_log_sent_to_org_fkey"
+            columns: ["sent_to_org"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "nudge_log_sent_to_org_fkey"
             columns: ["sent_to_org"]
@@ -5007,6 +5525,20 @@ export type Database = {
             foreignKeyName: "org_feature_overrides_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "org_feature_overrides_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "org_feature_overrides_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -5048,6 +5580,20 @@ export type Database = {
             foreignKeyName: "org_invitations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "org_invitations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "org_invitations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -5085,6 +5631,20 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "org_join_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "org_join_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "org_join_requests_organization_id_fkey"
             columns: ["organization_id"]
@@ -5132,6 +5692,20 @@ export type Database = {
           use_fc_input_as_base?: boolean | null
         }
         Relationships: [
+          {
+            foreignKeyName: "org_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "org_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "org_settings_organization_id_fkey"
             columns: ["organization_id"]
@@ -5792,6 +6366,20 @@ export type Database = {
             foreignKeyName: "project_contracts_from_org_id_fkey"
             columns: ["from_org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "project_contracts_from_org_id_fkey"
+            columns: ["from_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "project_contracts_from_org_id_fkey"
+            columns: ["from_org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -5801,6 +6389,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_contracts_to_org_id_fkey"
+            columns: ["to_org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "project_contracts_to_org_id_fkey"
+            columns: ["to_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "project_contracts_to_org_id_fkey"
@@ -6109,6 +6711,20 @@ export type Database = {
             foreignKeyName: "project_members_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "project_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "project_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -6162,6 +6778,20 @@ export type Database = {
           role?: Database["public"]["Enums"]["org_type"] | null
         }
         Relationships: [
+          {
+            foreignKeyName: "project_participants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "project_participants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "project_participants_organization_id_fkey"
             columns: ["organization_id"]
@@ -6533,6 +7163,20 @@ export type Database = {
             foreignKeyName: "project_rfis_assigned_to_org_id_fkey"
             columns: ["assigned_to_org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "project_rfis_assigned_to_org_id_fkey"
+            columns: ["assigned_to_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "project_rfis_assigned_to_org_id_fkey"
+            columns: ["assigned_to_org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -6542,6 +7186,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_rfis_submitted_by_org_id_fkey"
+            columns: ["submitted_by_org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "project_rfis_submitted_by_org_id_fkey"
+            columns: ["submitted_by_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "project_rfis_submitted_by_org_id_fkey"
@@ -6644,6 +7302,20 @@ export type Database = {
           scope_item_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "project_scope_assignments_assigned_to_org_id_fkey"
+            columns: ["assigned_to_org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "project_scope_assignments_assigned_to_org_id_fkey"
+            columns: ["assigned_to_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "project_scope_assignments_assigned_to_org_id_fkey"
             columns: ["assigned_to_org_id"]
@@ -7218,6 +7890,20 @@ export type Database = {
             foreignKeyName: "project_team_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "project_team_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "project_team_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -7386,6 +8072,20 @@ export type Database = {
             foreignKeyName: "projects_adopted_from_supplier_org_id_fkey"
             columns: ["adopted_from_supplier_org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "projects_adopted_from_supplier_org_id_fkey"
+            columns: ["adopted_from_supplier_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "projects_adopted_from_supplier_org_id_fkey"
+            columns: ["adopted_from_supplier_org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -7393,8 +8093,36 @@ export type Database = {
             foreignKeyName: "projects_created_by_org_id_fkey"
             columns: ["created_by_org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "projects_created_by_org_id_fkey"
+            columns: ["created_by_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "projects_created_by_org_id_fkey"
+            columns: ["created_by_org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "projects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "projects_organization_id_fkey"
@@ -7534,6 +8262,20 @@ export type Database = {
             foreignKeyName: "purchase_orders_created_by_org_id_fkey"
             columns: ["created_by_org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_created_by_org_id_fkey"
+            columns: ["created_by_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_created_by_org_id_fkey"
+            columns: ["created_by_org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -7548,8 +8290,36 @@ export type Database = {
             foreignKeyName: "purchase_orders_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_pricing_owner_org_id_fkey"
+            columns: ["pricing_owner_org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_pricing_owner_org_id_fkey"
+            columns: ["pricing_owner_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "purchase_orders_pricing_owner_org_id_fkey"
@@ -7666,6 +8436,20 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "reminders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "reminders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "reminders_org_id_fkey"
             columns: ["org_id"]
@@ -7851,8 +8635,36 @@ export type Database = {
             foreignKeyName: "returns_created_by_org_id_fkey"
             columns: ["created_by_org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "returns_created_by_org_id_fkey"
+            columns: ["created_by_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "returns_created_by_org_id_fkey"
+            columns: ["created_by_org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "returns_pricing_owner_org_id_fkey"
+            columns: ["pricing_owner_org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "returns_pricing_owner_org_id_fkey"
+            columns: ["pricing_owner_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "returns_pricing_owner_org_id_fkey"
@@ -7867,6 +8679,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "returns_supplier_org_id_fkey"
+            columns: ["supplier_org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "returns_supplier_org_id_fkey"
+            columns: ["supplier_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "returns_supplier_org_id_fkey"
@@ -7985,8 +8811,36 @@ export type Database = {
             foreignKeyName: "rfis_submitted_by_org_id_fkey"
             columns: ["submitted_by_org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "rfis_submitted_by_org_id_fkey"
+            columns: ["submitted_by_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "rfis_submitted_by_org_id_fkey"
+            columns: ["submitted_by_org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfis_submitted_to_org_id_fkey"
+            columns: ["submitted_to_org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "rfis_submitted_to_org_id_fkey"
+            columns: ["submitted_to_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "rfis_submitted_to_org_id_fkey"
@@ -8368,6 +9222,20 @@ export type Database = {
             foreignKeyName: "supplier_estimates_supplier_org_id_fkey"
             columns: ["supplier_org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "supplier_estimates_supplier_org_id_fkey"
+            columns: ["supplier_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "supplier_estimates_supplier_org_id_fkey"
+            columns: ["supplier_org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -8458,6 +9326,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "suppliers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "suppliers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "suppliers_organization_id_fkey"
             columns: ["organization_id"]
@@ -8638,8 +9520,36 @@ export type Database = {
             foreignKeyName: "trusted_partners_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "trusted_partners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "trusted_partners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trusted_partners_partner_org_id_fkey"
+            columns: ["partner_org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "trusted_partners_partner_org_id_fkey"
+            columns: ["partner_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "trusted_partners_partner_org_id_fkey"
@@ -8725,8 +9635,29 @@ export type Database = {
             foreignKeyName: "user_org_roles_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "user_org_roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "user_org_roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_org_roles_user_id_profiles_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["contact_user_id"]
           },
           {
             foreignKeyName: "user_org_roles_user_id_profiles_fkey"
@@ -8871,6 +9802,20 @@ export type Database = {
           unit?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "work_order_catalog_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "work_order_catalog_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "work_order_catalog_org_id_fkey"
             columns: ["org_id"]
@@ -9141,6 +10086,20 @@ export type Database = {
             foreignKeyName: "change_orders_assigned_to_org_id_fkey"
             columns: ["assigned_to_org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "change_orders_assigned_to_org_id_fkey"
+            columns: ["assigned_to_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "change_orders_assigned_to_org_id_fkey"
+            columns: ["assigned_to_org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -9169,6 +10128,13 @@ export type Database = {
             foreignKeyName: "change_orders_created_by_user_id_fkey"
             columns: ["created_by_user_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["contact_user_id"]
+          },
+          {
+            foreignKeyName: "change_orders_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
@@ -9176,8 +10142,36 @@ export type Database = {
             foreignKeyName: "change_orders_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "change_orders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "change_orders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_originating_org_id_fkey"
+            columns: ["originating_org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "change_orders_originating_org_id_fkey"
+            columns: ["originating_org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "change_orders_originating_org_id_fkey"
@@ -9266,6 +10260,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "change_orders_role_view"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_equipment_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_equipment_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "co_equipment_items_org_id_fkey"
@@ -9395,6 +10403,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "co_line_items_role_view"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_labor_entries_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_labor_entries_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "co_labor_entries_org_id_fkey"
@@ -9534,6 +10556,20 @@ export type Database = {
             foreignKeyName: "co_line_items_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_line_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_line_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -9616,6 +10652,20 @@ export type Database = {
             foreignKeyName: "co_material_items_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
+            referencedRelation: "connected_team_target_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_material_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organization_join_directory"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "co_material_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -9688,6 +10738,49 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      connected_team_target_directory: {
+        Row: {
+          city_state: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_user_id: string | null
+          org_id: string | null
+          org_name: string | null
+          org_trade: string | null
+          org_type: string | null
+        }
+        Relationships: []
+      }
+      organization_join_directory: {
+        Row: {
+          admin_name: string | null
+          allow_join_requests: boolean | null
+          org_address: Json | null
+          org_id: string | null
+          org_name: string | null
+          org_trade: string | null
+          org_type: string | null
+        }
+        Insert: {
+          admin_name?: never
+          allow_join_requests?: boolean | null
+          org_address?: never
+          org_id?: string | null
+          org_name?: string | null
+          org_trade?: string | null
+          org_type?: never
+        }
+        Update: {
+          admin_name?: never
+          allow_join_requests?: boolean | null
+          org_address?: never
+          org_id?: string | null
+          org_name?: string | null
+          org_trade?: string | null
+          org_type?: never
+        }
+        Relationships: []
       }
       supplier_quotes_public: {
         Row: {
@@ -9781,100 +10874,7 @@ export type Database = {
       }
       approve_crew_change_order: {
         Args: { _co_id: string; _keep_internal?: boolean }
-        Returns: {
-          ai_intake_id: string | null
-          approved_amount: number | null
-          approved_at: string | null
-          architect_approval_status: string
-          architect_approval_token: string | null
-          architect_approved_at: string | null
-          architect_approver_email: string | null
-          architect_approver_name: string | null
-          architect_rejection_note: string | null
-          architect_signed_record_path: string | null
-          assembly_state: string | null
-          assigned_to_org_id: string | null
-          blocked_by_rfi_id: string | null
-          closed_for_pricing_at: string | null
-          co_equipment_responsible_override: string | null
-          co_material_responsible_override: string | null
-          co_number: string | null
-          combined_at: string | null
-          combined_co_id: string | null
-          completed_at: string | null
-          completion_acknowledged_at: string | null
-          contracted_at: string | null
-          created_at: string | null
-          created_by_role: string
-          created_by_user_id: string | null
-          crew_approved_at: string | null
-          crew_approved_by_user_id: string | null
-          document_type: string
-          draft_shared_with_next: boolean
-          entry_source: Database["public"]["Enums"]["co_entry_source"]
-          equipment_needed: boolean
-          equipment_responsible: string | null
-          equipment_tax: number | null
-          fc_input_needed: boolean
-          fc_pricing_submitted_at: string | null
-          gc_budget: number | null
-          gc_owner_markup_percent: number | null
-          id: string
-          kept_internal: boolean
-          labor_tax: number | null
-          labor_taxable_snapshot: boolean | null
-          location_tag: string | null
-          materials_needed: boolean
-          materials_on_site: boolean
-          materials_responsible: string | null
-          materials_tax: number | null
-          not_passed_reason: string | null
-          nte_cap: number | null
-          nte_increase_approved: boolean | null
-          nte_increase_requested: number | null
-          org_id: string
-          originating_org_id: string | null
-          owner_approval_status: string
-          owner_approval_token: string | null
-          owner_approved_at: string | null
-          owner_approver_email: string | null
-          owner_approver_name: string | null
-          owner_rejection_note: string | null
-          owner_signed_record_path: string | null
-          parent_co_id: string | null
-          passed_to_owner: boolean | null
-          pricing_type: string
-          problem_summary: string | null
-          problem_voice_url: string | null
-          project_id: string
-          reason: string | null
-          reason_note: string | null
-          rejected_at: string | null
-          rejection_note: string | null
-          retainage_amount: number | null
-          retainage_released: boolean
-          retainage_released_at: string | null
-          shared_at: string | null
-          status: string
-          submitted_at: string | null
-          tax_rate_snapshot: number | null
-          tc_snapshot_hourly_rate: number | null
-          tc_snapshot_markup_percent: number | null
-          tc_submitted_price: number | null
-          title: string | null
-          total_tax: number | null
-          trigger_code: string | null
-          updated_at: string | null
-          use_fc_pricing_base: boolean | null
-          withdrawn_at: string | null
-          withdrawn_reason: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "change_orders"
-          isOneToOne: true
-          isSetofReturn: false
-        }
+        Returns: undefined
       }
       approve_invoice_with_line_rejections: {
         Args: { _invoice_id: string; _rejections: Json }
@@ -10060,27 +11060,7 @@ export type Database = {
       }
       decide_co_price_revision: {
         Args: { _approve: boolean; _revision_id: string }
-        Returns: {
-          co_id: string
-          decided_at: string | null
-          decided_by: string | null
-          from_org_id: string
-          id: string
-          previous_price: number
-          proposed_price: number
-          proposed_total: number
-          scope_snapshot: Json
-          status: string
-          submitted_at: string
-          submitted_by: string
-          to_org_id: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "co_price_revisions"
-          isOneToOne: true
-          isSetofReturn: false
-        }
+        Returns: undefined
       }
       decide_field_item: {
         Args: { p_decision: string; p_item_id: string; p_reason?: string }
@@ -10125,100 +11105,7 @@ export type Database = {
       }
       forward_change_order_to_upstream_gc: {
         Args: { _co_id: string }
-        Returns: {
-          ai_intake_id: string | null
-          approved_amount: number | null
-          approved_at: string | null
-          architect_approval_status: string
-          architect_approval_token: string | null
-          architect_approved_at: string | null
-          architect_approver_email: string | null
-          architect_approver_name: string | null
-          architect_rejection_note: string | null
-          architect_signed_record_path: string | null
-          assembly_state: string | null
-          assigned_to_org_id: string | null
-          blocked_by_rfi_id: string | null
-          closed_for_pricing_at: string | null
-          co_equipment_responsible_override: string | null
-          co_material_responsible_override: string | null
-          co_number: string | null
-          combined_at: string | null
-          combined_co_id: string | null
-          completed_at: string | null
-          completion_acknowledged_at: string | null
-          contracted_at: string | null
-          created_at: string | null
-          created_by_role: string
-          created_by_user_id: string | null
-          crew_approved_at: string | null
-          crew_approved_by_user_id: string | null
-          document_type: string
-          draft_shared_with_next: boolean
-          entry_source: Database["public"]["Enums"]["co_entry_source"]
-          equipment_needed: boolean
-          equipment_responsible: string | null
-          equipment_tax: number | null
-          fc_input_needed: boolean
-          fc_pricing_submitted_at: string | null
-          gc_budget: number | null
-          gc_owner_markup_percent: number | null
-          id: string
-          kept_internal: boolean
-          labor_tax: number | null
-          labor_taxable_snapshot: boolean | null
-          location_tag: string | null
-          materials_needed: boolean
-          materials_on_site: boolean
-          materials_responsible: string | null
-          materials_tax: number | null
-          not_passed_reason: string | null
-          nte_cap: number | null
-          nte_increase_approved: boolean | null
-          nte_increase_requested: number | null
-          org_id: string
-          originating_org_id: string | null
-          owner_approval_status: string
-          owner_approval_token: string | null
-          owner_approved_at: string | null
-          owner_approver_email: string | null
-          owner_approver_name: string | null
-          owner_rejection_note: string | null
-          owner_signed_record_path: string | null
-          parent_co_id: string | null
-          passed_to_owner: boolean | null
-          pricing_type: string
-          problem_summary: string | null
-          problem_voice_url: string | null
-          project_id: string
-          reason: string | null
-          reason_note: string | null
-          rejected_at: string | null
-          rejection_note: string | null
-          retainage_amount: number | null
-          retainage_released: boolean
-          retainage_released_at: string | null
-          shared_at: string | null
-          status: string
-          submitted_at: string | null
-          tax_rate_snapshot: number | null
-          tc_snapshot_hourly_rate: number | null
-          tc_snapshot_markup_percent: number | null
-          tc_submitted_price: number | null
-          title: string | null
-          total_tax: number | null
-          trigger_code: string | null
-          updated_at: string | null
-          use_fc_pricing_base: boolean | null
-          withdrawn_at: string | null
-          withdrawn_reason: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "change_orders"
-          isOneToOne: true
-          isSetofReturn: false
-        }
+        Returns: undefined
       }
       generate_po_number: { Args: { org_id: string }; Returns: string }
       get_actor_info: { Args: never; Returns: Record<string, unknown> }
@@ -10496,7 +11383,7 @@ export type Database = {
       }
       resend_project_invite: {
         Args: { _project_id: string; _team_member_id: string }
-        Returns: Json
+        Returns: undefined
       }
       reset_project_setup: {
         Args: { p_project_id: string }
@@ -10683,7 +11570,7 @@ export type Database = {
           }
       send_nudge: {
         Args: { _entity_id: string; _entity_type: string }
-        Returns: Json
+        Returns: undefined
       }
       send_work_order_assignment_notification: {
         Args: {

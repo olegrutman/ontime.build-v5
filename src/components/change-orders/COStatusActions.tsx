@@ -399,15 +399,19 @@ export function COStatusActions({
           useFcPricingBase: co.use_fc_pricing_base,
           pricingType: co.pricing_type, financials,
         });
-        const { data, error } = await supabase.rpc('forward_change_order_to_upstream_gc', {
+        const { error } = await supabase.rpc('forward_change_order_to_upstream_gc', {
           _co_id: co.id,
         });
 
         if (error) throw error;
 
-
-        const forwarded = Array.isArray(data) ? data[0] : data;
-        const nextOrgId = forwarded?.assigned_to_org_id ?? null;
+        const { data: forwarded, error: forwardedError } = await supabase
+          .from('change_orders')
+          .select('assigned_to_org_id')
+          .eq('id', co.id)
+          .single();
+        if (forwardedError) throw forwardedError;
+        const nextOrgId = forwarded.assigned_to_org_id ?? null;
 
         toast.success(`Sent to ${rl.GC} for approval`);
         await logActivity('forwarded_to_gc', undefined, financials?.grandTotal || undefined);
