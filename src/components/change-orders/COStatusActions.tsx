@@ -353,11 +353,6 @@ export function COStatusActions({
         return;
       }
 
-      if (ownInternalApproved) {
-        const { error } = await supabase.rpc('set_own_change_order_internal', { _co_id: co.id, _internal: false });
-        if (error) throw error;
-      }
-
       await snapshotCOSubmission({
         coId: co.id,
         projectId,

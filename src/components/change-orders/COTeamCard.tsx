@@ -109,12 +109,12 @@ export function COTeamCard({ co, collaborators }: COTeamCardProps) {
     const assignedOrg = orgMap.get(co.assigned_to_org_id);
     if (assignedOrg) {
       const collabRow = collaborators.find(c => c.organization_id === co.assigned_to_org_id);
-      const status: TeamMember['status'] = collabRow?.status === 'active' ? 'Active'
+      const status: TeamMember['status'] = co.created_by_role === 'TC' && co.kept_internal && ['draft', 'shared', 'work_in_progress', 'closed_for_pricing'].includes(co.status)
+        ? 'Not submitted'
+        : collabRow?.status === 'active' ? 'Active'
         : collabRow?.status === 'invited' ? 'Pending accept'
         : collabRow?.status === 'completed' ? 'Completed'
-        : co.created_by_role === 'TC' && co.kept_internal && ['draft', 'shared', 'work_in_progress', 'closed_for_pricing'].includes(co.status)
-          ? 'Not submitted'
-          : 'Notified';
+        : 'Notified';
       const roleCode = (assignedOrg.type === 'GC' ? 'GC' : assignedOrg.type === 'TC' ? 'TC' : assignedOrg.type === 'FC' ? 'FC' : 'OTHER') as TeamMember['roleCode'];
       members.push({
         orgId: co.assigned_to_org_id,

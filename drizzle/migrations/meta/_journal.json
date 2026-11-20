@@ -666,6 +666,13 @@
       "when": 1795218453961,
       "tag": "0094_allow_returned_crew_items_to_reopen",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1795219057330,
+      "tag": "0095_enforce_internal_order_upstream_isolation",
+      "breakpoints": true
     }
   ]
 }

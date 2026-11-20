@@ -204,7 +204,7 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
       return {
         icon: <Send className="h-5 w-5" />,
         title: co.kept_internal ? 'Approved — kept as internal cost' : `Approved — ready to send to ${rl.GC}`,
-        subtitle: co.kept_internal ? `${rl.GC} won't see this. You can still bill it later.` : `Send it to ${rl.GC} only if it should be billed`,
+        subtitle: co.kept_internal ? `${rl.GC} hasn't been asked to approve or pay for this.` : `Send it to ${rl.GC} only if it should be billed`,
         actions: [],
       };
     }

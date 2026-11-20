@@ -10,6 +10,12 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 type Perspective = 'upstream' | 'downstream';
 
+const coDocumentStatus = (co: any): string => {
+  const preUpstream = ['draft', 'shared', 'work_in_progress', 'closed_for_pricing'].includes(co.status);
+  if (co.created_by_role === 'TC' && co.kept_internal && preUpstream) return 'APPROVED INTERNALLY';
+  return (co.status ?? '').toUpperCase();
+};
+
 const normalizeOrgRole = (role?: string | null): 'FC' | 'TC' | 'GC' | null => {
   const value = (role ?? '').toUpperCase();
   if (value === 'FC' || value.includes('FIELD CREW') || value.startsWith('FC_')) return 'FC';
@@ -316,7 +322,7 @@ Deno.serve(async (req) => {
       : [
           ["Project:", project?.name ?? "—", numberLabel, co.co_number ?? "—"],
           ["Contractor:", orgName(billingOrgId), "Date:", new Date(co.created_at).toLocaleDateString()],
-          ["Owner:", orgName(receivingOrgId), "Status:", (co.status ?? "").toUpperCase()],
+          ["Owner:", orgName(receivingOrgId), "Status:", coDocumentStatus(co)],
           ["Document Type:", docKindLabel, "Parties:", `${orgName(billingOrgId)} to ${orgName(receivingOrgId)}`],
         ];
 

@@ -208,7 +208,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
           { key: 'corrections', label: 'Corrections', count: changeOrders.filter(co => correctionLabel(co.correction)).length },
           { key: 'in_progress', label: 'Active', count: stats.inProgressCount },
           { key: 'approved_filter', label: 'Approved', count: stats.approvedCount },
-          ...(crewApprovedCount > 0 ? [{ key: 'crew_approved' as FilterKey, label: 'Crew approved · ready to bill', count: crewApprovedCount }] : []),
+          ...(crewApprovedCount > 0 ? [{ key: 'crew_approved' as FilterKey, label: 'Crew approved · not forwarded', count: crewApprovedCount }] : []),
           ...(stats.withdrawnCount > 0 ? [{ key: 'withdrawn_filter' as FilterKey, label: 'Withdrawn', count: stats.withdrawnCount }] : []),
         ] as { key: FilterKey; label: string; count: number }[]).map(f => (
           <Button variant="outline"
