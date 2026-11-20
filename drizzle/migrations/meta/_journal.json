@@ -645,6 +645,27 @@
       "when": 1795217715610,
       "tag": "0091_reserve_approved_hours_on_draft_invoices",
       "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1795218172759,
+      "tag": "0092_subcontractor_internal_order_approval",
+      "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1795218424495,
+      "tag": "0093_return_crew_order_for_correction",
+      "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "7",
+      "when": 1795218453961,
+      "tag": "0094_allow_returned_crew_items_to_reopen",
+      "breakpoints": true
     }
   ]
 }

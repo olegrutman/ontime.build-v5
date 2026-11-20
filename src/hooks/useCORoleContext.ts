@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { COCreatedByRole, COCollaborator, COFinancials, ChangeOrder } from '@/types/changeOrder';
+import { canFixReturnedCrewOrder } from '@/lib/coInternalApproval';
 
 interface UseCORoleContextResult {
   isGC: boolean;
@@ -92,7 +93,8 @@ export function useCORoleContext(
     );
     const canCompleteFCInput = !!co && isFC && isCollaboratorOrg;
 
-    const isActiveStatus = ['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'submitted'].includes(co?.status ?? '');
+    const returnedCrewOrderEditable = canFixReturnedCrewOrder(co, { isGC, isTC, isFC, myOrgId });
+    const isActiveStatus = returnedCrewOrderEditable || ['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'submitted'].includes(co?.status ?? '');
     const isRunningPricing = co?.pricing_type === 'tm' || co?.pricing_type === 'nte';
     // Bug 15: FC must be an active collaborator OR the CO creator before they can edit
     const isFCCreator = isFC && co?.org_id === myOrgId;
@@ -118,9 +120,10 @@ export function useCORoleContext(
     // An active crew collaborator can still price after submission: their price bills
     // the subcontractor only, never the general contractor.
     const fcFrozen = co?.fc_pricing_submitted_at != null;
-    const externalFrozenForRole =
-      isFC ? (fcFrozen || (submittedOrFinal && !fcPostSubmitPricing))
-      : submittedOrFinal;
+    const externalFrozenForRole = returnedCrewOrderEditable
+      ? false
+      : isFC ? (fcFrozen || (submittedOrFinal && !fcPostSubmitPricing))
+        : submittedOrFinal;
     const canEditExternal = revisionOpen ||
       !!co && (isGC || isTC || isFC) && !externalFrozenForRole && (!isFC || isCollaboratorOrg || isFCCreator);
 

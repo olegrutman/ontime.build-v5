@@ -27,8 +27,11 @@ import { sendCONotification, buildCONotification } from '@/lib/coNotifications';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
 import { resolveCOAssignee, snapshotCOSubmission, materializeCrewPricingForOrg } from '@/lib/coSubmitPrep';
 import { approvedLaborForReview, summarizeLineReview } from '@/lib/coLineReview';
+import { canApproveOwnOrderInternally, isOwnOrderInternallyApproved } from '@/lib/coInternalApproval';
+import { usePermission } from '@/components/auth/RequirePermission';
 import { toast } from 'sonner';
 import type { ChangeOrder, COCollaborator, COFinancials, COStatus, COLineItem, COLaborEntry } from '@/types/changeOrder';
+import type { COPricingReadiness } from '@/lib/coPricingReadiness';
 
 interface COStatusActionsProps {
   co: ChangeOrder;
@@ -44,6 +47,7 @@ interface COStatusActionsProps {
   lineItemCount?: number;
   lineItems?: COLineItem[];
   laborEntries?: COLaborEntry[];
+  pricingReadiness?: COPricingReadiness;
 }
 
 export function COStatusActions({
@@ -60,6 +64,7 @@ export function COStatusActions({
   lineItemCount = 0,
   lineItems = [],
   laborEntries = [],
+  pricingReadiness,
 }: COStatusActionsProps) {
   const { submitCO, approveCO, rejectCO } = useChangeOrderDetail(co.id);
   const { shareCO, updateCO } = useChangeOrders(projectId);
@@ -67,6 +72,7 @@ export function COStatusActions({
   const navigate = useNavigate();
   const { data: routing } = useCORoutingTargets(projectId);
   const rl = useRoleLabelsContext();
+  const canApproveInternal = usePermission('canApprove');
   /* A CO routed to nobody (or to its own creating org) still needs a Submit path:
      fall back to the default upstream target for this org. */
   const routedAssignee = co.assigned_to_org_id && co.assigned_to_org_id !== co.org_id
@@ -120,6 +126,9 @@ export function COStatusActions({
   const crewDraft = isTC && status === 'draft' && co.created_by_role === 'FC' && co.org_id === currentOrgId;
   const crewApproved = (forwardsToGC || crewDraft) && !!co.crew_approved_at;
   const crewPending = (forwardsToGC || crewDraft) && !co.crew_approved_at;
+  const ownInternalApproved = isOwnOrderInternallyApproved(co, isTC, currentOrgId);
+  const ownInternalEligible = canApproveOwnOrderInternally(co, isTC, currentOrgId)
+    && canApproveInternal && lineItemCount > 0 && pricingReadiness === 'ready';
   const submitAmount = financials?.viewer?.totalToUpstream ?? financials?.grandTotal ?? 0;
   const itemReview = lineItems.length > 1 && status === 'submitted' && !forwardsToGC;
   const lineReview = summarizeLineReview(lineItems);
@@ -344,6 +353,11 @@ export function COStatusActions({
         return;
       }
 
+      if (ownInternalApproved) {
+        const { error } = await supabase.rpc('set_own_change_order_internal', { _co_id: co.id, _internal: false });
+        if (error) throw error;
+      }
+
       await snapshotCOSubmission({
         coId: co.id,
         projectId,
@@ -536,6 +550,23 @@ export function COStatusActions({
     }
   }
 
+  async function doApproveOwnInternal() {
+    setActing(true);
+    const wasSubmitted = status === 'submitted';
+    try {
+      const { error } = await supabase.rpc('set_own_change_order_internal', { _co_id: co.id, _internal: true });
+      if (error) throw error;
+      toast.success(wasSubmitted ? `Recalled from ${rl.GC} and approved internally` : 'Approved internally — nothing sent upstream');
+      await logActivity('approved_internal', wasSubmitted ? `Recalled from ${rl.GC}; approved internally` : 'Approved without upstream submission', submitAmount || undefined);
+      if (wasSubmitted) await notifyOrg(co.assigned_to_org_id, 'CO_RECALLED');
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to approve internally');
+    } finally {
+      setActing(false);
+    }
+  }
+
   async function doApproveCrew(keepInternal: boolean) {
     setActing(true);
     try {
@@ -571,8 +602,13 @@ export function COStatusActions({
 
     setActing(true);
     try {
-      await rejectCO.mutateAsync({ coId: co.id, note: rejectNote.trim() });
-      toast.success('CO rejected');
+      if (crewPending) {
+        const { error } = await supabase.rpc('return_crew_change_order_for_fix', { _co_id: co.id, _note: rejectNote.trim() });
+        if (error) throw error;
+      } else {
+        await rejectCO.mutateAsync({ coId: co.id, note: rejectNote.trim() });
+      }
+      toast.success(crewPending ? `Returned to ${rl.FC} for correction` : 'CO rejected');
       await logActivity('rejected', rejectNote.trim());
       // Creator is notified by the notify_co_status_change DB trigger.
       await notifyAllCOParties('CHANGE_REJECTED', undefined, [co.created_by_user_id]);
@@ -819,7 +855,7 @@ export function COStatusActions({
     );
   }
 
-  const hasAnyAction = canShare || canSendToWIP || canCloseForPricing || canSubmit || canSubmitFCPricing || canRecall || canApprove || canReject || crewPending || crewApproved || canMarkCompleted || canAcknowledge || canWithdraw || canDelete;
+  const hasAnyAction = canShare || canSendToWIP || canCloseForPricing || canSubmit || canSubmitFCPricing || canRecall || canApprove || canReject || crewPending || crewApproved || ownInternalEligible || ownInternalApproved || canMarkCompleted || canAcknowledge || canWithdraw || canDelete;
 
   if (!hasAnyAction) {
     if (isApproved) {
@@ -863,8 +899,20 @@ export function COStatusActions({
           {(canSubmit || canSubmitFCPricing) && (
             <Button size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={doSubmit} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-              {canSubmitFCPricing ? `Submit ${rl.FC} pricing` : co.pricing_type === 'fixed' ? 'Submit scope & price' : co.pricing_type === 'tm' ? 'Submit rates & actuals' : 'Submit rates & ceiling'}
+              {canSubmitFCPricing ? `Submit ${rl.FC} pricing` : ownInternalApproved ? `Submit to ${rl.GC}` : co.pricing_type === 'fixed' ? 'Submit scope & price' : co.pricing_type === 'tm' ? 'Submit rates & actuals' : 'Submit rates & ceiling'}
             </Button>
+          )}
+          {ownInternalEligible && (
+            <Button size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={doApproveOwnInternal} disabled={acting}>
+              {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+              {status === 'submitted' ? `Recall & approve internally` : 'Approve internally'}
+            </Button>
+          )}
+          {ownInternalApproved && (
+            <div className="rounded-lg border border-state-approved/30 bg-state-approved-bg px-3 py-2 text-[0.7rem] leading-snug text-muted-foreground">
+              <span className="font-semibold text-foreground">Approved internally.</span>{' '}
+              Scope and prices remain editable. {rl.GC} has not been asked to approve or bill this order.
+            </div>
           )}
           {canRecall && (
             <Button variant="outline" size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={doRecall} disabled={acting}>

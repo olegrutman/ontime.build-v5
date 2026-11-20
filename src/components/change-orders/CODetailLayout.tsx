@@ -746,6 +746,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               lineItemCount={lineItems.length}
               lineItems={lineItems}
               laborEntries={laborEntries}
+              pricingReadiness={pricingReadiness}
             />
           {pricingType === 'fixed' && (
             <COPricingUnlockBar

@@ -36,6 +36,6 @@ describe('CO pricing readiness', () => {
     for (const status of ['submitted', 'approved', 'contracted', 'rejected', 'withdrawn'] as const) {
       expect(coPricingStatusLabel(status, 'ready')).toBeUndefined();
     }
-    expect(coPricingStatusLabel('draft', 'ready', true)).toBeUndefined();
+    expect(coPricingStatusLabel('draft', 'ready', true)).toBe('Approved internally');
   });
 });

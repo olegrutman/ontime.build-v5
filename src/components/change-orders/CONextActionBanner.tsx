@@ -91,6 +91,14 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
 
   if (isTC || isFC) {
     const upstream = isTC ? rl.GC : rl.TC;
+    if (isTC && co.created_by_role === 'TC' && co.kept_internal && ['draft', 'shared', 'work_in_progress', 'closed_for_pricing'].includes(status)) {
+      return {
+        icon: <CheckCircle className="h-5 w-5" />,
+        title: 'Approved internally',
+        subtitle: `${rl.GC} has not been asked to approve or bill this order. Upstream submission remains a separate choice.`,
+        actions: [{ label: `Submit to ${rl.GC}`, action: 'submit' }],
+      };
+    }
     // FC collaborators submit their input via the complete_fc_change_order_input RPC
     // (action 'submit_to_tc'), not by flipping the entire CO to 'submitted'.
     const submitActionName = isFC && isFCCollaborator ? 'submit_to_tc' : 'submit';

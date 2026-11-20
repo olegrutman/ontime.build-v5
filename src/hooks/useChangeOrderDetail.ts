@@ -563,6 +563,8 @@ export function useChangeOrderDetail(coId: string | null) {
         .update({
           status: 'submitted',
           submitted_at: new Date().toISOString(),
+          rejected_at: null,
+          rejection_note: null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', changeOrderId)

@@ -22,7 +22,7 @@ interface TeamMember {
   orgName: string;
   roleLabel: string;
   roleCode: 'GC' | 'TC' | 'FC' | 'OTHER';
-  status: 'Owner' | 'Active' | 'Pending accept' | 'Completed' | 'Notified';
+  status: 'Owner' | 'Active' | 'Pending accept' | 'Completed' | 'Notified' | 'Not submitted';
 }
 
 const ROLE_COLORS: Record<string, string> = {
@@ -38,6 +38,7 @@ const STATUS_STYLES: Record<string, string> = {
   'Pending accept': 'bg-state-open/10 text-state-open',
   Completed: 'bg-muted text-muted-foreground',
   Notified: 'bg-type-sov/10 text-type-sov',
+  'Not submitted': 'bg-muted text-muted-foreground',
 };
 
 export function COTeamCard({ co, collaborators }: COTeamCardProps) {
@@ -111,7 +112,9 @@ export function COTeamCard({ co, collaborators }: COTeamCardProps) {
       const status: TeamMember['status'] = collabRow?.status === 'active' ? 'Active'
         : collabRow?.status === 'invited' ? 'Pending accept'
         : collabRow?.status === 'completed' ? 'Completed'
-        : 'Notified';
+        : co.created_by_role === 'TC' && co.kept_internal && ['draft', 'shared', 'work_in_progress', 'closed_for_pricing'].includes(co.status)
+          ? 'Not submitted'
+          : 'Notified';
       const roleCode = (assignedOrg.type === 'GC' ? 'GC' : assignedOrg.type === 'TC' ? 'TC' : assignedOrg.type === 'FC' ? 'FC' : 'OTHER') as TeamMember['roleCode'];
       members.push({
         orgId: co.assigned_to_org_id,

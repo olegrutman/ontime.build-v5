@@ -11393,6 +11393,10 @@ export type Database = {
         Args: { _project_id: string; _supplier_org_id: string }
         Returns: string
       }
+      return_crew_change_order_for_fix: {
+        Args: { _co_id: string; _note: string }
+        Returns: undefined
+      }
       review_co_line_items: {
         Args: { _co_id: string; _decisions: Json }
         Returns: undefined
@@ -11687,6 +11691,10 @@ export type Database = {
       }
       set_member_project_scope: {
         Args: { _scope: string; _target_role_id: string }
+        Returns: undefined
+      }
+      set_own_change_order_internal: {
+        Args: { _co_id: string; _internal: boolean }
         Returns: undefined
       }
       set_project_member_access: {

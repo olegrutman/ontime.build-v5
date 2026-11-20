@@ -39,7 +39,8 @@ export function coPricingStatusLabel(
   readiness?: COPricingReadiness,
   keptInternal = false,
 ): string | undefined {
-  if (keptInternal || !['draft', 'shared', 'work_in_progress', 'closed_for_pricing'].includes(status)) return;
+  if (!['draft', 'shared', 'work_in_progress', 'closed_for_pricing'].includes(status)) return;
+  if (keptInternal) return 'Approved internally';
   if (readiness === 'ready') return 'Priced · Awaiting submission';
   if (readiness === 'incomplete') return 'Pricing incomplete';
 }
