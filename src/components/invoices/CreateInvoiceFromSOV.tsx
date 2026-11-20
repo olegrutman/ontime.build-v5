@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { getContractDisplayName } from '@/hooks/useContractSOV';
 import { buildInvoiceNumber, invoiceOrderReference } from '@/lib/invoiceNumber';
 import { BulkCOInvoicePanel } from './BulkCOInvoicePanel';
+import { coLumpInvoiceSource } from '@/lib/coInvoiceRows';
 
 
 interface Contract {
@@ -656,6 +657,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
           lineItemsToInsert = [{
             invoice_id: invoice.id,
             sov_item_id: null,
+            ...coLumpInvoiceSource(selectedCO.co_id),
             description: label.length > 240 ? label.slice(0, 237) + '…' : label,
             // Keep the full reason_note so the renderer can show scope OR full notes.
             line_notes: selectedCO.description || null,

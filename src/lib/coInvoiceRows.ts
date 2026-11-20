@@ -21,6 +21,11 @@ export function splitBulkInvoiceOrders<T extends BulkInvoiceBalance>(orders: T[]
   return { billable, partiallyBilled };
 }
 
+/** Single-order progress lines must count toward that order, not become legacy full-order billing. */
+export function coLumpInvoiceSource(coId: string) {
+  return { source_co_id: coId, source_entry_ids: null };
+}
+
 /** Never silently replace missing scope with a summary or increase approved billing. */
 export function validateCoInvoiceRows(rows: BillableInvoiceRow[], remaining: number): BillableInvoiceRow[] {
   const positive = rows.filter(row => row.amount > 0.005);

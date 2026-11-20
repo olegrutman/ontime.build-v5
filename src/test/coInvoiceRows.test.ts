@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { splitBulkInvoiceOrders, submittedLaborTotal, validateCoInvoiceRows } from '@/lib/coInvoiceRows';
+import { coLumpInvoiceSource, splitBulkInvoiceOrders, submittedLaborTotal, validateCoInvoiceRows } from '@/lib/coInvoiceRows';
 
 describe('subcontractor-added invoice work', () => {
   it('freezes saved crew-derived and manual billable labor once', () => {
@@ -31,5 +31,14 @@ describe('bulk re-invoicing eligibility', () => {
     const result = splitBulkInvoiceOrders([{ co_id: 'paid', already_billed: 650, remaining: 0 }]);
     expect(result.billable).toEqual([]);
     expect(result.partiallyBilled).toEqual([]);
+  });
+});
+
+describe('single-order progress provenance', () => {
+  it('tags a partial lump-sum line to its order without falsely reserving every source entry', () => {
+    expect(coLumpInvoiceSource('WO-729-A5-12-0001')).toEqual({
+      source_co_id: 'WO-729-A5-12-0001',
+      source_entry_ids: null,
+    });
   });
 });
