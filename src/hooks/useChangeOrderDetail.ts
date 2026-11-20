@@ -6,6 +6,7 @@ import { resolveUpstreamBillerOrgId } from '@/lib/fcPricingBase';
 import { coLaborCost } from '@/lib/coLaborCost';
 import { approvedLaborForReview, finalizedCOApprovalAmount } from '@/lib/coLineReview';
 import { getNteUsedAmount } from '@/lib/coPricingPresentation';
+import { crewPricingEntries } from '@/lib/crewHourReview';
 
 import type {
   ChangeOrder,
@@ -182,11 +183,19 @@ export function useChangeOrderDetail(coId: string | null) {
   const actualCostEntries = laborEntries.filter(entry => entry.is_actual_cost);
 
   const fcBillableEntries = billableLaborEntries.filter(entry => entry.entered_by_role === 'FC');
+  const fcPricingEntries = crewPricingEntries(fcBillableEntries);
   const fcLaborTotal = fcBillableEntries.reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
   const fcTotalHours = fcBillableEntries
     .filter(entry => entry.pricing_mode === 'hourly')
     .reduce((sum, entry) => sum + (entry.hours ?? 0), 0);
   const fcLumpSumTotal = fcBillableEntries
+    .filter(entry => entry.pricing_mode === 'lump_sum')
+    .reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
+  const approvedFcLaborTotal = fcPricingEntries.reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
+  const approvedFcTotalHours = fcPricingEntries
+    .filter(entry => entry.pricing_mode === 'hourly')
+    .reduce((sum, entry) => sum + (entry.hours ?? 0), 0);
+  const approvedFcLumpSumTotal = fcPricingEntries
     .filter(entry => entry.pricing_mode === 'lump_sum')
     .reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
   const tcLaborTotal = billableLaborEntries
@@ -197,7 +206,7 @@ export function useChangeOrderDetail(coId: string | null) {
   // rows mirror the crew rows — the same work. Adding both would double the labor
   // used for the NTE gauge, labor tax and margin, so only count it once.
   const laborTotal = co?.use_fc_pricing_base
-    ? (tcLaborTotal > 0 ? tcLaborTotal : fcLaborTotal)
+    ? (tcLaborTotal > 0 ? tcLaborTotal : approvedFcLaborTotal)
     : tcLaborTotal + fcLaborTotal;
   const materialsCost = materials.reduce((sum, material) => sum + (material.line_cost ?? 0), 0);
   const materialsMarkup = materials.reduce((sum, material) => sum + (material.markup_amount ?? 0), 0);
@@ -354,6 +363,9 @@ export function useChangeOrderDetail(coId: string | null) {
     fcLaborTotal,
     fcTotalHours,
     fcLumpSumTotal,
+    approvedFcLaborTotal,
+    approvedFcTotalHours,
+    approvedFcLumpSumTotal,
     tcLaborTotal,
     materialsTotal,
     materialsCost,

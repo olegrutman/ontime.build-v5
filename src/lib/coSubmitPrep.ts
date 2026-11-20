@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
 import { submittedLaborTotal } from '@/lib/coInvoiceRows';
+import { crewPricingEntries } from '@/lib/crewHourReview';
 
 
 /**
@@ -64,6 +65,8 @@ interface SnapshotArgs {
     equipmentTotal?: number;
     fcTotalHours?: number;
     fcLumpSumTotal?: number;
+    approvedFcTotalHours?: number;
+    approvedFcLumpSumTotal?: number;
   } | null;
 }
 
@@ -107,8 +110,8 @@ export async function snapshotCOSubmission({
     // Same rule as the on-screen calculation: price from what the crew actually
     // submitted (hours first, lump sum fallback), never from the pricing label.
     updates.tc_submitted_price = computeFcPricingBase({
-      fcTotalHours: financials?.fcTotalHours ?? 0,
-      fcLumpSumTotal: financials?.fcLumpSumTotal ?? 0,
+      fcTotalHours: financials?.approvedFcTotalHours ?? financials?.fcTotalHours ?? 0,
+      fcLumpSumTotal: financials?.approvedFcLumpSumTotal ?? financials?.fcLumpSumTotal ?? 0,
       hourlyRate: rate,
       markupPercent: markup,
       pricingType,
@@ -174,7 +177,7 @@ export async function materializeCrewPricing({
 }: MaterializeArgs): Promise<void> {
   const { data: rows, error } = await supabase
     .from('co_labor_entries')
-    .select('id, co_line_item_id, org_id, entered_by_role, is_actual_cost, pricing_mode, hours, lump_sum, line_total')
+    .select('id, co_line_item_id, org_id, entered_by_role, is_actual_cost, pricing_mode, hours, lump_sum, line_total, crew_review_status')
     .eq('co_id', coId);
   if (error) throw error;
   if (!rows) return;
@@ -194,7 +197,7 @@ export async function materializeCrewPricing({
     );
     if (alreadyPriced) continue;
 
-    const crew = itemRows.filter((r) => !r.is_actual_cost && r.entered_by_role === 'FC');
+    const crew = crewPricingEntries(itemRows);
     if (crew.length === 0) continue;
 
     const crewHours = crew.reduce((s, r) => s + Number(r.hours ?? 0), 0);

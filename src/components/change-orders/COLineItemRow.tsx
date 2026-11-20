@@ -18,6 +18,7 @@ import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { actualEntryBaseCost } from '@/lib/laborEntryMath';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
+import { crewPricingEntries } from '@/lib/crewHourReview';
 
 interface COLineItemRowProps {
   item: COLineItem;
@@ -207,13 +208,14 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
     .filter(e => (e.hours ?? 0) > 0 && (e.line_total ?? 0) === 0)
     .reduce((s, e) => s + Number(e.hours ?? 0), 0);
 
-  // Any crew time logged on this scope item — used to tell a subcontractor there's
-  // already work here waiting to be priced.
-  const crewHoursOnItem = fcBillable.reduce((s, e) => s + Number(e.hours ?? 0), 0);
-  const crewLumpOnItem = fcBillable
+  // New crew-derived prices use approved entries only. Historical NULL-review
+  // entries stay eligible so this feature cannot rewrite existing order economics.
+  const pricingFcBillable = crewPricingEntries(fcBillable);
+  const crewHoursOnItem = pricingFcBillable.reduce((s, e) => s + Number(e.hours ?? 0), 0);
+  const crewLumpOnItem = pricingFcBillable
     .filter(e => e.pricing_mode === 'lump_sum')
     .reduce((s, e) => s + Number(e.lump_sum ?? 0), 0);
-  const crewCostOnItem = fcBillable.reduce((s, e) => s + Number(e.line_total ?? 0), 0);
+  const crewCostOnItem = pricingFcBillable.reduce((s, e) => s + Number(e.line_total ?? 0), 0);
 
   // Provisional billable amount straight from the crew's submitted time. Shown to a
   // subcontractor while the item is still unpriced so the card and the side panel
@@ -262,7 +264,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           description: `Internal cost (${rl.FC} time)`,
           is_actual_cost: true,
           crew_pricing_derived: true,
-          source_fc_entry_ids: fcBillable.map(e => e.id),
+          source_fc_entry_ids: pricingFcBillable.map(e => e.id),
         });
       }
       toast.success('Priced from crew time');

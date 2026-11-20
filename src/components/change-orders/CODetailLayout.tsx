@@ -552,8 +552,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   // while the pricing panel shows a real amount.
   const crewDerivedPrice = co.use_fc_pricing_base
     ? computeFcPricingBase({
-        fcTotalHours: financials.fcTotalHours,
-        fcLumpSumTotal: financials.fcLumpSumTotal,
+        fcTotalHours: financials.approvedFcTotalHours,
+        fcLumpSumTotal: financials.approvedFcLumpSumTotal,
         hourlyRate: crewPricingBase.hourlyRate,
         markupPercent: crewPricingBase.markupPercent,
         pricingType: co.pricing_type,

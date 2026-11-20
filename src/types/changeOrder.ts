@@ -163,6 +163,11 @@ export interface COLaborEntry {
   crew_size: number | null;
   days: number | null;
   hours_per_day: number | null;
+  /** NULL means a historical entry that predates crew review. */
+  crew_review_status?: 'pending' | 'approved' | 'rejected' | null;
+  crew_reviewed_by_user_id?: string | null;
+  crew_reviewed_at?: string | null;
+  crew_rejection_note?: string | null;
 }
 
 export interface COMaterialItem {
@@ -232,6 +237,10 @@ export interface COFinancials {
   fcLaborTotal: number;
   fcTotalHours: number;
   fcLumpSumTotal: number;
+  /** Approved crew charges available for new crew-derived pricing. */
+  approvedFcLaborTotal: number;
+  approvedFcTotalHours: number;
+  approvedFcLumpSumTotal: number;
   tcLaborTotal: number;
   materialsTotal: number;
   materialsCost: number;

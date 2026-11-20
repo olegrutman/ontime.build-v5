@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle, Lock, Loader2, MapPin, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Check, CheckCircle, Lock, Loader2, MapPin, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { canRemoveLaborEntry } from '@/lib/laborEntryDelete';
 import { actualEntryBaseCost } from '@/lib/laborEntryMath';
+import { crewReviewDecisionError } from '@/lib/crewHourReview';
 import { formatWorkloadTooltip, fmtHours } from '@/lib/crewWorkload';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import type { COLaborEntry, COLineItem, COPricingType } from '@/types/changeOrder';
@@ -29,6 +31,8 @@ function EntryRow({
   onDelete,
   showApproval = false,
   onApproval,
+  showCrewReview = false,
+  onCrewReview,
 }: {
   entry: COLaborEntry;
   privateEntry?: boolean;
@@ -40,7 +44,12 @@ function EntryRow({
   onDelete: () => void;
   showApproval?: boolean;
   onApproval?: (approved: boolean) => void;
+  showCrewReview?: boolean;
+  onCrewReview?: (decision: 'approved' | 'rejected', note?: string) => Promise<void>;
 }) {
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectionNote, setRejectionNote] = useState('');
+  const [reviewing, setReviewing] = useState(false);
   const baseRate = entry.base_hourly_rate ?? entry.hourly_rate ?? 0;
   const baseLump = entry.base_lump_sum ?? entry.lump_sum ?? 0;
   const markup = privateEntry ? 0 : Number(entry.markup_percent ?? 0);
@@ -48,6 +57,26 @@ function EntryRow({
   const workload = entry.pricing_mode === 'hourly'
     ? (formatWorkloadTooltip(entry) ?? `${fmtHours(Number(entry.hours ?? 0))} hrs`)
     : null;
+  const reviewStatus = entry.crew_review_status ?? 'pending';
+
+  async function reviewCrewHours(decision: 'approved' | 'rejected') {
+    const validation = crewReviewDecisionError(decision, rejectionNote);
+    if (validation) {
+      toast.error(validation);
+      return;
+    }
+    if (!onCrewReview) return;
+    setReviewing(true);
+    try {
+      await onCrewReview(decision, rejectionNote);
+      setRejecting(false);
+      setRejectionNote('');
+    } catch {
+      // The parent reports the protected action's error and keeps the note intact.
+    } finally {
+      setReviewing(false);
+    }
+  }
 
   return (
     <div className="border-b border-border/60 px-4 py-4 last:border-b-0 sm:px-5">
@@ -94,6 +123,58 @@ function EntryRow({
           )}
         </div>
       </div>
+
+      {showCrewReview && (
+        <div className="mt-3 space-y-2 border-t border-border/60 pt-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={cn(
+              'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+              reviewStatus === 'approved' && 'bg-state-approved-bg text-state-approved-foreground',
+              reviewStatus === 'rejected' && 'bg-destructive/10 text-destructive',
+              reviewStatus === 'pending' && 'bg-state-open-bg text-state-open-foreground',
+            )}>
+              {reviewStatus === 'approved' ? 'Hours approved' : reviewStatus === 'rejected' ? 'Hours rejected' : 'Review needed'}
+            </span>
+            {entry.crew_reviewed_at && (
+              <span className="text-[11px] text-muted-foreground">Reviewed {new Date(entry.crew_reviewed_at).toLocaleDateString()}</span>
+            )}
+            {onCrewReview && !rejecting && (
+              <div className="flex flex-wrap gap-2 sm:ml-auto">
+                <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5" disabled={reviewing} onClick={() => void reviewCrewHours('approved')}>
+                  {reviewing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                  Approve hours
+                </Button>
+                <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5 text-destructive hover:text-destructive" disabled={reviewing} onClick={() => setRejecting(true)}>
+                  <X className="h-3.5 w-3.5" /> Reject hours
+                </Button>
+              </div>
+            )}
+          </div>
+          {reviewStatus === 'rejected' && entry.crew_rejection_note && (
+            <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive"><span className="font-semibold">Reason:</span> {entry.crew_rejection_note}</p>
+          )}
+          {rejecting && (
+            <div className="space-y-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+              <label htmlFor={`crew-rejection-${entry.id}`} className="text-xs font-semibold text-foreground">Why are these hours rejected?</label>
+              <Textarea
+                id={`crew-rejection-${entry.id}`}
+                value={rejectionNote}
+                onChange={event => setRejectionNote(event.target.value)}
+                placeholder="Explain what the crew needs to correct"
+                rows={2}
+                className="bg-background"
+                autoFocus
+              />
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button type="button" size="sm" variant="ghost" disabled={reviewing} onClick={() => { setRejecting(false); setRejectionNote(''); }}>Cancel</Button>
+                <Button type="button" size="sm" variant="destructive" disabled={reviewing || !rejectionNote.trim()} onClick={() => void reviewCrewHours('rejected')}>
+                  {reviewing && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Confirm rejection
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -227,6 +308,25 @@ export function COItemPricingDialog({
     else onRefresh();
   }
 
+  async function handleCrewReview(entryId: string, decision: 'approved' | 'rejected', note?: string) {
+    const validation = crewReviewDecisionError(decision, note);
+    if (validation) {
+      toast.error(validation);
+      throw new Error(validation);
+    }
+    const { error } = await supabase.rpc('review_fc_labor_entry', {
+      _entry_id: entryId,
+      _decision: decision,
+      _note: note?.trim() || null,
+    });
+    if (error) {
+      toast.error(error.message);
+      throw error;
+    }
+    toast.success(decision === 'approved' ? 'Crew hours approved' : 'Crew hours rejected');
+    onRefresh();
+  }
+
   function renderRows(rows: COLaborEntry[], options: { privateEntry?: boolean; downstream?: boolean; hideRates?: boolean } = {}) {
     return (
       <div className="divide-y divide-border/60 rounded-xl border border-border bg-card">
@@ -241,6 +341,10 @@ export function COItemPricingDialog({
             onDelete={() => void deleteEntry(entry)}
             showApproval={!options.privateEntry && !options.downstream && showGCApproval}
             onApproval={approved => void handleGCApproval(entry.id, approved)}
+            showCrewReview={entry.entered_by_role === 'FC' && !entry.is_actual_cost && (isFC || (isTC && !!options.downstream))}
+            onCrewReview={isTC && options.downstream
+              ? (decision, note) => handleCrewReview(entry.id, decision, note)
+              : undefined}
           />
         ))}
       </div>
@@ -342,6 +446,7 @@ export function COItemPricingDialog({
                     {isTC && allFcBillable.length > 0 && (
                       <section>
                         <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">{rl.FC} charges · private</h3>
+                        <p className="mb-2 text-xs leading-relaxed text-muted-foreground">Approved hours can feed new crew-based pricing. Review never changes a price already submitted or approved upstream.</p>
                         {renderRows(allFcBillable, { downstream: true })}
                       </section>
                     )}

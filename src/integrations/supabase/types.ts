@@ -1641,6 +1641,10 @@ export type Database = {
           co_line_item_id: string
           created_at: string | null
           crew_pricing_derived: boolean
+          crew_rejection_note: string | null
+          crew_review_status: string | null
+          crew_reviewed_at: string | null
+          crew_reviewed_by_user_id: string | null
           crew_size: number | null
           days: number | null
           description: string | null
@@ -1668,6 +1672,10 @@ export type Database = {
           co_line_item_id: string
           created_at?: string | null
           crew_pricing_derived?: boolean
+          crew_rejection_note?: string | null
+          crew_review_status?: string | null
+          crew_reviewed_at?: string | null
+          crew_reviewed_by_user_id?: string | null
           crew_size?: number | null
           days?: number | null
           description?: string | null
@@ -1695,6 +1703,10 @@ export type Database = {
           co_line_item_id?: string
           created_at?: string | null
           crew_pricing_derived?: boolean
+          crew_rejection_note?: string | null
+          crew_review_status?: string | null
+          crew_reviewed_at?: string | null
+          crew_reviewed_by_user_id?: string | null
           crew_size?: number | null
           days?: number | null
           description?: string | null
@@ -9272,6 +9284,10 @@ export type Database = {
           co_id: string | null
           co_line_item_id: string | null
           created_at: string | null
+          crew_rejection_note: string | null
+          crew_review_status: string | null
+          crew_reviewed_at: string | null
+          crew_reviewed_by_user_id: string | null
           crew_size: number | null
           days: number | null
           description: string | null
@@ -9298,6 +9314,10 @@ export type Database = {
           co_id?: string | null
           co_line_item_id?: string | null
           created_at?: string | null
+          crew_rejection_note?: string | null
+          crew_review_status?: string | null
+          crew_reviewed_at?: string | null
+          crew_reviewed_by_user_id?: string | null
           crew_size?: number | null
           days?: number | null
           description?: string | null
@@ -9324,6 +9344,10 @@ export type Database = {
           co_id?: string | null
           co_line_item_id?: string | null
           created_at?: string | null
+          crew_rejection_note?: string | null
+          crew_review_status?: string | null
+          crew_reviewed_at?: string | null
+          crew_reviewed_by_user_id?: string | null
           crew_size?: number | null
           days?: number | null
           description?: string | null
@@ -10485,6 +10509,46 @@ export type Database = {
       review_co_line_items: {
         Args: { _co_id: string; _decisions: Json }
         Returns: undefined
+      }
+      review_fc_labor_entry: {
+        Args: { _decision: string; _entry_id: string; _note?: string }
+        Returns: {
+          actual_cost_note: string | null
+          base_hourly_rate: number | null
+          base_lump_sum: number | null
+          co_id: string
+          co_line_item_id: string
+          created_at: string | null
+          crew_pricing_derived: boolean
+          crew_rejection_note: string | null
+          crew_review_status: string | null
+          crew_reviewed_at: string | null
+          crew_reviewed_by_user_id: string | null
+          crew_size: number | null
+          days: number | null
+          description: string | null
+          entered_by_role: string
+          entry_date: string
+          gc_approved: boolean
+          gc_approved_at: string | null
+          hourly_rate: number | null
+          hours: number | null
+          hours_per_day: number | null
+          id: string
+          is_actual_cost: boolean
+          line_total: number | null
+          lump_sum: number | null
+          markup_percent: number
+          org_id: string
+          pricing_mode: string
+          source_fc_entry_ids: string[] | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "co_labor_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       run_integrity_audit: { Args: { _source?: string }; Returns: string }
       search_catalog: {

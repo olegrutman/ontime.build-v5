@@ -589,6 +589,27 @@
       "when": 1795108577407,
       "tag": "0083_field_material_receipt",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1795216238927,
+      "tag": "0084_add_crew_labor_review",
+      "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1795216437544,
+      "tag": "0085_fix_crew_labor_review_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1795216502587,
+      "tag": "0086_fix_crew_review_generated_total",
+      "breakpoints": true
     }
   ]
 }

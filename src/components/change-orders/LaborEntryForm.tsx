@@ -13,6 +13,7 @@ import type { COLaborRole, COPricingMode, COLaborEntry } from '@/types/changeOrd
 import { seedFromEntry, seedForNewEntry } from '@/lib/laborEntrySeed';
 import { calculateLaborEntryAmount } from '@/lib/laborEntryMath';
 import { getNteEntryStatus } from '@/lib/coPricingPresentation';
+import { crewPricingEntries } from '@/lib/crewHourReview';
 
 
 function fmtHours(n: number) {
@@ -130,13 +131,13 @@ export function LaborEntryForm({
       const [entriesRes, coRes] = await Promise.all([
         supabase
           .from('co_labor_entries')
-          .select('id, hours, hourly_rate, lump_sum, pricing_mode')
+          .select('id, hours, hourly_rate, lump_sum, pricing_mode, crew_review_status')
           .eq('co_line_item_id', lineItemId)
           .eq('entered_by_role', 'FC')
           .eq('is_actual_cost', false),
         supabase.from('change_orders').select('use_fc_pricing_base').eq('id', coId).maybeSingle(),
       ]);
-      const data = entriesRes.data;
+      const data = entriesRes.data ? crewPricingEntries(entriesRes.data) : null;
       if (cancelled || !data) return;
       let h = 0, c = 0;
       for (const e of data) {
