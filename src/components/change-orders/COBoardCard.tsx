@@ -8,7 +8,7 @@ import { EntrySourcePill } from './EntrySourcePill';
 import { coPricingStatusLabel } from '@/lib/coPricingReadiness';
 import { COCorrectionBadge } from './COCorrectionBadge';
 import { COExternalApprovedBadge } from './COExternalApprovedBadge';
-import { CO_PRICING_PRESENTATION } from '@/lib/coPricingPresentation';
+import { COPricingTypeBadge } from './COPricingTypeBadge';
 
 interface COBoardCardProps {
   co: ChangeOrderWithMembers;
@@ -119,15 +119,7 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
                 Input needed
               </Badge>
             )}
-            {co.pricing_type && (
-              <Badge
-                variant="secondary"
-                className="h-5 px-2 py-0 text-[10px] font-semibold"
-                aria-label={`Pricing: ${CO_PRICING_PRESENTATION[co.pricing_type].listLabel}`}
-              >
-                {CO_PRICING_PRESENTATION[co.pricing_type].listLabel}
-              </Badge>
-            )}
+            {co.pricing_type && <COPricingTypeBadge pricingType={co.pricing_type} />}
           </div>
         </div>
 

@@ -1,13 +1,12 @@
 import { differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import type { ChangeOrderWithMembers } from '@/hooks/useChangeOrders';
 import type { COStatus } from '@/types/changeOrder';
 import { COApprovalTrail } from './COApprovalTrail';
 import { EntrySourcePill } from './EntrySourcePill';
 import { COCorrectionBadge } from './COCorrectionBadge';
 import { COExternalApprovedBadge } from './COExternalApprovedBadge';
-import { CO_PRICING_PRESENTATION } from '@/lib/coPricingPresentation';
+import { COPricingTypeBadge } from './COPricingTypeBadge';
 
 interface CORowProps {
   co: ChangeOrderWithMembers;
@@ -86,15 +85,7 @@ export function CORow({ co, onClick, needsAction = false, selectable = false, is
           <COCorrectionBadge correction={co.correction} />
           <COExternalApprovedBadge co={co} />
 
-          {co.pricing_type && (
-            <Badge
-              variant="secondary"
-              className="h-5 px-2 py-0 text-[10px] font-semibold"
-              aria-label={`Pricing: ${CO_PRICING_PRESENTATION[co.pricing_type].listLabel}`}
-            >
-              {CO_PRICING_PRESENTATION[co.pricing_type].listLabel}
-            </Badge>
-          )}
+          {co.pricing_type && <COPricingTypeBadge pricingType={co.pricing_type} />}
         </div>
         <h3
           className={cn(
