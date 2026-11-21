@@ -3,21 +3,25 @@ import type { COPricingType } from '@/types/changeOrder';
 export const CO_PRICING_PRESENTATION: Record<COPricingType, {
   label: string;
   shortLabel: string;
+  listLabel: string;
   expectation: string;
 }> = {
   fixed: {
     label: 'Fixed price',
     shortLabel: 'Fixed',
+    listLabel: 'Fixed price',
     expectation: 'Agreed lump-sum scope. Bill against progress or completed items; internal labor hours and private costs stay with the performing company.',
   },
   tm: {
     label: 'Time & materials',
     shortLabel: 'T&M',
+    listLabel: 'T&M',
     expectation: 'Open-ended authorization. The running total grows from dated hours, material and equipment entries; there is no fixed remaining balance.',
   },
   nte: {
     label: 'Not to exceed',
     shortLabel: 'NTE',
+    listLabel: 'Not to exceed',
     expectation: 'Log dated hours, materials and equipment against the authorized ceiling. New entries that would pass the ceiling are blocked until an increase is approved.',
   },
 };

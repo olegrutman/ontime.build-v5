@@ -7,8 +7,7 @@ import { COApprovalTrail } from './COApprovalTrail';
 import { EntrySourcePill } from './EntrySourcePill';
 import { COCorrectionBadge } from './COCorrectionBadge';
 import { COExternalApprovedBadge } from './COExternalApprovedBadge';
-
-const PRICING_BADGE: Record<string, string> = { fixed: 'Fixed', tm: 'T&M', nte: 'NTE' };
+import { CO_PRICING_PRESENTATION } from '@/lib/coPricingPresentation';
 
 interface CORowProps {
   co: ChangeOrderWithMembers;
@@ -88,8 +87,12 @@ export function CORow({ co, onClick, needsAction = false, selectable = false, is
           <COExternalApprovedBadge co={co} />
 
           {co.pricing_type && (
-            <Badge variant="secondary" className="h-5 px-1.5 py-0 text-[10px]">
-              {PRICING_BADGE[co.pricing_type] ?? co.pricing_type}
+            <Badge
+              variant="secondary"
+              className="h-5 px-2 py-0 text-[10px] font-semibold"
+              aria-label={`Pricing: ${CO_PRICING_PRESENTATION[co.pricing_type].listLabel}`}
+            >
+              {CO_PRICING_PRESENTATION[co.pricing_type].listLabel}
             </Badge>
           )}
         </div>

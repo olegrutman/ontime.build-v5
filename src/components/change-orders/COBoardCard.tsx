@@ -8,18 +8,13 @@ import { EntrySourcePill } from './EntrySourcePill';
 import { coPricingStatusLabel } from '@/lib/coPricingReadiness';
 import { COCorrectionBadge } from './COCorrectionBadge';
 import { COExternalApprovedBadge } from './COExternalApprovedBadge';
+import { CO_PRICING_PRESENTATION } from '@/lib/coPricingPresentation';
 
 interface COBoardCardProps {
   co: ChangeOrderWithMembers;
   isActive: boolean;
   onClick: (id: string) => void;
 }
-
-const PRICING_BADGE: Record<string, string> = {
-  fixed: 'Fixed',
-  tm: 'T&M',
-  nte: 'NTE',
-};
 
 /** Left-edge stripe — pricing_type first (ISSUE 3), then reason */
 function getStripeColor(co: ChangeOrderWithMembers): string {
@@ -125,8 +120,12 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
               </Badge>
             )}
             {co.pricing_type && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
-                {PRICING_BADGE[co.pricing_type] ?? co.pricing_type}
+              <Badge
+                variant="secondary"
+                className="h-5 px-2 py-0 text-[10px] font-semibold"
+                aria-label={`Pricing: ${CO_PRICING_PRESENTATION[co.pricing_type].listLabel}`}
+              >
+                {CO_PRICING_PRESENTATION[co.pricing_type].listLabel}
               </Badge>
             )}
           </div>
