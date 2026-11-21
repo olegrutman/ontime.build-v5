@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { parseMoney, parsePercent, toCents } from '@/lib/money';
+import { formatCurrencyPrecise } from '@/lib/utils';
+
+describe('precise invoice amounts', () => {
+  it('shows full thousands and cents for pending payable rows and totals', () => {
+    expect(formatCurrencyPrecise(2590.25)).toBe('$2,590.25');
+    expect(formatCurrencyPrecise(3120.99)).toBe('$3,120.99');
+  });
+});
 
 describe('parseMoney', () => {
   it('keeps cents (regression: $8M bug)', () => {

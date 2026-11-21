@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Handshake, Users, TrendingUp, FileText, CheckCircle, Clock, Package, HelpCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrencyPrecise } from '@/lib/utils';
 import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
 import { PendingInvitesPanel } from '@/components/dashboard/PendingInvitesPanel';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
@@ -328,11 +328,11 @@ export function TCDashboardView({
                 {payables.rows.length > 0 ? payables.rows.map(inv => (
                   <TRow key={inv.id} onClick={() => navigate(`/project/${inv.projectId}?tab=invoices`)} cells={[
                     <TdN><div>{inv.title}</div><div className="mt-0.5 text-xs text-muted-foreground">{inv.projectName}</div></TdN>,
-                    <TdM>{fmt(inv.amount)}</TdM>,
+                    <TdM>{formatCurrencyPrecise(inv.amount)}</TdM>,
                     <Pill type={inv.status === 'SUBMITTED' ? 'pw' : 'pb'}>{inv.status}</Pill>,
                   ]} />
                 )) : <TRow cells={[<span className="text-muted-foreground">No pending payables</span>, '', '']} />}
-                {payables.count > 0 && <TRow isTotal cells={['', <TdM>{fmt(payables.total)}</TdM>, '']} />}
+                {payables.count > 0 && <TRow isTotal cells={['', <TdM>{formatCurrencyPrecise(payables.total)}</TdM>, '']} />}
               </tbody>
             </table>
           </KpiCard>
