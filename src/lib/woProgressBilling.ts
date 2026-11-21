@@ -26,6 +26,11 @@ export function woBillingSummary(value: number, billedToDate: number, cap?: numb
   return { limit, billed, remaining, percentBilled, status };
 }
 
+/** Every invoice entry point uses the same remaining pre-tax balance, including drafts. */
+export function hasBillableBalance(balance: { remaining: number } | null | undefined): boolean {
+  return Number(balance?.remaining ?? 0) > 0.005;
+}
+
 /** Fixed price: dollars for this period's percent of the approved value, never past the remaining balance. */
 export function fixedProgressAmount(value: number, percentThisPeriod: number, billedToDate: number): number {
   const pct = Math.max(0, Math.min(100, Number(percentThisPeriod) || 0));

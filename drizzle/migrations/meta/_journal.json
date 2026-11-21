@@ -673,6 +673,20 @@
       "when": 1795219057330,
       "tag": "0095_enforce_internal_order_upstream_isolation",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1795227488574,
+      "tag": "0096_align_crew_progress_billing_balances",
+      "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1795227614580,
+      "tag": "0097_fix_crew_procurement_billing_balance_columns",
+      "breakpoints": true
     }
   ]
 }

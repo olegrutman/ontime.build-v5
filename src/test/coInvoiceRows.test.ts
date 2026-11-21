@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coLumpInvoiceSource, splitBulkInvoiceOrders, submittedLaborTotal, validateCoInvoiceRows } from '@/lib/coInvoiceRows';
+import { coLumpInvoiceSource, splitBulkInvoiceOrders, submittedLaborTotal, untaggedProgressAmount, validateCoInvoiceRows } from '@/lib/coInvoiceRows';
 
 describe('subcontractor-added invoice work', () => {
   it('freezes saved crew-derived and manual billable labor once', () => {
@@ -31,6 +31,20 @@ describe('bulk re-invoicing eligibility', () => {
     const result = splitBulkInvoiceOrders([{ co_id: 'paid', already_billed: 650, remaining: 0 }]);
     expect(result.billable).toEqual([]);
     expect(result.partiallyBilled).toEqual([]);
+  });
+});
+
+describe('continued order-level progress billing', () => {
+  it('bills only the $220 remaining after an earlier $200 untagged progress line', () => {
+    expect(untaggedProgressAmount(420, 220, 200)).toBe(220);
+  });
+
+  it('does not replace an over-limit itemized invoice when no earlier progress exists', () => {
+    expect(untaggedProgressAmount(420, 220, 0)).toBeNull();
+  });
+
+  it('leaves ordinary itemized billing unchanged when it already fits', () => {
+    expect(untaggedProgressAmount(200, 220, 200)).toBeNull();
   });
 });
 

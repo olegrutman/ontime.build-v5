@@ -26,6 +26,13 @@ export function coLumpInvoiceSource(coId: string) {
   return { source_co_id: coId, source_entry_ids: null };
 }
 
+/** Continue an earlier order-level progress invoice without rebilling its untagged entries. */
+export function untaggedProgressAmount(requested: number, remaining: number, priorProgress: number): number | null {
+  const available = Math.max(0, Math.round(remaining * 100) / 100);
+  if (requested <= available + 0.005 || priorProgress <= 0.005 || available <= 0.005) return null;
+  return available;
+}
+
 /** Never silently replace missing scope with a summary or increase approved billing. */
 export function validateCoInvoiceRows(rows: BillableInvoiceRow[], remaining: number): BillableInvoiceRow[] {
   const positive = rows.filter(row => row.amount > 0.005);

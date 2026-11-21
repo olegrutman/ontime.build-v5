@@ -44,6 +44,7 @@ import { COEquipmentPanel } from './COEquipmentPanel';
 import { COMaterialResponsibilityToggle } from './COMaterialResponsibilityToggle';
 import { CONTEPanel } from './CONTEPanel';
 import { fetchWoBilledToDate } from '@/lib/woProgressBillingData';
+import { hasBillableBalance } from '@/lib/woProgressBilling';
 
 import { COActivityFeed } from './COActivityFeed';
 import { COAuditLog } from './COAuditLog';
@@ -219,6 +220,18 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     queryFn: async () => {
       const result = await fetchWoBilledToDate(projectId, myOrgId, [coId], isGC ? 'received' : 'issued');
       return result.get(coId) ?? null;
+    },
+  });
+  const { data: viewerBillingBalance } = useQuery({
+    queryKey: ['co-viewer-billing-balance', projectId, coId, myOrgId],
+    enabled: !!projectId && !!coId && !!myOrgId && (isTC || isFC),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('list_billable_change_orders', {
+        p_project_id: projectId,
+        p_from_org_id: myOrgId,
+      });
+      if (error) throw error;
+      return (data ?? []).find(row => row.co_id === coId) ?? null;
     },
   });
 
@@ -562,9 +575,13 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const tcBillableTotal = finalizedApprovalAmount ?? (financials.billableGrandTotal > 0
     ? financials.billableGrandTotal
     : (crewDerivedPrice?.fcHasSubmitted ? crewDerivedPrice.calculatedPrice : financials.billableGrandTotal));
-  const orderBillingValue = Number(finalizedApprovalAmount ?? (co as any).tc_submitted_price ?? tcBillableTotal ?? 0);
+  const fallbackBillingValue = isFC
+    ? Number(financials.viewer.totalToUpstream ?? 0)
+    : Number(finalizedApprovalAmount ?? (co as any).tc_submitted_price ?? tcBillableTotal ?? 0);
+  const orderBillingValue = Number(viewerBillingBalance?.grand_total ?? fallbackBillingValue);
   const billedToDate = billingInfo?.legacyFullyBilled ? orderBillingValue : Number(billingInfo?.billed ?? 0);
   const draftBilling = Number(billingInfo?.draft ?? 0);
+  const canCreateProgressInvoice = (isTC || isFC) && hasBillableBalance(viewerBillingBalance);
 
 
 
@@ -591,9 +608,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       orgId={myOrgId}
       status={co.status}
       nteCap={(co as any).nte_cap ?? null}
-      value={isFC
-        ? Number(financials.viewer.ownLaborToUpstream ?? 0)
-        : Number(finalizedApprovalAmount ?? (co as any).tc_submitted_price ?? tcBillableTotal ?? 0)}
+      value={orderBillingValue}
     />
   ) : null;
 
@@ -712,7 +727,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   <Clock3 className="h-4 w-4 shrink-0" />Log hours &amp; actuals
                 </Button>
               )}
-              {(isTC || isFC) && (status === 'approved' || status === 'contracted') && (
+              {canCreateProgressInvoice && (
                 <Button variant="outline" className="min-h-10 w-full gap-2 whitespace-normal" onClick={() => setCreateInvoiceOpen(true)}>
                   <Receipt className="h-4 w-4 shrink-0" />
                   {co.pricing_type === 'fixed' ? 'Create progress invoice' : 'Invoice logged actuals'}
@@ -1103,6 +1118,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         projectId={projectId}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['co-linked-invoice', coId] });
+          queryClient.invalidateQueries({ queryKey: ['co-viewer-billing-balance', projectId, coId, myOrgId] });
+          queryClient.invalidateQueries({ queryKey: ['co-order-billing', projectId, coId, myOrgId] });
           queryClient.invalidateQueries({ queryKey: ['co-order-billing', projectId, coId] });
           refreshDetail();
         }}

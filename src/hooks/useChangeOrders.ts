@@ -7,6 +7,7 @@ import { getCOPricingReadiness, type COPricingReadiness } from '@/lib/coPricingR
 import type { ChangeOrder, COCollaboratorStatus, COStatus } from '@/types/changeOrder';
 import type { OrderCorrection } from '@/lib/coCorrection';
 import { correctionLabel } from '@/lib/coCorrection';
+import { isTaxInvoiceLine } from '@/lib/woProgressBillingData';
 
 export interface ChangeOrderWithMembers extends ChangeOrder {
   correction?: OrderCorrection | null;
@@ -164,7 +165,7 @@ export function useChangeOrders(projectId: string | null) {
               .in('co_id', coIds)
           : Promise.resolve({ data: [] as any[] }) as any,
         supabase.from('invoices')
-          .select('id, status, total_amount, co_ids, contract_id')
+          .select('id, status, subtotal, total_amount, co_ids, contract_id')
           .eq('project_id', projectId!) as any,
         coIds.length
           ? supabase.from('co_line_items').select('id, co_id, item_name, sort_order').in('co_id', coIds)
@@ -249,7 +250,7 @@ export function useChangeOrders(projectId: string | null) {
       const myInvoices = ((projInvoices ?? []) as any[]).filter(i => contractFromOrg.get(i.contract_id) === orgId);
       const invIds = myInvoices.map(i => i.id);
       const { data: invLines } = invIds.length
-        ? await supabase.from('invoice_line_items').select('invoice_id, source_co_id, current_billed').in('invoice_id', invIds)
+        ? await supabase.from('invoice_line_items').select('invoice_id, source_co_id, current_billed, description').in('invoice_id', invIds)
         : { data: [] as any[] };
       const perCo = new Map<string, { status: string; amount: number }[]>();
       for (const inv of myInvoices) {
@@ -257,8 +258,8 @@ export function useChangeOrders(projectId: string | null) {
         const coList: string[] = lines.length ? Array.from(new Set(lines.map(l => l.source_co_id))) : (inv.co_ids ?? []);
         for (const coId of coList) {
           const amt = lines.length
-            ? lines.filter(l => l.source_co_id === coId).reduce((s, l) => s + Number(l.current_billed || 0), 0)
-            : Number(inv.total_amount || 0) / Math.max(1, coList.length);
+            ? lines.filter(l => l.source_co_id === coId && !isTaxInvoiceLine(l.description)).reduce((s, l) => s + Number(l.current_billed || 0), 0)
+            : Number(inv.subtotal ?? inv.total_amount ?? 0) / Math.max(1, coList.length);
           const arr = perCo.get(coId) ?? [];
           arr.push({ status: inv.status, amount: amt });
           perCo.set(coId, arr);

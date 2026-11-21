@@ -14,14 +14,20 @@ export type WoInvoiceLineLike = {
   source_co_id: string | null;
   source_entry_ids?: string[] | null;
   current_billed: number | null;
+  description?: string | null;
 };
+
+/** Tax is added to the payable invoice total, not to the approved pre-tax work value. */
+export function isTaxInvoiceLine(description: string | null | undefined): boolean {
+  return /^\s*(?:sales\s+)?tax(?:\s|\(|$)/i.test(description ?? '');
+}
 
 /** One shared status rule: issued invoices bill; drafts reserve entries but are not billed. */
 export function applyWoInvoiceLine(info: WoBilledInfo, status: string, line: WoInvoiceLineLike) {
   const normalized = String(status).toUpperCase();
   if (['REJECTED', 'VOID', 'VOIDED'].includes(normalized)) return;
   for (const entryId of line.source_entry_ids ?? []) info.entryIds.add(entryId);
-  const amount = Number(line.current_billed) || 0;
+  const amount = isTaxInvoiceLine(line.description) ? 0 : Number(line.current_billed) || 0;
   if (normalized === 'DRAFT') info.draft += amount;
   else info.billed += amount;
 }
@@ -51,7 +57,7 @@ export async function fetchWoBilledToDate(
 
   const { data: lines } = await supabase
     .from('invoice_line_items')
-    .select('invoice_id, source_co_id, source_entry_ids, current_billed')
+    .select('invoice_id, source_co_id, source_entry_ids, current_billed, description')
     .in('invoice_id', tracked.map(i => i.id));
 
   const invoicesWithTaggedLines = new Set<string>();

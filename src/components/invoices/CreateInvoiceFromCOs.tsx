@@ -18,8 +18,9 @@ import { CO_REASON_LABELS } from '@/types/changeOrder';
 import type { COReasonCode, COLaborEntry, COMaterialItem, COEquipmentItem, COLineItem } from '@/types/changeOrder';
 import { buildInvoiceNumber } from '@/lib/invoiceNumber';
 import { fetchWoBilledToDate, type WoBilledInfo } from '@/lib/woProgressBillingData';
-import { woBillingSummary, fixedProgressAmount } from '@/lib/woProgressBilling';
+import { woBillingSummary, fixedProgressAmount, hasBillableBalance } from '@/lib/woProgressBilling';
 import { completedItemClaims, isCompletedBillableItem } from '@/lib/coItemCompletion';
+import { untaggedProgressAmount } from '@/lib/coInvoiceRows';
 import { canBillCrewLaborEntry, canCrewBillOrder } from '@/lib/crewHourReview';
 
 
@@ -46,6 +47,7 @@ interface ApprovedCO {
   pricing_type: string;
   tc_submitted_price?: number | null;
   approved_amount?: number | null;
+  approved_at?: string | null;
   nte_cap?: number | null;
   completion_acknowledged_at?: string | null;
 }
@@ -92,6 +94,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
   const [step, setStep] = useState<'select' | 'review'>('select');
   const [approvedCOs, setApprovedCOs] = useState<ApprovedCO[]>([]);
   const [billedMap, setBilledMap] = useState<Map<string, WoBilledInfo>>(new Map());
+  const [billingBalances, setBillingBalances] = useState<Map<string, { grand_total: number; already_billed: number; remaining: number }>>(new Map());
   const [percentById, setPercentById] = useState<Record<string, number>>({});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [lineItems, setLineItems] = useState<GeneratedLineItem[]>([]);
@@ -175,12 +178,24 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
           return false; // GC doesn't create invoices from COs
         });
 
-        const billed = await fetchWoBilledToDate(projectId, currentOrgId, filtered.map(c => c.id));
+        const [billed, balanceResult] = await Promise.all([
+          fetchWoBilledToDate(projectId, currentOrgId, filtered.map(c => c.id)),
+          supabase.rpc('list_billable_change_orders', {
+            p_project_id: projectId,
+            p_from_org_id: currentOrgId,
+          }),
+        ]);
+        if (balanceResult.error) throw balanceResult.error;
         const { data: completed, error: completedError } = await supabase.from(t.line)
           .select('co_id').in('co_id', filtered.map(c => c.id)).eq('approval_status', 'approved').not('completed_at', 'is', null);
         if (completedError) throw completedError;
         setCompletedCoIds(new Set((completed ?? []).map(item => item.co_id)));
         setBilledMap(billed);
+        setBillingBalances(new Map((balanceResult.data ?? []).map(row => [row.co_id, {
+          grand_total: Number(row.grand_total ?? 0),
+          already_billed: Number(row.already_billed ?? 0),
+          remaining: Number(row.remaining ?? 0),
+        }])));
         setApprovedCOs(filtered as ApprovedCO[]);
       } catch (err: any) {
         toast.error(err.message || 'Failed to load change orders');
@@ -229,23 +244,26 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
   const hasDuplicateContracts = eligibleContracts.length > 1;
 
   const isFixedProgress = (co: ApprovedCO) =>
-    invoicingRole === 'TC' && co.pricing_type === 'fixed' && approvedInvoiceValue(co) > 0;
+    (invoicingRole === 'TC' || invoicingRole === 'FC') && co.pricing_type === 'fixed'
+    && (billingBalances.get(co.id)?.grand_total ?? approvedInvoiceValue(co)) > 0;
 
   const summaryFor = (co: ApprovedCO) => {
     const info = billedMap.get(co.id);
-    const value = approvedInvoiceValue(co);
+    const value = billingBalances.get(co.id)?.grand_total ?? approvedInvoiceValue(co);
     return woBillingSummary(value, info?.legacyFullyBilled ? value : (info?.billed ?? 0), co.nte_cap);
   };
 
   const availableCOs = useMemo(
     () => approvedCOs.filter(co => {
+      const balance = billingBalances.get(co.id);
+      if (balance) return hasBillableBalance(balance);
       const info = billedMap.get(co.id);
       if (info?.legacyFullyBilled) return false;
       if (isFixedProgress(co)) return summaryFor(co).remaining > 0;
       return true;
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [approvedCOs, billedMap],
+    [approvedCOs, billedMap, billingBalances],
   );
 
 
@@ -378,10 +396,10 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         if (completedFixedIds.has(id)) continue;
         const co = coById.get(id);
         if (!co) continue;
-        const value = approvedInvoiceValue(co);
         const s = summaryFor(co);
-        const pct = percentById[id] ?? (co.completion_acknowledged_at ? Math.round((s.remaining / value) * 10000) / 100 : 0);
-        const amount = fixedProgressAmount(value, pct, s.billed);
+        const value = s.limit;
+        const pct = percentById[id] ?? (co.completion_acknowledged_at && value > 0 ? Math.round((s.remaining / value) * 10000) / 100 : 0);
+        const amount = fixedProgressAmount(value, pct, s.billed + (billedMap.get(id)?.draft ?? 0));
         if (amount <= 0) continue;
         const isFinal = amount >= s.remaining - 0.005;
         const label = co.co_number ?? co.title ?? 'WO';
@@ -414,6 +432,8 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       // Materials → line items. Skip when GC procures (supplier bills GC directly).
       for (const mat of materials) {
         if (fixedIds.has(mat.co_id) || alreadyBilled(mat.co_id, mat.id)) continue;
+        const order = coById.get(mat.co_id);
+        if (invoicingRole === 'FC' && order?.pricing_type === 'tm' && !(['approved', 'contracted'].includes(order.status) && order.approved_at)) continue;
         if (Number(mat.billed_amount ?? 0) <= 0) continue;
         if (matRespByCo.get(mat.co_id) === 'GC') continue;
         let desc = mat.description;
@@ -427,6 +447,8 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       // Equipment → line items. Skip when GC procures.
       for (const eq of equipment) {
         if (fixedIds.has(eq.co_id) || alreadyBilled(eq.co_id, eq.id)) continue;
+        const order = coById.get(eq.co_id);
+        if (invoicingRole === 'FC' && order?.pricing_type === 'tm' && !(['approved', 'contracted'].includes(order.status) && order.approved_at)) continue;
         if (Number(eq.billed_amount ?? 0) <= 0) continue;
         if (eqRespByCo.get(eq.co_id) === 'GC') continue;
         let desc = eq.description;
@@ -442,8 +464,22 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         const s = summaryFor(co);
         if (s.limit <= 0) continue;
         const thisInvoice = generated.filter(g => g.coId === id).reduce((a, g) => a + g.amount, 0);
-        if (thisInvoice > Math.max(0, s.remaining - (billedMap.get(id)?.draft ?? 0)) + 0.005) {
-          throw new Error(`${co.co_number ?? co.title ?? 'Work order'} would bill $${thisInvoice.toFixed(2)}, but only $${s.remaining.toFixed(2)} remains of its approved amount.`);
+        const info = billedMap.get(id);
+        const available = Math.max(0, s.remaining - (info?.draft ?? 0));
+        const progressAmount = untaggedProgressAmount(thisInvoice, available, (info?.billed ?? 0) + (info?.draft ?? 0));
+        if (progressAmount !== null) {
+          for (let i = generated.length - 1; i >= 0; i--) {
+            if (generated[i].coId === id) generated.splice(i, 1);
+          }
+          generated.push({
+            description: `${co.co_number ?? co.title ?? 'Work order'} — Remaining approved progress billing`,
+            amount: progressAmount,
+            coId: id,
+            type: 'progress',
+            entryIds: [],
+          });
+        } else if (thisInvoice > available + 0.005) {
+          throw new Error(`${co.co_number ?? co.title ?? 'Work order'} would bill $${thisInvoice.toFixed(2)}, but only $${available.toFixed(2)} remains of its approved amount.`);
         }
       }
 
@@ -706,8 +742,9 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
                           {completedCoIds.has(co.id) && <Badge variant="outline">Completed items available</Badge>}
                           {selected && isFixedProgress(co) && !completedCoIds.has(co.id) && (() => {
                             const s = summaryFor(co);
-                            const value = approvedInvoiceValue(co);
-                            const maxPct = Math.round((s.remaining / value) * 10000) / 100;
+                            const value = s.limit;
+                            const available = Math.max(0, s.remaining - (billedMap.get(co.id)?.draft ?? 0));
+                            const maxPct = value > 0 ? Math.round((available / value) * 10000) / 100 : 0;
                             const pct = percentById[co.id] ?? (co.completion_acknowledged_at ? maxPct : 0);
                             return (
                               <div className="flex flex-wrap items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>
@@ -719,7 +756,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
                                   onChange={e => setPercentById(p => ({ ...p, [co.id]: Math.min(maxPct, Math.max(0, Number(e.target.value) || 0)) }))}
                                   className="w-20 h-8"
                                 />
-                                <span className="text-xs text-muted-foreground">% of price = <span className="font-mono text-foreground">{fmtCurrency(fixedProgressAmount(value, pct, s.billed))}</span></span>
+                                <span className="text-xs text-muted-foreground">% of price = <span className="font-mono text-foreground">{fmtCurrency(fixedProgressAmount(value, pct, s.billed + (billedMap.get(co.id)?.draft ?? 0)))}</span></span>
                               </div>
                             );
                           })()}
