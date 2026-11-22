@@ -8,6 +8,31 @@ import { approvedLaborForReview, finalizedCOApprovalAmount } from '@/lib/coLineR
 import { getNteUsedAmount } from '@/lib/coPricingPresentation';
 import { crewPricingEntries } from '@/lib/crewHourReview';
 import { summarizeMixedItemLabor } from '@/lib/coItemLaborPricing';
+import { nteCeilingError } from '@/lib/coNteCeiling';
+
+export interface ApproveCOInput {
+  coId: string;
+  passToOwner?: boolean | null;
+  ownerPrice?: number | null;
+  ownerMarkupPercent?: number | null;
+  notPassedReason?: string | null;
+  nteCap?: number | null;
+  backchargeOrgId?: string | null;
+  backchargeAmount?: number | null;
+  backchargeResponsibleName?: string | null;
+}
+
+export interface ApproveCOResult {
+  already_approved: boolean;
+  status: 'approved' | 'rejected' | 'contracted' | 'completed';
+  approved_amount: number;
+  approved_at?: string | null;
+  gc_budget?: number | null;
+  passed_to_owner?: boolean | null;
+  retainage_amount?: number | null;
+  backcharge_amount?: number | null;
+  backcharge_org_id?: string | null;
+}
 
 import type {
   ChangeOrder,
@@ -554,6 +579,8 @@ export function useChangeOrderDetail(coId: string | null) {
 
   const submitCO = useMutation({
     mutationFn: async (changeOrderId: string) => {
+      const ceilingError = nteCeilingError(co?.pricing_type, co?.nte_cap, financials?.nteUsedAmount ?? 0);
+      if (ceilingError) throw new Error(ceilingError);
       const { data, error } = await supabase
         .from('change_orders')
         .update({
@@ -574,21 +601,35 @@ export function useChangeOrderDetail(coId: string | null) {
   });
 
   const approveCO = useMutation({
-    mutationFn: async (changeOrderId: string) => {
-      const { data, error } = await supabase
-        .from('change_orders')
-        .update({
-          status: 'approved',
-          approved_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', changeOrderId)
-        .select()
-        .maybeSingle();
+    mutationFn: async (input: ApproveCOInput) => {
+      const { data, error } = await supabase.rpc('approve_change_order_atomic', {
+        _co_id: input.coId,
+        _pass_to_owner: input.passToOwner ?? null,
+        _owner_price: input.ownerPrice ?? null,
+        _owner_markup_percent: input.ownerMarkupPercent ?? null,
+        _not_passed_reason: input.notPassedReason ?? null,
+        _nte_cap: input.nteCap ?? null,
+        _backcharge_org_id: input.backchargeOrgId ?? null,
+        _backcharge_amount: input.backchargeAmount ?? null,
+        _backcharge_responsible_name: input.backchargeResponsibleName ?? null,
+      });
       if (error) throw error;
-      return assertUpdatedChangeOrder(data as ChangeOrder | null, 'approve');
+      return data as unknown as ApproveCOResult;
     },
-    onSuccess: invalidate,
+    onSuccess: (result, input) => {
+      // Replace the actionable Submitted state immediately. A later refresh can
+      // enrich the record, but cannot leave a second approval click available.
+      queryClient.setQueryData(['co-detail', input.coId, 'co'], (old: ChangeOrder | undefined) => old ? {
+        ...old,
+        status: result.status,
+        approved_at: result.approved_at ?? old.approved_at,
+        approved_amount: result.approved_amount,
+        gc_budget: result.gc_budget ?? null,
+        passed_to_owner: result.passed_to_owner ?? null,
+        retainage_amount: result.retainage_amount ?? 0,
+      } : old);
+      invalidate();
+    },
   });
 
   const rejectCO = useMutation({

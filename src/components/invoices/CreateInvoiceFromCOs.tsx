@@ -99,6 +99,8 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [lineItems, setLineItems] = useState<GeneratedLineItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadVersion, setLoadVersion] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [retainagePercent, setRetainagePercent] = useState(0);
   const [invoiceMode, setInvoiceMode] = useState<'per_co' | 'aggregate'>('per_co');
@@ -121,6 +123,10 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
 
     (async () => {
       setLoading(true);
+      setLoadError(null);
+      setApprovedCOs([]);
+      setBilledMap(new Map());
+      setBillingBalances(new Map());
       try {
         // Overall approval preserves existing billing. For crews, subcontractor-approved
         // T&M hours also open billing while the order is still submitted upstream.
@@ -198,12 +204,14 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         }])));
         setApprovedCOs(filtered as ApprovedCO[]);
       } catch (err: any) {
-        toast.error(err.message || 'Failed to load change orders');
+        const message = err?.message || 'Failed to load billable orders';
+        setLoadError(message);
+        toast.error(message);
       } finally {
         setLoading(false);
       }
     })();
-  }, [open, projectId]);
+  }, [open, projectId, currentOrgId, invoicingRole, loadVersion]);
 
   // Load the upstream contracts this org can bill on, so duplicates are caught
   // BEFORE an invoice lands on the wrong contract.
@@ -686,7 +694,17 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
               </div>
             )}
 
-            {loading ? (
+            {loadError ? (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="space-y-3">
+                  <p className="text-sm">Billable orders could not be loaded: {loadError}</p>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setLoadVersion(value => value + 1)}>
+                    Retry loading orders
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : loading ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>

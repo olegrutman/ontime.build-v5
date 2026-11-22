@@ -28,6 +28,7 @@ import type { POWizardV2LineItem } from '@/types/poWizardV2';
 import { SmartPicker as ProductPickerContent, SmartPickerHandle as ProductPickerHandle } from '@/components/po-wizard-v2/SmartPicker';
 import { getNteEntryStatus } from '@/lib/coPricingPresentation';
 import { fillMissingSkus } from '@/lib/poLineSku';
+import { SUPPLIER_PROJECT_ACCESS_MESSAGE } from '@/lib/coSupplierAccess';
 
 const UOM_OPTIONS = ['ea', 'LF', 'SF', 'SQ', 'bag', 'box', 'sheet', 'roll', 'gal', 'lb', 'ton', 'hr'];
 
@@ -199,6 +200,7 @@ export function COMaterialsPanel({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [supplierId, setSupplierId] = useState<string | null>(null);
   const [supplierLoading, setSupplierLoading] = useState(false);
+  const [supplierCanReceive, setSupplierCanReceive] = useState(false);
   const [poRequiresApproval, setPORequiresApproval] = useState(false);
   const pickerRef = useRef<ProductPickerHandle>(null);
   const [pickerTitle, setPickerTitle] = useState<string>('Add Material');
@@ -353,28 +355,34 @@ export function COMaterialsPanel({
 
     const resolveSupplier = async () => {
       setSupplierLoading(true);
+      setSupplierCanReceive(false);
       try {
-        const { data: teamData } = await supabase
-          .from('project_team')
-          .select('org_id')
+        const { data: participantData, error: participantError } = await supabase
+          .from('project_participants')
+          .select('organization_id')
           .eq('project_id', projectId)
-          .eq('role', 'Supplier');
+          .eq('role', 'SUPPLIER')
+          .eq('invite_status', 'ACCEPTED');
+        if (participantError) throw participantError;
 
-        const orgIds = (teamData || []).map(team => team.org_id);
+        const orgIds = (participantData || []).map(participant => participant.organization_id);
         let resolvedSupplierId: string | null = null;
 
         if (orgIds.length > 0) {
-          const { data: supplierData } = await supabase
+          const { data: supplierData, error: supplierError } = await supabase
             .from('suppliers')
             .select('id')
             .in('organization_id', orgIds)
             .limit(1)
             .maybeSingle();
-
+          if (supplierError) throw supplierError;
           resolvedSupplierId = supplierData?.id ?? null;
         }
 
+        const hasProjectSupplier = !!resolvedSupplierId;
         if (!resolvedSupplierId) {
+          // The master catalog remains available for product research, but it is
+          // not a supplier handoff and cannot create or send a pricing request.
           const { data: systemSupplier } = await supabase
             .from('suppliers')
             .select('id')
@@ -387,6 +395,7 @@ export function COMaterialsPanel({
 
         if (!cancelled) {
           setSupplierId(resolvedSupplierId);
+          setSupplierCanReceive(hasProjectSupplier);
 
           // Check for approved supplier estimates
           if (orgIds.length > 0) {
@@ -604,20 +613,12 @@ export function COMaterialsPanel({
   }, [addedByRole, coId, materials.length, materialsOnSite, nteCap, nteUsed, onRefresh, orgId]);
 
   async function resolvePricingOwnerOrgId() {
-    const { data: contracts, error } = await supabase
-      .from('project_contracts')
-      .select('material_responsibility, from_org_id, to_org_id')
-      .eq('project_id', projectId)
-      .not('material_responsibility', 'is', null);
-
+    const { data, error } = await supabase.rpc('resolve_co_material_pricing_owner', {
+      _co_id: coId,
+      _actor_org_id: orgId,
+    });
     if (error) throw error;
-
-    const contractWithResponsibility = (contracts ?? []).find(contract => contract.material_responsibility);
-    if (!contractWithResponsibility) return orgId;
-
-    return contractWithResponsibility.material_responsibility === 'GC'
-      ? (contractWithResponsibility.to_org_id ?? orgId)
-      : (contractWithResponsibility.from_org_id ?? orgId);
+    return data;
   }
 
   async function resolveSupplierEmail() {
@@ -661,6 +662,10 @@ export function COMaterialsPanel({
 
     if (!supplierId) {
       toast.error('No supplier is configured for this project');
+      return;
+    }
+    if (!supplierCanReceive) {
+      toast.error(SUPPLIER_PROJECT_ACCESS_MESSAGE);
       return;
     }
 
@@ -1154,6 +1159,12 @@ export function COMaterialsPanel({
                 )}
               </div>
 
+              {!activePricingRequest && !supplierCanReceive && !supplierLoading && (
+                <p className="rounded-lg border border-state-open/30 bg-state-open-bg px-3 py-2 text-xs leading-snug text-state-open-foreground">
+                  {SUPPLIER_PROJECT_ACCESS_MESSAGE} The catalog is still available for adding items.
+                </p>
+              )}
+
               {!activePricingRequest && (
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -1161,7 +1172,7 @@ export function COMaterialsPanel({
                     size="sm"
                     className="h-8 text-xs gap-1"
                     onClick={() => createPricingRequest(false)}
-                    disabled={pricingAction !== null || supplierLoading || !supplierId}
+                    disabled={pricingAction !== null || supplierLoading || !supplierId || !supplierCanReceive}
                   >
                     {pricingAction === 'draft' ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShoppingCart className="h-3 w-3" />}
                     Create pricing draft
@@ -1170,7 +1181,7 @@ export function COMaterialsPanel({
                     size="sm"
                     className="h-8 text-xs gap-1"
                     onClick={() => createPricingRequest(true)}
-                    disabled={pricingAction !== null || supplierLoading || !supplierId}
+                    disabled={pricingAction !== null || supplierLoading || !supplierId || !supplierCanReceive}
                   >
                     {pricingAction === 'send' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
                     {isTC && poRequiresApproval ? `Send to ${rl.GC} for approval` : 'Send to supplier for pricing'}

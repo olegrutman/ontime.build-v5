@@ -10886,6 +10886,20 @@ export type Database = {
         Args: { _user_id: string }
         Returns: undefined
       }
+      approve_change_order_atomic: {
+        Args: {
+          _backcharge_amount?: number
+          _backcharge_org_id?: string
+          _backcharge_responsible_name?: string
+          _co_id: string
+          _not_passed_reason?: string
+          _nte_cap?: number
+          _owner_markup_percent?: number
+          _owner_price?: number
+          _pass_to_owner?: boolean
+        }
+        Returns: Json
+      }
       approve_crew_change_order: {
         Args: { _co_id: string; _keep_internal?: boolean }
         Returns: undefined
@@ -11177,6 +11191,21 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_wo_billing_status: {
+        Args: {
+          p_co_ids: string[]
+          p_direction?: string
+          p_org_id: string
+          p_project_id: string
+        }
+        Returns: {
+          billed: number
+          co_id: string
+          draft: number
+          entry_ids: string[]
+          legacy_fully_billed: boolean
+        }[]
+      }
       has_co_v4_flag: {
         Args: { _flag: string; _org_id: string }
         Returns: boolean
@@ -11403,6 +11432,10 @@ export type Database = {
         Args: { p_project_id: string }
         Returns: undefined
       }
+      resolve_co_material_pricing_owner: {
+        Args: { _actor_org_id: string; _co_id: string }
+        Returns: string
+      }
       resolve_supplier_po_buyer_org: {
         Args: { _project_id: string; _supplier_org_id: string }
         Returns: string
@@ -11601,6 +11634,10 @@ export type Database = {
       set_co_item_labor_pricing_method: {
         Args: { _item_id: string; _method: string; _org_id: string }
         Returns: undefined
+      }
+      set_co_nte_ceiling: {
+        Args: { _ceiling: number; _co_id: string }
+        Returns: number
       }
       set_co_procurement_responsibility: {
         Args: { _co_id: string; _kind: string; _responsible: string }

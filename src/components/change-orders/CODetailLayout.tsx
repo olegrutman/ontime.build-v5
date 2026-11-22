@@ -45,8 +45,10 @@ import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COMaterialResponsibilityToggle } from './COMaterialResponsibilityToggle';
 import { CONTEPanel } from './CONTEPanel';
+import { COOrderNteCeiling } from './COOrderNteCeiling';
 import { fetchWoBilledToDate } from '@/lib/woProgressBillingData';
 import { hasBillableBalance } from '@/lib/woProgressBilling';
+import { nteCeilingError } from '@/lib/coNteCeiling';
 
 import { COActivityFeed } from './COActivityFeed';
 import { COAuditLog } from './COAuditLog';
@@ -88,6 +90,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const scopeRef = useRef<HTMLDivElement>(null);
   const materialsRef = useRef<HTMLDivElement>(null);
   const pricingRef = useRef<HTMLDivElement>(null);
+  const actionsRef = useRef<HTMLElement>(null);
   const photosCardRef = useRef<COPhotosCardHandle>(null);
 
   const [comment, setComment] = useState('');
@@ -166,7 +169,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     nteLog, activity, financials, isLoading,
     requestFCInput, completeFCInput, closeForPricing,
     requestNTEIncrease, approveNTEIncrease, rejectNTEIncrease,
-    submitCO, approveCO, rejectCO,
+    submitCO, rejectCO,
   } = useChangeOrderDetail(coId);
   useCORealtime(coId);
   const { data: projectFCOrgs = [] } = useProjectFCOrgs(projectId);
@@ -277,17 +280,17 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     o => !collaboratorOrgIds.has(o.id) || o.id === currentCollaborator?.organization_id
   );
 
-  function refreshDetail() {
+  async function refreshDetail() {
     queryClient.invalidateQueries({ queryKey: ['co-corrections', projectId] });
-    queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
     queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
     queryClient.invalidateQueries({ queryKey: ['co-financials-v2', coId] });
     queryClient.invalidateQueries({ queryKey: ['co-responsibility', coId] });
+    await queryClient.refetchQueries({ queryKey: ['co-detail', coId] });
   }
 
   function handleBack() { navigate(`/project/${projectId}/change-orders`); }
 
-  function goToSection(ref?: RefObject<HTMLDivElement | null>) {
+  function goToSection(ref?: RefObject<HTMLElement | null>) {
     ref?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -347,6 +350,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             openPhotos('during');
             break;
           }
+          const ceilingError = nteCeilingError(co.pricing_type, co.nte_cap, financials.nteUsedAmount);
+          if (ceilingError) {
+            toast.error(ceilingError);
+            goToSection(actionsRef);
+            break;
+          }
           try {
             // FC-as-creator submits the CO itself; FC-as-collaborator marks input complete.
             const isFCCreator = co.created_by_role === 'FC' && co.org_id === myOrgId;
@@ -395,6 +404,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             openPhotos('during');
             break;
           }
+          const ceilingError = nteCeilingError(co.pricing_type, co.nte_cap, financials.nteUsedAmount);
+          if (ceilingError) {
+            toast.error(ceilingError);
+            goToSection(actionsRef);
+            break;
+          }
           try {
             const assignee = await resolveCOAssignee({
               coId: co.id,
@@ -422,16 +437,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         break;
       case 'approve':
         if (co) {
-          if (lineItems.length > 1) {
-            goToSection(scopeRef);
-            toast.info('Review each scope item, then finish the review in Actions.');
-            break;
-          }
           if (!canApprove) { toast.error('You do not have permission to approve'); break; }
-          try {
-            await approveCO.mutateAsync(co.id);
-            toast.success('Approved');
-          } catch (e: any) { toast.error(e?.message ?? 'Failed to approve'); }
+          goToSection(actionsRef);
+          toast.info(lineItems.length > 1
+            ? 'Review each scope item, then finish in Actions.'
+            : 'Finish approval in Actions so owner pricing and the order status save together.');
         }
         break;
       case 'reject':
@@ -703,7 +713,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} crewForwardPricingError={crewForwardPricingError} />
             </div>
             <aside className="min-w-0 space-y-3 xl:col-start-2 xl:row-span-2 xl:row-start-1">
-            <section aria-label="Actions" className="space-y-3 rounded-2xl border-2 border-primary/30 bg-card p-3 shadow-sm">
+            <section ref={actionsRef} aria-label="Actions" className="space-y-3 rounded-2xl border-2 border-primary/30 bg-card p-3 shadow-sm">
               {(isTC || isFC) && co.pricing_type !== 'fixed' && canEdit && !nteBlocked && lineItems.some(item => item.approval_status !== 'rejected') && (
                 <Button className="min-h-10 w-full gap-2 whitespace-normal" onClick={openFirstEntry}>
                   <Clock3 className="h-4 w-4 shrink-0" />Log hours &amp; actuals
@@ -714,6 +724,20 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   <Receipt className="h-4 w-4 shrink-0" />
                   {co.pricing_type === 'fixed' ? 'Create progress invoice' : 'Invoice logged actuals'}
                 </Button>
+              )}
+              {co.pricing_type === 'nte' && !['submitted', 'approved', 'contracted', 'withdrawn'].includes(co.status) && (
+                <COOrderNteCeiling
+                  coId={co.id}
+                  ceiling={co.nte_cap ?? null}
+                  currentActuals={financials.nteUsedAmount}
+                  canEdit={(isTC || isGC) && canEditExternal}
+                  onRefresh={refreshDetail}
+                />
+              )}
+              {co.pricing_type === 'nte' && co.nte_cap == null && ['submitted', 'approved', 'contracted'].includes(co.status) && (
+                <p className="rounded-lg border border-state-open/30 bg-state-open-bg px-3 py-2 text-xs text-state-open-foreground">
+                  Ceiling not set. A positive order ceiling is required for any new submission or approval.
+                </p>
               )}
               {co.pricing_type === 'nte' && co.nte_cap != null && (
                 <CONTEPanel

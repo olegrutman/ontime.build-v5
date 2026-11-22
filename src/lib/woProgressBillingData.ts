@@ -43,37 +43,23 @@ export async function fetchWoBilledToDate(
   coIds.forEach(id => out.set(id, { billed: 0, draft: 0, entryIds: new Set(), legacyFullyBilled: false }));
   if (coIds.length === 0) return out;
 
-  const { data: contracts } = await supabase
-    .from('project_contracts').select('id').eq('project_id', projectId).eq(direction === 'issued' ? 'from_org_id' : 'to_org_id', orgId);
-  const contractIds = (contracts ?? []).map(c => c.id);
-  if (contractIds.length === 0) return out;
+  // One authorized read avoids the invoice-line RLS chain that also evaluates
+  // unrelated purchase-order policies and previously timed out the selector.
+  const { data, error } = await supabase.rpc('get_wo_billing_status', {
+    p_project_id: projectId,
+    p_org_id: orgId,
+    p_co_ids: coIds,
+    p_direction: direction,
+  });
+  if (error) throw error;
 
-  const { data: invoices } = await supabase
-    .from('invoices').select('id, status, co_ids').eq('project_id', projectId).in('contract_id', contractIds);
-  const tracked = (invoices ?? []).filter(i => !['REJECTED', 'VOID', 'VOIDED'].includes(String(i.status).toUpperCase()));
-  if (tracked.length === 0) return out;
-  const live = tracked.filter(i => String(i.status).toUpperCase() !== 'DRAFT');
-  const statusByInvoice = new Map(tracked.map(i => [i.id, i.status]));
-
-  const { data: lines } = await supabase
-    .from('invoice_line_items')
-    .select('invoice_id, source_co_id, source_entry_ids, current_billed, description')
-    .in('invoice_id', tracked.map(i => i.id));
-
-  const invoicesWithTaggedLines = new Set<string>();
-  for (const l of lines ?? []) {
-    if (!l.source_co_id) continue;
-    const info = out.get(l.source_co_id);
-    if (!info) continue;
-    applyWoInvoiceLine(info, statusByInvoice.get(l.invoice_id) ?? 'DRAFT', l);
-    if (String(statusByInvoice.get(l.invoice_id)).toUpperCase() !== 'DRAFT') invoicesWithTaggedLines.add(l.invoice_id);
-  }
-  for (const inv of live) {
-    if (invoicesWithTaggedLines.has(inv.id)) continue;
-    for (const id of ((inv as any).co_ids ?? []) as string[]) {
-      const info = out.get(id);
-      if (info) info.legacyFullyBilled = true;
-    }
+  for (const row of data ?? []) {
+    out.set(row.co_id, {
+      billed: Number(row.billed ?? 0),
+      draft: Number(row.draft ?? 0),
+      entryIds: new Set(row.entry_ids ?? []),
+      legacyFullyBilled: !!row.legacy_fully_billed,
+    });
   }
   return out;
 }

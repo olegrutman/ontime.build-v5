@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Receipt } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { fetchWoBilledToDate } from '@/lib/woProgressBillingData';
 import { woBillingSummary, WO_BILLING_LABEL } from '@/lib/woProgressBilling';
 
@@ -19,17 +20,33 @@ export function WOBilledToDateCard({ projectId, coId, orgId, value, nteCap, stat
   const [billed, setBilled] = useState<number | null>(null);
   const [draft, setDraft] = useState(0);
   const [legacy, setLegacy] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     if (!orgId) return;
+    let cancelled = false;
+    setLoadFailed(false);
     fetchWoBilledToDate(projectId, orgId, [coId]).then(m => {
+      if (cancelled) return;
       const info = m.get(coId);
       setBilled(info?.billed ?? 0);
       setDraft(info?.draft ?? 0);
       setLegacy(!!info?.legacyFullyBilled);
+    }).catch(() => {
+      if (!cancelled) setLoadFailed(true);
     });
-  }, [projectId, coId, orgId]);
+    return () => { cancelled = true; };
+  }, [projectId, coId, orgId, retry]);
 
+  if (loadFailed && ['approved', 'contracted'].includes(status)) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-4 flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">Billing totals could not be loaded.</p>
+        <Button type="button" variant="outline" size="sm" onClick={() => setRetry(value => value + 1)}>Retry</Button>
+      </div>
+    );
+  }
   if (!['approved', 'contracted'].includes(status) || billed === null || value <= 0) return null;
   const s = woBillingSummary(value, legacy ? value : billed, nteCap);
   const tone = s.status === 'fully_billed' ? 'bg-success' : 'bg-primary';

@@ -171,6 +171,7 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
   }
 
   const cap = Math.max(0, Number(co.nte_cap) || 0);
+  const hasCap = co.nte_cap != null && Number(co.nte_cap) > 0;
   const used = Math.max(0, financials.nteUsedAmount);
   const percent = cap > 0 ? (used / cap) * 100 : 0;
   const meterColor = percent >= 95 ? C.red : percent >= 80 ? C.amber : C.green;
@@ -179,21 +180,23 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       label: 'Actuals / NTE ceiling',
       value: fmtCurrency(used),
       color: meterColor,
-      sub: `${percent.toFixed(1)}% of ${fmtCurrency(cap)} authorized ceiling`,
+      sub: hasCap ? `${percent.toFixed(1)}% of ${fmtCurrency(cap)} authorized ceiling` : 'Ceiling not set',
       kind: 'revenue',
       primary: true,
       meter: { percent, color: meterColor },
-      badge: percent >= 100
-        ? { text: 'Ceiling reached', variant: 'watch' }
-        : percent >= 80
-          ? { text: 'Approaching ceiling', variant: 'watch' }
-          : { text: 'Within ceiling', variant: 'healthy' },
+      badge: !hasCap
+        ? { text: 'Ceiling required', variant: 'watch' }
+        : percent >= 100
+          ? { text: 'Ceiling reached', variant: 'watch' }
+          : percent >= 80
+            ? { text: 'Approaching ceiling', variant: 'watch' }
+            : { text: 'Within ceiling', variant: 'healthy' },
     },
     {
       label: 'Remaining headroom',
-      value: fmtCurrency(Math.max(0, cap - used)),
+      value: hasCap ? fmtCurrency(Math.max(0, cap - used)) : 'Not set',
       color: meterColor,
-      sub: percent >= 100 ? 'Request a cap increase before more actuals' : 'Available before the authorized ceiling',
+      sub: !hasCap ? 'Set a positive ceiling before submission or approval' : percent >= 100 ? 'Request a cap increase before more actuals' : 'Available before the authorized ceiling',
       kind: 'other',
     },
     {

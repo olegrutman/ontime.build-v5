@@ -157,6 +157,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
 }, _ref) {
   const { user, userOrgRoles } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   
   const isRevisionMode = !!revisionInvoiceId && !!revisionData;
@@ -214,6 +215,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
 
   const fetchData = async () => {
     setLoading(true);
+    setLoadError(null);
     
     try {
       const { data: contractsData } = await supabase
@@ -266,13 +268,16 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
         });
         if (coErr) {
           console.error('Error fetching billable COs:', coErr);
+          setApprovedCOs([]);
+          setLoadError(coErr.message || 'Approved orders could not be loaded');
         } else {
           setApprovedCOs((coData || []) as BillableCO[]);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to load SOV data');
+      setLoadError(error?.message || 'Failed to load billing data');
+      toast.error('Failed to load billing data');
     } finally {
       setLoading(false);
     }
@@ -759,6 +764,15 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
               </button>
             ))}
           </div>
+        )}
+        {loadError && !loading && (
+          <Alert variant="destructive" className="my-3">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="space-y-3">
+              <p>Some billing data could not be loaded: {loadError}</p>
+              <Button type="button" variant="outline" size="sm" onClick={() => void fetchData()}>Retry loading billing data</Button>
+            </AlertDescription>
+          </Alert>
         )}
         {loading ? (
           <div className="space-y-4 py-4">

@@ -708,6 +708,20 @@
       "when": 1795326227891,
       "tag": "0100_per_item_labor_pricing_method",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1795378181480,
+      "tag": "0101_phase1_co_approval_billing_supplier_safety",
+      "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1795378336003,
+      "tag": "0102_fix_wo_billing_status_legacy_alias",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,7 @@ import { resolveCOAssignee, snapshotCOSubmission } from '@/lib/coSubmitPrep';
 import { approvedLaborForReview, summarizeLineReview } from '@/lib/coLineReview';
 import { crewUpstreamPricingError } from '@/lib/crewHourReview';
 import { canApproveOwnOrderInternally, isOwnOrderInternallyApproved } from '@/lib/coInternalApproval';
+import { nteCeilingError, parseNteCeiling } from '@/lib/coNteCeiling';
 import { usePermission } from '@/components/auth/RequirePermission';
 import { toast } from 'sonner';
 import type { ChangeOrder, COCollaborator, COFinancials, COStatus, COLineItem, COLaborEntry } from '@/types/changeOrder';
@@ -44,7 +45,7 @@ interface COStatusActionsProps {
   financials?: Pick<COFinancials, 'grandTotal' | 'billableGrandTotal' | 'billableMaterialsTotal' | 'billableEquipmentTotal' | 'laborTotal' | 'fcLaborTotal' | 'fcTotalHours' | 'fcLumpSumTotal' | 'approvedFcTotalHours' | 'approvedFcLumpSumTotal' | 'materialsTotal' | 'equipmentTotal' | 'viewer'> | null;
   collaborators?: COCollaborator[];
   assignedOrgName?: string;
-  onRefresh: () => void;
+  onRefresh: () => void | Promise<unknown>;
   lineItemCount?: number;
   lineItems?: COLineItem[];
   laborEntries?: COLaborEntry[];
@@ -84,6 +85,7 @@ export function COStatusActions({
   const actorRole = isGC ? 'GC' : isTC ? 'TC' : 'FC';
 
   const [acting, setActing] = useState(false);
+  const actingRef = useRef(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectNote, setRejectNote] = useState('');
@@ -100,6 +102,7 @@ export function COStatusActions({
   const [ownerMarkup, setOwnerMarkup] = useState('');
   const [ownerPrice, setOwnerPrice] = useState('');
   const [notPassedReason, setNotPassedReason] = useState('');
+  const [nteCeiling, setNteCeiling] = useState(co.nte_cap == null ? '' : String(co.nte_cap));
 
   const isDamagedByOthers = co.reason === 'damaged_by_others';
 
@@ -154,6 +157,10 @@ export function COStatusActions({
     ? typedOwnerPrice
     : derivedOwnerPrice;
   const ownerPriceMissing = showOwnerStep && passToOwner === 'yes' && (!effectiveOwnerPrice || effectiveOwnerPrice <= 0);
+  const parsedNteCeiling = parseNteCeiling(nteCeiling);
+  const effectiveNteCeiling = parsedNteCeiling ?? co.nte_cap ?? null;
+  const nteCeilingValidation = nteCeilingError(co.pricing_type, effectiveNteCeiling);
+  const nteCeilingMissing = co.pricing_type === 'nte' && !!nteCeilingValidation;
   const money = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 
   useEffect(() => {
@@ -343,6 +350,11 @@ export function COStatusActions({
       toast.error('Add at least one scope item before submitting.');
       return;
     }
+    const ceilingError = nteCeilingError(co.pricing_type, co.nte_cap, financials?.billableGrandTotal ?? 0);
+    if (ceilingError) {
+      toast.error(ceilingError);
+      return;
+    }
 
     setActing(true);
     try {
@@ -380,11 +392,24 @@ export function COStatusActions({
   }
 
   async function doApprove() {
+    if (actingRef.current) return;
     if (itemReview && !lineReview.complete) {
       toast.error('Approve or reject every item before finishing the review.');
       return;
     }
+    if (nteCeilingValidation) {
+      toast.error(nteCeilingValidation);
+      return;
+    }
+    if (ownerPriceMissing) {
+      toast.error('Enter a markup % or an owner price before approving.');
+      return;
+    }
+
+    actingRef.current = true;
     setActing(true);
+    let successMessage: string | null = null;
+    let repeatMessage: string | null = null;
     try {
       if (forwardsToGC) {
         /* snapshotCOSubmission materializes the latest approved crew hours and
@@ -412,125 +437,59 @@ export function COStatusActions({
         if (forwardedError) throw forwardedError;
         const nextOrgId = forwarded.assigned_to_org_id ?? null;
 
-        toast.success(`Sent to ${rl.GC} for approval`);
+        successMessage = `Sent to ${rl.GC} for approval`;
         await logActivity('forwarded_to_gc', undefined, financials?.grandTotal || undefined);
         await notifyOrg(nextOrgId, 'CHANGE_SUBMITTED', financials?.grandTotal || undefined);
       } else {
-        // Compute retainage before approving
-        const { data: projRetainage } = await supabase
-          .from('projects')
-          .select('retainage_percent')
-          .eq('id', projectId)
-          .single();
-        const retPct = projRetainage?.retainage_percent ?? 0;
-        const grandTotalForRetainage = gcCostBase;
-        const retainageAmt = grandTotalForRetainage * (retPct / 100);
+        const selectedOrg = projectParticipants.find(p => p.org_id === backchargeOrgId);
+        const result = await approveCO.mutateAsync({
+          coId: co.id,
+          passToOwner: showOwnerStep ? passToOwner === 'yes' : null,
+          ownerPrice: showOwnerStep && passToOwner === 'yes' ? effectiveOwnerPrice : null,
+          ownerMarkupPercent: showOwnerStep && passToOwner === 'yes' && !isNaN(parsedOwnerMarkup) ? parsedOwnerMarkup : null,
+          notPassedReason: showOwnerStep && passToOwner === 'no' ? notPassedReason.trim() || null : null,
+          nteCap: co.pricing_type === 'nte' ? effectiveNteCeiling : null,
+          backchargeOrgId: isDamagedByOthers ? backchargeOrgId || null : null,
+          backchargeAmount: isDamagedByOthers && backchargeAmount ? Number(backchargeAmount) : null,
+          backchargeResponsibleName: isDamagedByOthers ? selectedOrg?.org_name ?? null : null,
+        });
+        const finalStatus = result.status;
+        const approvedAmount = Number(result.approved_amount ?? 0);
 
-        // Update retainage snapshot on approval
-        if (retPct > 0) {
-          await supabase
-            .from('change_orders')
-            .update({ retainage_amount: retainageAmt })
-            .eq('id', co.id);
-        }
-
-        /* GC decides here whether this cost is passed to the owner and at what
-           markup. A passed-through CO adds its owner price to the owner
-           contract; an absorbed one stays a pure GC cost. */
-        if (showOwnerStep) {
-          if (passToOwner === 'yes') {
-            if (!effectiveOwnerPrice || effectiveOwnerPrice <= 0) {
-              toast.error('Enter a markup % or an owner price before approving.');
-              return;
-            }
-            const markup = !isNaN(parsedOwnerMarkup)
-              ? parsedOwnerMarkup
-              : gcCostBase > 0
-                ? Number((((effectiveOwnerPrice - gcCostBase) / gcCostBase) * 100).toFixed(2))
-                : null;
-            const { error: ownerErr } = await supabase
-              .from('change_orders')
-              .update({
-                gc_budget: Number(effectiveOwnerPrice.toFixed(2)),
-                gc_owner_markup_percent: markup,
-                passed_to_owner: true,
-                not_passed_reason: null,
-              })
-              .eq('id', co.id);
-            if (ownerErr) throw ownerErr;
-            await logActivity(
-              'owner_price_set',
-              `Passed to owner at ${money(effectiveOwnerPrice)}${markup != null ? ` (${markup}% markup on ${money(gcCostBase)} cost)` : ''}`,
-              Number(effectiveOwnerPrice.toFixed(2)),
-            );
-          } else {
-            const { error: ownerErr } = await supabase
-              .from('change_orders')
-              .update({
-                passed_to_owner: false,
-                gc_budget: null,
-                gc_owner_markup_percent: null,
-                not_passed_reason: notPassedReason.trim() || null,
-              })
-              .eq('id', co.id);
-            if (ownerErr) throw ownerErr;
-            await logActivity(
-              'owner_price_absorbed',
-              `Not passed to owner — absorbed ${money(gcCostBase)}${notPassedReason.trim() ? `: ${notPassedReason.trim()}` : ''}`,
-              gcCostBase || undefined,
-            );
-          }
-        }
-
-        let finalStatus: 'approved' | 'rejected' = 'approved';
-        let approvedAmount = gcCostBase;
-        if (itemReview) {
-          const { data, error } = await supabase.rpc('finalize_co_line_review', { _co_id: co.id });
-          if (error) throw error;
-          const result = data as { status: 'approved' | 'rejected'; approved_amount: number };
-          finalStatus = result.status;
-          approvedAmount = Number(result.approved_amount ?? 0);
+        if (result.already_approved) {
+          repeatMessage = 'Already approved — no amounts or contract totals were changed';
         } else {
-          await approveCO.mutateAsync(co.id);
-        }
-        const partiallyApproved = finalStatus === 'approved' && lineReview.rejected > 0;
-        toast.success(finalStatus === 'rejected'
-          ? 'All items rejected'
-          : partiallyApproved
-            ? `Approved ${lineReview.approved} item${lineReview.approved === 1 ? '' : 's'}; rejected items were excluded`
-            : 'CO approved');
-        await logActivity(finalStatus === 'approved' ? 'approved' : 'rejected',
-          itemReview ? `${lineReview.approved} approved · ${lineReview.rejected} rejected` : undefined,
-          finalStatus === 'approved' ? approvedAmount : undefined);
-        // The DB trigger notify_co_status_change already alerts the CO creator,
-        // so exclude them here to avoid duplicate notifications.
-        await notifyAllCOParties(finalStatus === 'approved' ? 'CHANGE_APPROVED' : 'CHANGE_REJECTED',
-          finalStatus === 'approved' ? approvedAmount : undefined, [co.created_by_user_id]);
-
-        // Auto-create backcharge for damaged_by_others COs
-        if (finalStatus === 'approved' && isDamagedByOthers && user) {
-          const bcAmount = parseFloat(backchargeAmount) || approvedAmount;
-          const selectedOrg = projectParticipants.find(p => p.org_id === backchargeOrgId);
-          await supabase.from('backcharges').insert({
-            project_id: projectId,
-            source_co_id: co.id,
-            responsible_org_id: backchargeOrgId || null,
-            responsible_party_name: selectedOrg?.org_name ?? null,
-            amount: bcAmount,
-            created_by_user_id: user.id,
-          });
-          if (backchargeOrgId) {
-            await notifyOrg(backchargeOrgId, 'BACKCHARGE_CREATED', bcAmount);
+          const partiallyApproved = finalStatus === 'approved' && lineReview.rejected > 0;
+          successMessage = finalStatus === 'rejected'
+            ? 'All items rejected'
+            : partiallyApproved
+              ? `Approved ${lineReview.approved} item${lineReview.approved === 1 ? '' : 's'}; rejected items were excluded`
+              : 'CO approved';
+          await logActivity(finalStatus === 'approved' ? 'approved' : 'rejected',
+            itemReview ? `${lineReview.approved} approved · ${lineReview.rejected} rejected` : undefined,
+            finalStatus === 'approved' ? approvedAmount : undefined);
+          // The DB trigger alerts the creator; exclude them from this additional alert.
+          await notifyAllCOParties(finalStatus === 'approved' ? 'CHANGE_APPROVED' : 'CHANGE_REJECTED',
+            finalStatus === 'approved' ? approvedAmount : undefined, [co.created_by_user_id]);
+          if (result.backcharge_amount != null && result.backcharge_org_id) {
+            await notifyOrg(result.backcharge_org_id, 'BACKCHARGE_CREATED', Number(result.backcharge_amount));
           }
-          await logActivity('backcharge_created', `Backcharge of $${bcAmount.toFixed(2)} against ${selectedOrg?.org_name ?? 'TBD'}`, bcAmount);
         }
       }
 
       setApproveOpen(false);
-      onRefresh();
+      try {
+        await onRefresh();
+        if (successMessage) toast.success(successMessage);
+        if (repeatMessage) toast.info(repeatMessage);
+      } catch {
+        if (successMessage) toast.success(`${successMessage}; reload if the page does not refresh`);
+        if (repeatMessage) toast.info(repeatMessage);
+      }
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to approve');
     } finally {
+      actingRef.current = false;
       setActing(false);
     }
   }
@@ -999,10 +958,12 @@ export function COStatusActions({
       </div>
 
       <AlertDialog open={approveOpen} onOpenChange={(open) => {
+        if (acting) return;
         setApproveOpen(open);
         if (open && isDamagedByOthers) {
           setBackchargeAmount(String(gcCostBase));
         }
+        if (open) setNteCeiling(co.nte_cap == null ? '' : String(co.nte_cap));
       }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1022,7 +983,9 @@ export function COStatusActions({
                     ? `Are you sure you want to approve this ${co.document_type === 'WO' ? 'work order' : 'change order'}?`
                     : co.pricing_type === 'tm'
                       ? 'This authorizes the submitted rates and current actuals. The running total may continue to grow from dated entries.'
-                      : `This authorizes actuals up to the ${money(co.nte_cap ?? 0)} ceiling. New entries cannot pass that ceiling without an approved increase.`}
+                      : effectiveNteCeiling && effectiveNteCeiling > 0
+                      ? `This authorizes actuals up to the ${money(effectiveNteCeiling)} ceiling. New entries cannot pass that ceiling without an approved increase.`
+                      : 'Enter a positive order ceiling before authorizing this work. $0 is not a valid ceiling.'}
               {!forwardsToGC && (!itemReview || lineReview.approved > 0) && co.pricing_type === 'fixed' && (
                 <span className="block mt-1">
                   The subcontractor will be able to submit an invoice for approved work.
@@ -1030,6 +993,28 @@ export function COStatusActions({
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {!forwardsToGC && co.pricing_type === 'nte' && (
+            <div className="space-y-2 py-2 border-t border-border">
+              <Label htmlFor="approval-nte-ceiling" className="text-xs text-muted-foreground">Order ceiling</Label>
+              {co.nte_cap && co.nte_cap > 0 ? (
+                <p className="text-sm font-mono">${co.nte_cap.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              ) : (
+                <Input
+                  id="approval-nte-ceiling"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={nteCeiling}
+                  onChange={event => setNteCeiling(event.target.value)}
+                  placeholder="Enter a ceiling greater than $0"
+                  className="font-mono"
+                  disabled={acting}
+                />
+              )}
+              {nteCeilingValidation && <p className="text-xs text-destructive">{nteCeilingValidation}</p>}
+            </div>
+          )}
 
           {/* GC → owner pass-through: decide billing and markup at approval */}
           {showOwnerStep && (
@@ -1154,7 +1139,10 @@ export function COStatusActions({
           )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={acting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={doApprove} disabled={acting || ownerPriceMissing}>
+            <AlertDialogAction
+              onClick={event => { event.preventDefault(); void doApprove(); }}
+              disabled={acting || ownerPriceMissing || nteCeilingMissing}
+            >
               {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               {forwardsToGC
                 ? `Send to ${rl.GC}`

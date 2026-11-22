@@ -64,12 +64,16 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
           ? `Review & approve ${fmtCurrency(priceToUpstream)}`
           : co.pricing_type === 'tm'
             ? 'Authorize rates and current actuals'
-            : `Authorize rates and the ${fmtCurrency(co.nte_cap ?? 0)} ceiling`,
+            : co.nte_cap && co.nte_cap > 0
+              ? `Authorize rates and the ${fmtCurrency(co.nte_cap)} ceiling`
+              : 'Set the Not-to-exceed ceiling before approval',
         subtitle: co.pricing_type === 'fixed'
           ? `${rl.TC} submitted this ${co.document_type === 'WO' ? 'work order' : 'change order'} for your approval`
           : co.pricing_type === 'tm'
             ? 'The running total will continue to reflect dated labor, materials and equipment'
-            : 'New actuals cannot pass the ceiling without an approved increase',
+            : co.nte_cap && co.nte_cap > 0
+              ? 'New actuals cannot pass the ceiling without an approved increase'
+              : 'Enter a positive ceiling in the approval step; $0 is not a valid ceiling',
         actions: [
           { label: co.pricing_type === 'fixed' ? 'Approve' : 'Authorize', action: 'approve', primary: true },
           { label: 'Reject', action: 'reject' },
