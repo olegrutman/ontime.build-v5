@@ -722,10 +722,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             />
           </div>
           <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_340px]">
-            <div className="min-w-0 space-y-3">
+            <div className="min-w-0 xl:col-start-1 xl:row-start-1">
               <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} crewForwardPricingError={crewForwardPricingError} />
             </div>
-            <section aria-label="Actions" className="space-y-3 rounded-2xl border-2 border-primary/30 bg-card p-3 shadow-sm xl:sticky xl:top-14">
+            <aside className="min-w-0 space-y-3 xl:col-start-2 xl:row-span-2 xl:row-start-1">
+            <section aria-label="Actions" className="space-y-3 rounded-2xl border-2 border-primary/30 bg-card p-3 shadow-sm">
               {(isTC || isFC) && co.pricing_type !== 'fixed' && canEdit && !nteBlocked && lineItems.some(item => item.approval_status !== 'rejected') && (
                 <Button className="min-h-10 w-full gap-2 whitespace-normal" onClick={openFirstEntry}>
                   <Clock3 className="h-4 w-4 shrink-0" />Log hours &amp; actuals
@@ -778,7 +779,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           {pricingType === 'fixed' && !hasRejectedLineItems && <COPriceRevisionActions co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={financials.billableGrandTotal} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
               <COCorrectionCard presentation="actions" corrections={corrections} myOrgId={myOrgId} projectId={projectId} onRefresh={refreshDetail} />
             </section>
-          </div>
+              <div className="hidden space-y-3 xl:block">
+                <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
+                {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
+              </div>
+            </aside>
+            <div className="min-w-0 space-y-3 xl:col-start-1 xl:row-start-2" ref={pricingRef}>
           {pricingType === 'fixed' && !hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={financials.billableGrandTotal} onRefresh={refreshDetail} />}
 
           {/* Secondary items collapse into tappable tags. */}
@@ -816,9 +822,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             onTakePhoto={openPhotos}
           />
 
-
-          <div className="flex gap-4">
-            <div className="flex-1 min-w-0 space-y-4" ref={pricingRef}>
 
               {/* ====== SCOPE & LABOR ====== */}
               <div ref={scopeRef} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
@@ -1077,11 +1080,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                 </div>
               </Collapsible>
             </div>
-
-            <aside className="hidden w-[300px] shrink-0 space-y-3 self-start xl:sticky xl:top-14 xl:block 2xl:w-[320px]">
-              <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
-              {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
-            </aside>
           </div>
 
           <div className="space-y-3 xl:hidden">
