@@ -712,37 +712,16 @@ export function useChangeOrderDetail(coId: string | null) {
   const approveNTEIncrease = useMutation({
     mutationFn: async ({
       nteLogId,
-      requestedIncrease,
     }: {
       nteLogId: string;
       requestedIncrease: number;
     }) => {
-      if (!coId || !user || !co?.nte_cap) throw new Error('Missing data');
-      const newCap = co.nte_cap + requestedIncrease;
-      const now = new Date().toISOString();
-
-      const { error: logError } = await supabase
-        .from('co_nte_log')
-        .update({
-          approved_by_user_id: user.id,
-          approved_at: now,
-          new_cap_after_approval: newCap,
-        })
-        .eq('id', nteLogId);
-      if (logError) throw logError;
-
-      const { data, error: coError } = await supabase
-        .from('change_orders')
-        .update({
-          nte_cap: newCap,
-          nte_increase_requested: null,
-          nte_increase_approved: true,
-          updated_at: now,
-        })
-        .eq('id', coId)
-        .select()
-        .maybeSingle();
-      if (coError) throw coError;
+      if (!coId) throw new Error('Missing change order');
+      const { data, error } = await supabase.rpc('approve_co_nte_increase', {
+        _co_id: coId,
+        _nte_log_id: nteLogId,
+      });
+      if (error) throw error;
       return data as ChangeOrder;
     },
     onSuccess: invalidate,
