@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
 import { submittedLaborTotal } from '@/lib/coInvoiceRows';
 import { crewPricingEntries, crewUpstreamPricingError } from '@/lib/crewHourReview';
+import { hasCrewLaborPricing, itemLaborPricingMethod, type ItemLaborPricingFields } from '@/lib/coItemLaborPricing';
 
 
 /**
@@ -73,14 +74,14 @@ interface SnapshotArgs {
 /** Re-reads saved rows so stale screen state cannot forward an unpriced order. */
 export async function assertCrewUpstreamPricingReady(coId: string, upstreamBillerOrgId: string, requireReviewedCrewEntries = true): Promise<void> {
   const [itemsResult, entriesResult] = await Promise.all([
-    supabase.from('co_line_items').select('id').eq('co_id', coId),
+    supabase.from('co_line_items').select('id, labor_pricing_method').eq('co_id', coId),
     supabase.from('co_labor_entries')
       .select('co_line_item_id, org_id, entered_by_role, is_actual_cost, line_total, crew_review_status')
       .eq('co_id', coId),
   ]);
   if (itemsResult.error) throw itemsResult.error;
   if (entriesResult.error) throw entriesResult.error;
-  const pricingError = crewUpstreamPricingError(itemsResult.data ?? [], entriesResult.data ?? [], upstreamBillerOrgId, requireReviewedCrewEntries);
+  const pricingError = crewUpstreamPricingError((itemsResult.data ?? []) as ItemLaborPricingFields[], entriesResult.data ?? [], upstreamBillerOrgId, requireReviewedCrewEntries);
   if (pricingError) throw new Error(pricingError);
 }
 
@@ -111,7 +112,18 @@ export async function snapshotCOSubmission({
     updates.total_tax = updates.materials_tax + updates.labor_tax + updates.equipment_tax;
   }
 
-  if (isTC && useFcPricingBase) {
+  let laborPricingItems: ItemLaborPricingFields[] = [];
+  if (isTC) {
+    const { data, error } = await supabase
+      .from('co_line_items')
+      .select('id, labor_pricing_method')
+      .eq('co_id', coId);
+    if (error) throw error;
+    laborPricingItems = (data ?? []) as ItemLaborPricingFields[];
+  }
+  const hasCrewItems = hasCrewLaborPricing(laborPricingItems, !!useFcPricingBase);
+
+  if (isTC && hasCrewItems) {
     const { data: settings } = await supabase
       .from('org_settings')
       .select('default_hourly_rate, labor_markup_percent')
@@ -138,6 +150,8 @@ export async function snapshotCOSubmission({
       hourlyRate: rate,
       markupPercent: markup,
       pricingType,
+      items: laborPricingItems,
+      useFcPricingBase: !!useFcPricingBase,
     });
     await assertCrewUpstreamPricingReady(coId, currentOrgId);
 
@@ -172,6 +186,9 @@ interface MaterializeArgs {
   hourlyRate: number;
   markupPercent: number;
   pricingType?: string | null;
+  /** When omitted, retain the legacy all-items behavior used by existing tests/callers. */
+  items?: ItemLaborPricingFields[];
+  useFcPricingBase?: boolean;
 }
 
 /**
@@ -191,6 +208,8 @@ export async function materializeCrewPricing({
   hourlyRate,
   markupPercent,
   pricingType,
+  items,
+  useFcPricingBase = true,
 }: MaterializeArgs): Promise<void> {
   const { data: rows, error } = await supabase
     .from('co_labor_entries')
@@ -208,7 +227,12 @@ export async function materializeCrewPricing({
     byItem.set(r.co_line_item_id, list);
   }
 
-  for (const [lineItemId, itemRows] of byItem) {
+  const targetItemIds = items
+    ? items.filter(item => itemLaborPricingMethod(item, useFcPricingBase) === 'crew').map(item => item.id)
+    : Array.from(byItem.keys());
+
+  for (const lineItemId of targetItemIds) {
+    const itemRows = byItem.get(lineItemId) ?? [];
     // Never materialize a partial item while another crew entry still needs a
     // decision. The upstream guard will report the pending review clearly.
     if (itemRows.some(r => r.entered_by_role === 'FC' && !r.is_actual_cost && r.crew_review_status === 'pending')) continue;
@@ -322,11 +346,26 @@ export async function materializeCrewPricingForOrg({
   orgId: string;
   pricingType?: string | null;
 }): Promise<number> {
-  const { data: settings } = await supabase
-    .from('org_settings')
-    .select('default_hourly_rate, labor_markup_percent')
-    .eq('organization_id', orgId)
-    .maybeSingle();
+  const [settingsResult, itemsResult, coResult] = await Promise.all([
+    supabase
+      .from('org_settings')
+      .select('default_hourly_rate, labor_markup_percent')
+      .eq('organization_id', orgId)
+      .maybeSingle(),
+    supabase
+      .from('co_line_items')
+      .select('id, labor_pricing_method')
+      .eq('co_id', coId),
+    supabase
+      .from('change_orders')
+      .select('use_fc_pricing_base')
+      .eq('id', coId)
+      .single(),
+  ]);
+  if (settingsResult.error) throw settingsResult.error;
+  if (itemsResult.error) throw itemsResult.error;
+  if (coResult.error) throw coResult.error;
+  const settings = settingsResult.data;
 
   await materializeCrewPricing({
     coId,
@@ -334,6 +373,8 @@ export async function materializeCrewPricingForOrg({
     hourlyRate: settings?.default_hourly_rate ?? 0,
     markupPercent: settings?.labor_markup_percent ?? 0,
     pricingType,
+    items: (itemsResult.data ?? []) as ItemLaborPricingFields[],
+    useFcPricingBase: !!coResult.data?.use_fc_pricing_base,
   });
 
   const { count } = await supabase

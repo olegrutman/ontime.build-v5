@@ -1,3 +1,5 @@
+import { itemLaborPricingMethod, type ItemLaborPricingFields } from '@/lib/coItemLaborPricingMethod';
+
 export type CrewReviewStatus = 'pending' | 'approved' | 'rejected';
 
 export interface CrewHourReviewFields {
@@ -29,13 +31,18 @@ export interface CrewUpstreamPricingEntry extends CrewHourReviewFields {
 
 /** Overall crew approval is separate from upstream pricing readiness. */
 export function crewUpstreamPricingError(
-  items: readonly { id: string }[],
+  items: readonly ItemLaborPricingFields[],
   entries: readonly CrewUpstreamPricingEntry[],
   upstreamBillerOrgId: string,
-  requireReviewedCrewEntries = true,
+  orderUseCrewPricing = true,
 ): string | null {
   if (items.length === 0) return 'Add at least one scope item before sending this order upstream.';
-  if (requireReviewedCrewEntries && entries.some(entry => entry.entered_by_role === 'FC' && !entry.is_actual_cost && entry.crew_review_status === 'pending')) {
+  const crewItemIds = new Set(items
+    .filter(item => itemLaborPricingMethod(item, orderUseCrewPricing) === 'crew')
+    .map(item => item.id));
+  if (entries.some(entry => entry.co_line_item_id != null
+    && crewItemIds.has(entry.co_line_item_id)
+    && entry.entered_by_role === 'FC' && !entry.is_actual_cost && entry.crew_review_status === 'pending')) {
     return 'Review every crew time entry before sending this order upstream.';
   }
   const unpricedCount = items.filter(item => !entries.some(entry =>

@@ -1980,6 +1980,7 @@ export type Database = {
           group_key: string | null
           id: string
           item_name: string
+          labor_pricing_method: string | null
           location_tag: string | null
           nte_cap: number | null
           org_id: string
@@ -2014,6 +2015,7 @@ export type Database = {
           group_key?: string | null
           id?: string
           item_name: string
+          labor_pricing_method?: string | null
           location_tag?: string | null
           nte_cap?: number | null
           org_id: string
@@ -2048,6 +2050,7 @@ export type Database = {
           group_key?: string | null
           id?: string
           item_name?: string
+          labor_pricing_method?: string | null
           location_tag?: string | null
           nte_cap?: number | null
           org_id?: string
@@ -10447,6 +10450,7 @@ export type Database = {
           group_key: string | null
           id: string | null
           item_name: string | null
+          labor_pricing_method: string | null
           location_tag: string | null
           nte_cap: number | null
           org_id: string | null
@@ -10481,6 +10485,7 @@ export type Database = {
           group_key?: string | null
           id?: string | null
           item_name?: string | null
+          labor_pricing_method?: string | null
           location_tag?: string | null
           nte_cap?: never
           org_id?: string | null
@@ -10515,6 +10520,7 @@ export type Database = {
           group_key?: string | null
           id?: string | null
           item_name?: string | null
+          labor_pricing_method?: string | null
           location_tag?: string | null
           nte_cap?: never
           org_id?: string | null
@@ -11590,6 +11596,10 @@ export type Database = {
           _recipient_org_id: string
           _work_order_title: string
         }
+        Returns: undefined
+      }
+      set_co_item_labor_pricing_method: {
+        Args: { _item_id: string; _method: string; _org_id: string }
         Returns: undefined
       }
       set_co_procurement_responsibility: {

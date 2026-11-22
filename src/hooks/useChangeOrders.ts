@@ -8,6 +8,7 @@ import type { ChangeOrder, COCollaboratorStatus, COStatus } from '@/types/change
 import type { OrderCorrection } from '@/lib/coCorrection';
 import { correctionLabel } from '@/lib/coCorrection';
 import { isTaxInvoiceLine } from '@/lib/woProgressBillingData';
+import { hasCrewLaborPricing, type ItemLaborPricingFields } from '@/lib/coItemLaborPricingMethod';
 
 export interface ChangeOrderWithMembers extends ChangeOrder {
   correction?: OrderCorrection | null;
@@ -168,10 +169,14 @@ export function useChangeOrders(projectId: string | null) {
           .select('id, status, subtotal, total_amount, co_ids, contract_id')
           .eq('project_id', projectId!) as any,
         coIds.length
-          ? supabase.from('co_line_items').select('id, co_id, item_name, sort_order').in('co_id', coIds)
+          ? supabase.from('co_line_items').select('id, co_id, item_name, sort_order, labor_pricing_method').in('co_id', coIds)
           : Promise.resolve({ data: [], error: null }),
       ]);
       if (scopeResult.error) throw scopeResult.error;
+      const itemsByCo = new Map<string, ItemLaborPricingFields[]>();
+      for (const item of (scopeResult.data ?? []) as Array<ItemLaborPricingFields & { co_id: string }>) {
+        itemsByCo.set(item.co_id, [...(itemsByCo.get(item.co_id) ?? []), item]);
+      }
 
       const downstreamOrgIds = new Set(
         (downstreamContracts ?? []).map(c => c.from_org_id).filter(Boolean) as string[]
@@ -221,7 +226,8 @@ export function useChangeOrders(projectId: string | null) {
         const tcLabor = tcLaborByCo.get(c.id) ?? 0;
         const fcLabor = fcLaborByCo.get(c.id) ?? 0;
         const tcSubmitted = Number((c as any).tc_submitted_price ?? 0);
-        const tcBillableToGC = (c as any).use_fc_pricing_base && tcSubmitted > 0
+        const hasCrewItems = hasCrewLaborPricing(itemsByCo.get(c.id) ?? [], !!(c as any).use_fc_pricing_base);
+        const tcBillableToGC = hasCrewItems && tcSubmitted > 0
           ? tcSubmitted
           : tcLabor;
         const shared = (matByCo.get(c.id) ?? 0) + (eqByCo.get(c.id) ?? 0);

@@ -16,7 +16,8 @@ import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { useCOResponsibility } from '@/hooks/useCOResponsibility';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
 import { resolveCOAssignee, snapshotCOSubmission, materializeCrewPricingForOrg } from '@/lib/coSubmitPrep';
-import { computeFcPricingBase } from '@/lib/fcPricingBase';
+import { canChangeCrewPricingBase, computeFcPricingBase } from '@/lib/fcPricingBase';
+import { summarizeMixedItemLabor } from '@/lib/coItemLaborPricing';
 import { getCOPricingReadiness } from '@/lib/coPricingReadiness';
 import { crewUpstreamPricingError } from '@/lib/crewHourReview';
 import { finalizedCOApprovalAmount } from '@/lib/coLineReview';
@@ -33,7 +34,6 @@ import { canSubmitPriceRevision } from '@/lib/coPriceRevision';
 import { COCorrectionCard } from './COCorrectionCard';
 import { useCOCorrections } from '@/hooks/useCOCorrections';
 import { COSidebar } from './COSidebar';
-import { FCPricingToggleCard } from './FCPricingToggleCard';
 import { WOBilledToDateCard } from './WOBilledToDateCard';
 import { actualEntryBaseCost } from '@/lib/laborEntryMath';
 import { CombinedSOVCard } from './CombinedSOVCard';
@@ -352,9 +352,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             const isFCCreator = co.created_by_role === 'FC' && co.org_id === myOrgId;
             if (isFCCreator) {
               // The subcontractor never presses Submit on a crew-created order, so
-              // freeze their crew-derived price into real billable rows here —
-              // otherwise the order travels upstream with a $0 total.
-              if (co.use_fc_pricing_base && co.assigned_to_org_id) {
+              // freeze each crew-priced item into real billable rows here; manual
+              // items keep their independently saved prices.
+              if (co.assigned_to_org_id) {
                 await materializeCrewPricingForOrg({ coId: co.id, orgId: co.assigned_to_org_id, pricingType: co.pricing_type });
                 const { data: pricedRows } = await supabase
                   .from('co_labor_entries')
@@ -568,10 +568,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   // Fallback for orders submitted by the crew before the subcontractor priced
   // anything: derive the headline from crew time so the page never shows $0
   // while the pricing panel shows a real amount.
-  const crewDerivedPrice = co.use_fc_pricing_base
+  const mixedLabor = summarizeMixedItemLabor(lineItems, laborEntries, !!co.use_fc_pricing_base);
+  const crewDerivedPrice = mixedLabor.hasCrewItems
     ? computeFcPricingBase({
-        fcTotalHours: financials.approvedFcTotalHours,
-        fcLumpSumTotal: financials.approvedFcLumpSumTotal,
+        fcTotalHours: mixedLabor.approvedCrewHours,
+        fcLumpSumTotal: mixedLabor.approvedCrewLumpSum,
         hourlyRate: crewPricingBase.hourlyRate,
         markupPercent: crewPricingBase.markupPercent,
         pricingType: co.pricing_type,
@@ -827,19 +828,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   </div>
 
 
-                  {isTC && (collaborators.length > 0 || co.created_by_role === 'FC') && (
-                    <details className="mt-3 rounded-lg border border-border bg-muted/20 group">
-                      <summary className="cursor-pointer list-none select-none px-3 py-2 text-xs text-muted-foreground hover:text-foreground flex items-center justify-between gap-2">
-                        <span>Pricing method: <span className="font-semibold text-foreground">{financials.useFcPricingBase ? 'Use crew hours' : 'Set manually'}</span></span>
-                        <span className="shrink-0 underline underline-offset-2">Change</span>
-                      </summary>
-                      <div className="px-2 pb-2">
-                        <FCPricingToggleCard co={co} financials={financials} myOrgId={myOrgId}
-                          onRefresh={refreshDetail} fcCollabName={fcCollabName} gcSideName={rl.short('GC')} />
-                      </div>
-                    </details>
-                  )}
-
                   {/* Fixed orders track pricing readiness; running orders track actuals instead. */}
                   {lineItems.length > 0 && co.pricing_type === 'fixed' && (
                     <div className="flex flex-wrap items-center gap-3 mt-3">
@@ -904,6 +892,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                           crewPricingBase={crewPricingBase}
                           coStatus={co.status}
                           canReview={canReviewLineItems}
+                          canChangeLaborPricingMethod={isTC && canChangeCrewPricingBase(co, myOrgId)}
                         />
                       </div>
                     ))}</div>

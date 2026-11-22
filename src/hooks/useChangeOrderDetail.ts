@@ -7,6 +7,7 @@ import { coLaborCost } from '@/lib/coLaborCost';
 import { approvedLaborForReview, finalizedCOApprovalAmount } from '@/lib/coLineReview';
 import { getNteUsedAmount } from '@/lib/coPricingPresentation';
 import { crewPricingEntries } from '@/lib/crewHourReview';
+import { summarizeMixedItemLabor } from '@/lib/coItemLaborPricing';
 
 import type {
   ChangeOrder,
@@ -202,12 +203,10 @@ export function useChangeOrderDetail(coId: string | null) {
     .filter(entry => entry.entered_by_role === 'TC')
     .reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
 
-  // When the subcontractor prices from the crew's submitted time, their billable
-  // rows mirror the crew rows — the same work. Adding both would double the labor
-  // used for the NTE gauge, labor tax and margin, so only count it once.
-  const laborTotal = co?.use_fc_pricing_base
-    ? (tcLaborTotal > 0 ? tcLaborTotal : approvedFcLaborTotal)
-    : tcLaborTotal + fcLaborTotal;
+  // Each item independently uses crew-derived or manual labor pricing. NULL
+  // inherits the existing order default so historical orders keep their totals.
+  const mixedLabor = summarizeMixedItemLabor(lineItems, laborEntries, !!co?.use_fc_pricing_base);
+  const laborTotal = mixedLabor.laborTotal;
   const materialsCost = materials.reduce((sum, material) => sum + (material.line_cost ?? 0), 0);
   const materialsMarkup = materials.reduce((sum, material) => sum + (material.markup_amount ?? 0), 0);
   const materialsTotal = materials.reduce((sum, material) => sum + (material.billed_amount ?? 0), 0);
@@ -215,7 +214,7 @@ export function useChangeOrderDetail(coId: string | null) {
   const equipmentMarkup = equipment.reduce((sum, item) => sum + (item.markup_amount ?? 0), 0);
   const equipmentTotal = equipment.reduce((sum, item) => sum + (item.billed_amount ?? 0), 0);
   // Toggle OFF → only TC's own labor counts toward GC price; Toggle ON → use the calculated fc-based price
-  const tcBillableToGC = co?.use_fc_pricing_base && co?.tc_submitted_price && co.tc_submitted_price > 0
+  const tcBillableToGC = mixedLabor.hasCrewItems && co?.tc_submitted_price && co.tc_submitted_price > 0
     ? co.tc_submitted_price
     : tcLaborTotal;
   // Bug 2: grandTotal uses tcBillableToGC to avoid double-counting when FC pricing is base
@@ -228,11 +227,9 @@ export function useChangeOrderDetail(coId: string | null) {
   // Bug 4: Split actual costs by role for privacy
   const tcActualCostTotal = actualCostEntries.filter(e => e.entered_by_role === 'TC').reduce((s, e) => s + (e.line_total ?? 0), 0);
   const fcActualCostTotal = actualCostEntries.filter(e => e.entered_by_role === 'FC').reduce((s, e) => s + (e.line_total ?? 0), 0);
-  // The subcontractor's "Internal cost (crew time)" row mirrors the crew's own
-  // cost rows, so count that cost once when pricing from crew time.
-  const actualCostTotal = co?.use_fc_pricing_base
-    ? (tcActualCostTotal > 0 ? tcActualCostTotal : fcActualCostTotal)
-    : tcActualCostTotal + fcActualCostTotal;
+  // Mirrored crew costs deduplicate only on crew-priced items; manual items
+  // retain their independent crew obligations and private actual costs.
+  const actualCostTotal = mixedLabor.actualCostTotal;
   const profitMargin = grandTotal > 0 ? ((grandTotal - actualCostTotal) / grandTotal) * 100 : null;
 
   // Tax computations — use snapshot if available, else project settings
@@ -295,8 +292,7 @@ export function useChangeOrderDetail(coId: string | null) {
   // The ceiling tracks current billable actuals, not the frozen approval snapshot.
   // Crew-derived labor is already deduplicated in laborTotal.
   const nteUsedAmount = getNteUsedAmount(
-    // The ceiling governs what is billed upstream; crew rows are the subcontractor's cost unless they are the pricing base.
-    co?.use_fc_pricing_base ? laborTotal : tcLaborTotal, billableMaterialsTotal, billableEquipmentTotal);
+    mixedLabor.billableLaborActuals, billableMaterialsTotal, billableEquipmentTotal);
   const nteUsedPercent = co?.nte_cap && co.nte_cap > 0 ? (nteUsedAmount / co.nte_cap) * 100 : 0;
   const billableMaterialsTax = billableMaterialsTotal * taxPct;
   const billableEquipmentTax = billableEquipmentTotal * taxPct;
@@ -388,7 +384,7 @@ export function useChangeOrderDetail(coId: string | null) {
     tcActualCostTotal,
     tcLaborCostTotal,
     fcActualCostTotal,
-    useFcPricingBase: !!co?.use_fc_pricing_base,
+    useFcPricingBase: mixedLabor.hasCrewItems,
     profitMargin,
     nteUsedAmount,
     nteUsedPercent,

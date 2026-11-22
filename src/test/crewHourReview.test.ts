@@ -135,6 +135,28 @@ describe('crew upstream pricing guard', () => {
     expect(error).toBeNull();
   });
 
+  it('does not require crew-hour review for a manually priced item', () => {
+    const mixedItems = [
+      { id: 'item-1', labor_pricing_method: 'manual' as const },
+      { id: 'item-2', labor_pricing_method: 'manual' as const },
+    ];
+    const error = crewUpstreamPricingError(mixedItems, [
+      { ...crewEntry('pending'), co_line_item_id: 'item-1' },
+      priced('item-1', 440),
+      priced('item-2', 300),
+    ], 'subcontractor', true);
+    expect(error).toBeNull();
+  });
+
+  it('requires review when an item opts into crew hours despite a manual order default', () => {
+    const mixedItems = [{ id: 'item-1', labor_pricing_method: 'crew' as const }];
+    const error = crewUpstreamPricingError(mixedItems, [
+      { ...crewEntry('pending'), co_line_item_id: 'item-1' },
+      priced('item-1', 440),
+    ], 'subcontractor', false);
+    expect(error).toBe('Review every crew time entry before sending this order upstream.');
+  });
+
   it('rejects a zero-priced scope item rather than sending $0 upstream', () => {
     const error = crewUpstreamPricingError([{ id: 'item-1' }], [priced('item-1', 0)], 'subcontractor', false);
     expect(error).toBe('Confirm a non-zero price for the scope item before sending this order upstream.');

@@ -93,7 +93,7 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
     + (matResp === 'TC' ? financials.materialsTotal : 0)
     + (eqResp === 'TC' ? financials.equipmentTotal : 0));
   const ownLabor = financials.viewer.ownLaborToUpstream;
-  const ownBillable = ownLabor > 0 ? ownLabor : (isTC && co.use_fc_pricing_base ? (props.tcBillableTotal ?? 0) : 0);
+  const ownBillable = ownLabor > 0 ? ownLabor : (isTC && financials.useFcPricingBase ? (props.tcBillableTotal ?? 0) : 0);
   const currentRevenue = financials.viewer.totalToUpstream > 0 ? financials.viewer.totalToUpstream : ownBillable;
   const revenue = isGC
     ? gcHeadline
@@ -333,7 +333,7 @@ function getLegacyTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
     // card never reads $0 while the pricing panel shows a real number.
     const myBillable = ownLaborToUpstream > 0
       ? ownLaborToUpstream
-      : (isTC && props.co.use_fc_pricing_base ? (props.tcBillableTotal ?? 0) : 0);
+      : (isTC && financials.useFcPricingBase ? (props.tcBillableTotal ?? 0) : 0);
     const isApproved = ['approved', 'contracted'].includes(props.co.status);
     const currentRevenue = totalToUpstream > 0 ? totalToUpstream : myBillable;
     const revenue = isApproved && isTC && props.co.approved_amount != null

@@ -86,6 +86,27 @@ describe('crew-derived upstream price materialization', () => {
     expect(state.insert).not.toHaveBeenCalled();
   });
 
+  it('materializes only the crew-priced item on a mixed-method order', async () => {
+    state.rows = [
+      crewEntry('crew-a', 8, 200),
+      { ...crewEntry('crew-b', 4, 100), co_line_item_id: 'item-2' },
+    ];
+
+    await materializeCrewPricing({
+      coId: 'order', orgId: 'subcontractor', hourlyRate: 50, markupPercent: 10, pricingType: 'tm',
+      items: [
+        { id: 'item-1', labor_pricing_method: 'crew' },
+        { id: 'item-2', labor_pricing_method: 'manual' },
+      ],
+      useFcPricingBase: false,
+    });
+
+    expect(state.insert).toHaveBeenCalledTimes(2);
+    expect(state.insert.mock.calls.every(([values]) => (values as { co_line_item_id: string }).co_line_item_id === 'item-1')).toBe(true);
+    expect(state.insert).toHaveBeenCalledWith(expect.objectContaining({ hours: 8, hourly_rate: 55 }));
+    expect(state.update).not.toHaveBeenCalled();
+  });
+
   it('preserves an independently entered subcontractor price and private cost', async () => {
     state.rows = [
       crewEntry('crew-a', 8, 200),

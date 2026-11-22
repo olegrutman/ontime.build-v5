@@ -37,6 +37,8 @@ interface LaborEntryFormProps {
   onDelete?: () => void | Promise<void>;
   nteCap?: number | null;
   nteUsed?: number;
+  /** Effective choice for this item, independent of other items on the order. */
+  useCrewPricingBase?: boolean;
 }
 
 const QUICK_HOURS = [2, 4, 8, 10];
@@ -47,6 +49,7 @@ export function LaborEntryForm({
   isTC = false, isFC = false, isActualCost = false,
   editingEntry,
   onSaved, onCancel, onDelete, nteCap, nteUsed = 0,
+  useCrewPricingBase = false,
 }: LaborEntryFormProps) {
   const { user } = useAuth();
   const isEditing = !!editingEntry;
@@ -128,15 +131,12 @@ export function LaborEntryForm({
     let cancelled = false;
     async function loadFC() {
       if (!isTC || isActualCost || isEditing || !lineItemId) return;
-      const [entriesRes, coRes] = await Promise.all([
-        supabase
-          .from('co_labor_entries')
-          .select('id, hours, hourly_rate, lump_sum, pricing_mode, crew_review_status')
-          .eq('co_line_item_id', lineItemId)
-          .eq('entered_by_role', 'FC')
-          .eq('is_actual_cost', false),
-        supabase.from('change_orders').select('use_fc_pricing_base').eq('id', coId).maybeSingle(),
-      ]);
+      const entriesRes = await supabase
+        .from('co_labor_entries')
+        .select('id, hours, hourly_rate, lump_sum, pricing_mode, crew_review_status')
+        .eq('co_line_item_id', lineItemId)
+        .eq('entered_by_role', 'FC')
+        .eq('is_actual_cost', false);
       const data = entriesRes.data ? crewPricingEntries(entriesRes.data) : null;
       if (cancelled || !data) return;
       let h = 0, c = 0;
@@ -152,10 +152,9 @@ export function LaborEntryForm({
       setFcCost(totalCost);
       setFcEntryIds(data.map((e: any) => e.id));
 
-      // When this change order bills off the crew's submitted time, open the form
-      // already populated: crew hours on the billable side at my own rate, and the
-      // crew's dollars as my private cost. Everything stays editable before saving.
-      if (coRes.data?.use_fc_pricing_base && totalHours > 0) {
+      // Only a crew-priced item pre-fills from the crew's submitted time. A
+      // manual item on the same order keeps a fresh, independently editable form.
+      if (useCrewPricingBase && totalHours > 0) {
         setMode('hourly');
         setUseCrewMath(false);
         setHours(String(totalHours));
@@ -169,7 +168,7 @@ export function LaborEntryForm({
     }
     loadFC();
     return () => { cancelled = true; };
-  }, [lineItemId, coId, isTC, isActualCost, isEditing]);
+  }, [lineItemId, coId, isTC, isActualCost, isEditing, useCrewPricingBase]);
 
   const fcAvailable = fcCost > 0 || fcHours > 0;
   function importFCHours() {

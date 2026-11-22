@@ -17,6 +17,8 @@ export type COLaborRole = 'FC' | 'TC';
 
 export type COPricingMode = 'hourly' | 'lump_sum';
 
+export type COLaborPricingMethod = 'crew' | 'manual';
+
 export type COReasonCode =
   | 'addition'
   | 'rework'
@@ -129,6 +131,8 @@ export interface COLineItem {
   reason: COReasonCode | null;
   description: string | null;
   pricing_type: COPricingType | null;
+  /** NULL inherits the order's existing crew/manual default. */
+  labor_pricing_method?: COLaborPricingMethod | null;
   nte_cap: number | null;
   approval_status: 'pending' | 'approved' | 'rejected';
   approval_rejection_reason: string | null;

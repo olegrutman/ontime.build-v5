@@ -13,12 +13,13 @@ import { fmtHours } from '@/lib/crewWorkload';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CO_REASON_LABELS } from '@/types/changeOrder';
-import type { COLineItem, COLaborEntry, COCreatedByRole, COReasonCode, COPricingType } from '@/types/changeOrder';
+import type { COLineItem, COLaborEntry, COCreatedByRole, COLaborPricingMethod, COReasonCode, COPricingType } from '@/types/changeOrder';
 import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { actualEntryBaseCost } from '@/lib/laborEntryMath';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
 import { crewPricingEntries } from '@/lib/crewHourReview';
+import { itemLaborPricingMethod } from '@/lib/coItemLaborPricingMethod';
 
 interface COLineItemRowProps {
   item: COLineItem;
@@ -54,6 +55,8 @@ interface COLineItemRowProps {
   canReview?: boolean;
   /** Opens this item directly in entry mode from the Actions box. */
   entryRequestToken?: number;
+  /** Uses the same protected edit window as the legacy order-wide pricing switch. */
+  canChangeLaborPricingMethod?: boolean;
 }
 
 
@@ -85,6 +88,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   onRefresh, isEven = true, index, markupVisibility = 'hidden', crewPricingBase, coStatus,
   canReview = false,
   entryRequestToken,
+  canChangeLaborPricingMethod = false,
 }, ref) {
   const rl = useRoleLabelsContext();
 
@@ -93,6 +97,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const nteCap = item.nte_cap ?? coNteCap;
   const nteUsed = coNteUsed; // NTE used is CO-level aggregate
   const hasPricingOverride = item.pricing_type != null && item.pricing_type !== coPricingType;
+  const laborPricingMethod = itemLaborPricingMethod(item, crewPricingBase?.enabled ?? false);
   const [expanded, setExpanded] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editHeaderOpen, setEditHeaderOpen] = useState(false);
@@ -220,7 +225,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   // Provisional billable amount straight from the crew's submitted time. Shown to a
   // subcontractor while the item is still unpriced so the card and the side panel
   // never disagree. Nothing is written until it's confirmed or edited.
-  const crewBase = crewPricingBase?.enabled
+  const crewBase = laborPricingMethod === 'crew' && crewPricingBase
     ? computeFcPricingBase({
         fcTotalHours: crewHoursOnItem,
         fcLumpSumTotal: crewLumpOnItem,
@@ -231,6 +236,22 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
     : null;
   const provisionalAmount = crewBase?.fcHasSubmitted ? crewBase.calculatedPrice : 0;
   const [confirmingCrewPrice, setConfirmingCrewPrice] = useState(false);
+
+  async function changeLaborPricingMethod(method: COLaborPricingMethod) {
+    try {
+      const { error } = await supabase.rpc('set_co_item_labor_pricing_method', {
+        _item_id: item.id,
+        _method: method,
+        _org_id: orgId,
+      });
+      if (error) throw error;
+      toast.success(method === 'crew' ? 'This item now uses crew hours' : 'This item is now priced manually');
+      onRefresh();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Could not change this item’s pricing method');
+      throw error;
+    }
+  }
 
   async function confirmCrewPrice() {
     if (!crewBase || provisionalAmount <= 0) return;
@@ -411,6 +432,11 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 {item.location_tag && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent text-[10px] font-medium text-muted-foreground">
                     <MapPin className="h-2.5 w-2.5" /> {item.location_tag}
+                  </span>
+                )}
+                {isTC && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                    {laborPricingMethod === 'crew' ? 'Use crew hours' : 'Set manually'}
                   </span>
                 )}
                 {hasPricingOverride && (
@@ -695,20 +721,6 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
         </div>
 
-      {(item.completed_at || canCompleteItem) && (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-3 py-2 sm:px-4">
-          {item.completed_at ? (
-            <span className="inline-flex items-center gap-2 text-xs font-semibold text-state-approved-foreground">
-              <CheckCircle className="h-4 w-4 shrink-0" /> Completed · {new Date(item.completed_at).toLocaleDateString()}
-            </span>
-          ) : (
-            <Button variant="outline" size="sm" onClick={completeItem} disabled={completing} aria-label={`Mark ${item.item_name} completed`} className="gap-2">
-              {completing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />} Mark item completed
-            </Button>
-          )}
-        </div>
-      )}
-
       <COItemPricingDialog
         open={expanded}
         onOpenChange={(open) => {
@@ -735,6 +747,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
         provisionalAmount={provisionalAmount}
         confirmingCrewPrice={confirmingCrewPrice}
         onConfirmCrewPrice={confirmCrewPrice}
+        laborPricingMethod={laborPricingMethod}
+        canChangeLaborPricingMethod={canChangeLaborPricingMethod}
+        onLaborPricingMethodChange={changeLaborPricingMethod}
+        canCompleteItem={canCompleteItem}
+        completingItem={completing}
+        onCompleteItem={completeItem}
       />
     </div>
   );

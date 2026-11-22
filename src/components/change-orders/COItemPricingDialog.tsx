@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, CheckCircle, Lock, Loader2, MapPin, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Check, CheckCircle, Info, Lock, Loader2, MapPin, Pencil, Plus, Trash2, Users, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,7 +13,7 @@ import { actualEntryBaseCost } from '@/lib/laborEntryMath';
 import { crewReviewDecisionError } from '@/lib/crewHourReview';
 import { formatWorkloadTooltip, fmtHours } from '@/lib/crewWorkload';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
-import type { COLaborEntry, COLineItem, COPricingType } from '@/types/changeOrder';
+import type { COLaborEntry, COLineItem, COLaborPricingMethod, COPricingType } from '@/types/changeOrder';
 import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 import { LaborEntryForm } from './LaborEntryForm';
 import { COLineItemReview } from './COLineReview';
@@ -202,6 +202,12 @@ interface COItemPricingDialogProps {
   provisionalAmount?: number;
   confirmingCrewPrice?: boolean;
   onConfirmCrewPrice?: () => void;
+  laborPricingMethod?: COLaborPricingMethod;
+  canChangeLaborPricingMethod?: boolean;
+  onLaborPricingMethodChange?: (method: COLaborPricingMethod) => Promise<void>;
+  canCompleteItem?: boolean;
+  completingItem?: boolean;
+  onCompleteItem?: () => void;
 }
 
 export function COItemPricingDialog({
@@ -227,12 +233,19 @@ export function COItemPricingDialog({
   provisionalAmount = 0,
   confirmingCrewPrice = false,
   onConfirmCrewPrice,
+  laborPricingMethod = 'manual',
+  canChangeLaborPricingMethod = false,
+  onLaborPricingMethodChange,
+  canCompleteItem = false,
+  completingItem = false,
+  onCompleteItem,
 }: COItemPricingDialogProps) {
   const rl = useRoleLabelsContext();
   const [activeTab, setActiveTab] = useState('billing');
   const [formMode, setFormMode] = useState<'billable' | 'cost' | null>(null);
   const [editingEntry, setEditingEntry] = useState<COLaborEntry | null>(null);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+  const [changingLaborMethod, setChangingLaborMethod] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -354,6 +367,47 @@ export function COItemPricingDialog({
   const focusedEntry = editingEntry;
   const focusedActual = focusedEntry?.is_actual_cost ?? formMode === 'cost';
 
+  async function changeLaborMethod(method: COLaborPricingMethod) {
+    if (method === laborPricingMethod || !onLaborPricingMethodChange || !canChangeLaborPricingMethod) return;
+    setChangingLaborMethod(true);
+    try {
+      await onLaborPricingMethodChange(method);
+    } finally {
+      setChangingLaborMethod(false);
+    }
+  }
+
+  const methodButton = (method: COLaborPricingMethod) => {
+    const selected = laborPricingMethod === method;
+    const crew = method === 'crew';
+    return (
+      <button
+        key={method}
+        type="button"
+        aria-pressed={selected}
+        aria-label={crew ? 'Use crew hours' : 'Set manually'}
+        disabled={!canChangeLaborPricingMethod || changingLaborMethod}
+        onClick={() => void changeLaborMethod(method)}
+        className={cn(
+          'relative flex min-w-0 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors',
+          selected && crew && 'border-primary bg-primary/10',
+          selected && !crew && 'border-foreground bg-muted/40',
+          !selected && 'border-border bg-card hover:bg-muted/30',
+          (!canChangeLaborPricingMethod || changingLaborMethod) && 'cursor-not-allowed opacity-70',
+        )}
+      >
+        <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', selected && crew ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>
+          {crew ? <Users className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+        </span>
+        <span className="min-w-0">
+          <span className="block text-xs font-bold text-foreground">{crew ? 'Use crew hours' : 'Set manually'}</span>
+          <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">{crew ? 'Calculate from this item’s approved crew hours' : 'Enter your own hours, rate, or lump sum'}</span>
+        </span>
+        {selected && <CheckCircle className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />}
+      </button>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[92dvh] w-[calc(100vw-1.5rem)] max-w-4xl flex-col gap-0 overflow-hidden rounded-2xl p-0">
@@ -380,6 +434,34 @@ export function COItemPricingDialog({
 
         <COLineItemReview coId={coId} item={item} canReview={canReview} onRefresh={onRefresh} />
 
+        {isTC && onLaborPricingMethodChange && (
+          <section aria-label="Labor pricing method for this item" className="shrink-0 border-b border-border bg-muted/20 px-4 py-3 sm:px-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Labor pricing</p>
+                <h3 className="mt-0.5 text-xs font-bold text-foreground">Pricing method for this item</h3>
+              </div>
+              <span className="rounded-md border border-border bg-card px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">This item only</span>
+            </div>
+            <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {methodButton('crew')}
+              {methodButton('manual')}
+            </div>
+            <div className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
+              {changingLaborMethod ? <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin" /> : !canChangeLaborPricingMethod ? <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" /> : <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />}
+              <p>
+                {changingLaborMethod
+                  ? 'Saving this item’s pricing method…'
+                  : !canChangeLaborPricingMethod
+                    ? 'Recall the upstream submission before changing this item’s billing.'
+                    : laborPricingMethod === 'crew'
+                      ? 'Only this item uses approved crew hours × your billable rate. Crew pay stays private.'
+                      : 'Only this item is set manually. Other items can still use crew hours; crew pay stays private.'}
+              </p>
+            </div>
+          </section>
+        )}
+
         <div className="min-h-0 flex-1 overflow-y-auto bg-background">
           {focusedEntry || formMode ? (
             <div className="p-3 sm:p-5 [&>div]:shadow-none">
@@ -396,6 +478,7 @@ export function COItemPricingDialog({
                 editingEntry={focusedEntry ?? undefined}
                 nteCap={focusedActual ? null : nteCap}
                 nteUsed={nteUsed}
+                useCrewPricingBase={laborPricingMethod === 'crew'}
                 onSaved={() => { setEditingEntry(null); setFormMode(null); onRefresh(); }}
                 onCancel={() => { setEditingEntry(null); setFormMode(null); }}
                 onDelete={focusedEntry ? () => deleteEntry(focusedEntry) : undefined}
@@ -490,6 +573,22 @@ export function COItemPricingDialog({
             </>
           )}
         </div>
+
+        {(item.completed_at || canCompleteItem) && (
+          <div className="flex shrink-0 flex-col gap-3 border-t border-border bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <div className="flex items-start gap-2 text-[11px] leading-relaxed text-muted-foreground">
+              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p><span className="block text-xs font-semibold text-foreground">{item.completed_at ? 'Item completed' : 'Finish this item separately'}</span>{item.completed_at ? `Completed ${new Date(item.completed_at).toLocaleDateString()}` : 'Completed items become available for billing.'}</p>
+            </div>
+            {item.completed_at ? (
+              <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-state-approved-bg px-2.5 py-1 text-[11px] font-semibold text-state-approved-foreground sm:self-auto"><CheckCircle className="h-3.5 w-3.5" />Available for billing</span>
+            ) : (
+              <Button type="button" variant="outline" size="sm" onClick={onCompleteItem} disabled={completingItem} aria-label={`Mark ${item.item_name} completed`} className="w-full gap-2 sm:w-auto">
+                {completingItem ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />} Mark item completed
+              </Button>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
