@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
 import { submittedLaborTotal } from '@/lib/coInvoiceRows';
-import { crewPricingEntries } from '@/lib/crewHourReview';
+import { crewPricingEntries, crewUpstreamPricingError } from '@/lib/crewHourReview';
 
 
 /**
@@ -70,6 +70,20 @@ interface SnapshotArgs {
   } | null;
 }
 
+/** Re-reads saved rows so stale screen state cannot forward an unpriced order. */
+export async function assertCrewUpstreamPricingReady(coId: string, upstreamBillerOrgId: string, requireReviewedCrewEntries = true): Promise<void> {
+  const [itemsResult, entriesResult] = await Promise.all([
+    supabase.from('co_line_items').select('id').eq('co_id', coId),
+    supabase.from('co_labor_entries')
+      .select('co_line_item_id, org_id, entered_by_role, is_actual_cost, line_total, crew_review_status')
+      .eq('co_id', coId),
+  ]);
+  if (itemsResult.error) throw itemsResult.error;
+  if (entriesResult.error) throw entriesResult.error;
+  const pricingError = crewUpstreamPricingError(itemsResult.data ?? [], entriesResult.data ?? [], upstreamBillerOrgId, requireReviewedCrewEntries);
+  if (pricingError) throw new Error(pricingError);
+}
+
 /** Freezes project tax settings and (for TCs) the submitted price onto the CO. */
 export async function snapshotCOSubmission({
   coId,
@@ -125,6 +139,7 @@ export async function snapshotCOSubmission({
       markupPercent: markup,
       pricingType,
     });
+    await assertCrewUpstreamPricingReady(coId, currentOrgId);
 
     // Saved billable rows already include the crew-derived base and independent
     // subcontractor scope. Sum them once; never freeze only the crew portion.
@@ -139,6 +154,7 @@ export async function snapshotCOSubmission({
     updates.tc_submitted_price = submittedLaborTotal(billableRows ?? []);
 
   } else if (isTC) {
+    await assertCrewUpstreamPricingReady(coId, currentOrgId, false);
 
     // Never freeze GC-procured materials/equipment into the price billed to the
     // GC — they pay those directly on their own PO.
@@ -166,7 +182,8 @@ interface MaterializeArgs {
  * from crew hours while no billable row of their own existed — so every field
  * derived from saved rows (own labor, retainage, net payable, line item card)
  * read $0 while the snapshot read the real number. One scope item at a time,
- * skipping items that already carry a billable row for this org.
+ * refreshing derived rows when more crew entries are approved and preserving
+ * independently entered subcontractor prices.
  */
 export async function materializeCrewPricing({
   coId,
@@ -177,7 +194,7 @@ export async function materializeCrewPricing({
 }: MaterializeArgs): Promise<void> {
   const { data: rows, error } = await supabase
     .from('co_labor_entries')
-    .select('id, co_line_item_id, org_id, entered_by_role, is_actual_cost, pricing_mode, hours, lump_sum, line_total, crew_review_status')
+    .select('id, co_line_item_id, org_id, entered_by_role, is_actual_cost, pricing_mode, hours, lump_sum, line_total, crew_review_status, crew_pricing_derived, source_fc_entry_ids')
     .eq('co_id', coId);
   if (error) throw error;
   if (!rows) return;
@@ -192,14 +209,18 @@ export async function materializeCrewPricing({
   }
 
   for (const [lineItemId, itemRows] of byItem) {
-    const alreadyPriced = itemRows.some(
-      (r) => !r.is_actual_cost && r.entered_by_role === 'TC' && r.org_id === orgId,
+    // Never materialize a partial item while another crew entry still needs a
+    // decision. The upstream guard will report the pending review clearly.
+    if (itemRows.some(r => r.entered_by_role === 'FC' && !r.is_actual_cost && r.crew_review_status === 'pending')) continue;
+
+    const tcBillableRows = itemRows.filter(
+      r => !r.is_actual_cost && r.entered_by_role === 'TC' && r.org_id === orgId,
     );
-    if (alreadyPriced) continue;
+    const derivedBillable = tcBillableRows.find(r => r.crew_pricing_derived);
+    const hasManualBillable = tcBillableRows.some(r => !r.crew_pricing_derived);
+    if (!derivedBillable && hasManualBillable) continue;
 
     const crew = crewPricingEntries(itemRows);
-    if (crew.length === 0) continue;
-
     const crewHours = crew.reduce((s, r) => s + Number(r.hours ?? 0), 0);
     const crewLump = crew
       .filter((r) => r.pricing_mode === 'lump_sum')
@@ -213,34 +234,55 @@ export async function materializeCrewPricing({
       markupPercent,
       pricingType,
     });
-    if (!base.fcHasSubmitted || base.calculatedPrice <= 0) continue;
-
-    const { error: insertError } = await supabase.from('co_labor_entries').insert({
-      co_id: coId,
-      co_line_item_id: lineItemId,
-      org_id: orgId,
-      entered_by_role: 'TC',
-      entry_date: today,
-      pricing_mode: base.isHourly ? 'hourly' : 'lump_sum',
+    const hasPrice = base.fcHasSubmitted && base.calculatedPrice > 0;
+    const pricingValues = {
+      pricing_mode: base.isHourly ? ('hourly' as const) : ('lump_sum' as const),
       hours: base.isHourly ? crewHours : null,
       base_hourly_rate: base.isHourly ? hourlyRate : null,
       base_lump_sum: base.isHourly ? null : crewLump,
       markup_percent: markupPercent,
-      hourly_rate: base.isHourly ? hourlyRate * (1 + markupPercent / 100) : null,
+      hourly_rate: base.isHourly ? Number((hourlyRate * (1 + markupPercent / 100)).toFixed(2)) : null,
       lump_sum: base.isHourly ? null : base.calculatedPrice,
       description: 'Priced from crew submitted time',
-      is_actual_cost: false,
-      crew_pricing_derived: true,
-    });
-    // Never swallow this: a rejected insert used to leave the frozen price with no
-    // saved rows behind it, which reads as "Not priced" and blocks sending upstream.
-    if (insertError) throw insertError;
+      source_fc_entry_ids: crew.map(r => r.id),
+    };
 
-    const hasInternalCost = itemRows.some(
-      (r) => r.is_actual_cost && r.entered_by_role === 'TC' && r.org_id === orgId,
+    if (derivedBillable) {
+      // Reviewing additional hours must refresh the existing derived row; an
+      // old row must never make a partially priced order look complete.
+      const { error: updateError } = await supabase.from('co_labor_entries')
+        .update(pricingValues)
+        .eq('id', derivedBillable.id);
+      if (updateError) throw updateError;
+    } else if (hasPrice) {
+      const { error: insertError } = await supabase.from('co_labor_entries').insert({
+        co_id: coId,
+        co_line_item_id: lineItemId,
+        org_id: orgId,
+        entered_by_role: 'TC',
+        entry_date: today,
+        ...pricingValues,
+        is_actual_cost: false,
+        crew_pricing_derived: true,
+      });
+      // Never swallow this: a rejected insert used to leave the frozen price with no
+      // saved rows behind it, which reads as "Not priced" and blocks sending upstream.
+      if (insertError) throw insertError;
+    }
+
+    const derivedInternalCost = itemRows.find(
+      r => r.is_actual_cost && r.entered_by_role === 'TC' && r.org_id === orgId && r.crew_pricing_derived,
     );
-    if (crewCost > 0 && !hasInternalCost) {
-      await supabase.from('co_labor_entries').insert({
+    const hasManualInternalCost = itemRows.some(
+      r => r.is_actual_cost && r.entered_by_role === 'TC' && r.org_id === orgId && !r.crew_pricing_derived,
+    );
+    if (derivedInternalCost) {
+      const { error: costUpdateError } = await supabase.from('co_labor_entries')
+        .update({ base_lump_sum: crewCost, lump_sum: crewCost, source_fc_entry_ids: crew.map(r => r.id) })
+        .eq('id', derivedInternalCost.id);
+      if (costUpdateError) throw costUpdateError;
+    } else if (crewCost > 0 && !hasManualInternalCost) {
+      const { error: costInsertError } = await supabase.from('co_labor_entries').insert({
         co_id: coId,
         co_line_item_id: lineItemId,
         org_id: orgId,
@@ -255,6 +297,7 @@ export async function materializeCrewPricing({
         crew_pricing_derived: true,
         source_fc_entry_ids: crew.map((r) => r.id),
       });
+      if (costInsertError) throw costInsertError;
     }
   }
 }

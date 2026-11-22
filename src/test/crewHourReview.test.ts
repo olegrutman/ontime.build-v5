@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canBillCrewLaborEntry, canCrewBillOrder, canUseCrewEntryForPricing, crewPricingEntries, crewReviewDecisionError } from '@/lib/crewHourReview';
+import { canBillCrewLaborEntry, canCrewBillOrder, canUseCrewEntryForPricing, crewPricingEntries, crewReviewDecisionError, crewUpstreamPricingError } from '@/lib/crewHourReview';
 
 const crewEntry = (crew_review_status: 'pending' | 'approved' | 'rejected' | null) => ({
   id: crew_review_status ?? 'legacy',
@@ -90,5 +90,53 @@ describe('crew T&M billing eligibility', () => {
 
   it('never converts a private actual-cost row into an invoice line', () => {
     expect(canBillCrewLaborEntry({ ...crewEntry('approved'), is_actual_cost: true }, { pricing_type: 'tm', status: 'submitted' })).toBe(false);
+  });
+});
+
+describe('crew upstream pricing guard', () => {
+  const items = [{ id: 'item-1' }, { id: 'item-2' }];
+  const priced = (item: string, total: number) => ({
+    co_line_item_id: item,
+    org_id: 'subcontractor',
+    entered_by_role: 'TC',
+    is_actual_cost: false,
+    line_total: total,
+  });
+
+  it('blocks overall-approved crew work while one hour entry is still pending', () => {
+    const error = crewUpstreamPricingError(items, [
+      { ...crewEntry('pending'), co_line_item_id: 'item-1' },
+      priced('item-1', 440),
+      priced('item-2', 300),
+    ], 'subcontractor');
+    expect(error).toBe('Review every crew time entry before sending this order upstream.');
+  });
+
+  it('blocks forwarding when exactly one of two scope items has no subcontractor price', () => {
+    const error = crewUpstreamPricingError(items, [priced('item-1', 440)], 'subcontractor');
+    expect(error).toBe('Confirm a non-zero price for the scope item before sending this order upstream.');
+  });
+
+  it('allows crew-derived forwarding after reviews when every item is priced', () => {
+    const error = crewUpstreamPricingError(items, [
+      { ...crewEntry('approved'), co_line_item_id: 'item-1' },
+      priced('item-1', 440),
+      priced('item-2', 300),
+    ], 'subcontractor');
+    expect(error).toBeNull();
+  });
+
+  it('keeps pending reviews separate from manually priced crew orders', () => {
+    const error = crewUpstreamPricingError(items, [
+      { ...crewEntry('pending'), co_line_item_id: 'item-1' },
+      priced('item-1', 440),
+      priced('item-2', 300),
+    ], 'subcontractor', false);
+    expect(error).toBeNull();
+  });
+
+  it('rejects a zero-priced scope item rather than sending $0 upstream', () => {
+    const error = crewUpstreamPricingError([{ id: 'item-1' }], [priced('item-1', 0)], 'subcontractor', false);
+    expect(error).toBe('Confirm a non-zero price for the scope item before sending this order upstream.');
   });
 });

@@ -19,6 +19,7 @@ interface CONextActionBannerProps {
   /** Multi-item orders require individual decisions before whole-order finalization. */
   lineReview?: boolean;
   pricingReadiness?: COPricingReadiness;
+  crewForwardPricingError?: string | null;
   onAction: (action: string) => void;
 }
 
@@ -199,6 +200,14 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
           title: `Review ${rl.FC} work order`,
           subtitle: `Approve it, keep it as internal cost, or send it back to ${rl.FC} to fix`,
           actions: [],
+        };
+      }
+      if (!co.kept_internal && props.crewForwardPricingError) {
+        return {
+          icon: <AlertTriangle className="h-5 w-5" />,
+          title: 'Review crew pricing before sending upstream',
+          subtitle: props.crewForwardPricingError,
+          actions: [{ label: 'Review pricing', action: 'scroll_scope' }],
         };
       }
       return {

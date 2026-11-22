@@ -4,9 +4,12 @@ import { finalizedCOApprovalAmount } from '@/lib/coLineReview';
 const { update } = vi.hoisted(() => ({ update: vi.fn() }));
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: (table: string) => table === 'projects'
-      ? { select: () => ({ eq: () => ({ single: async () => ({ data: { sales_tax_rate: 0, labor_taxable: false } }) }) }) }
-      : { update: (values: unknown) => { update(values); return { eq: async () => ({ error: null }) }; } },
+    from: (table: string) => {
+      if (table === 'projects') return { select: () => ({ eq: () => ({ single: async () => ({ data: { sales_tax_rate: 0, labor_taxable: false } }) }) }) };
+      if (table === 'co_line_items') return { select: () => ({ eq: async () => ({ data: [{ id: 'item-1' }], error: null }) }) };
+      if (table === 'co_labor_entries') return { select: () => ({ eq: async () => ({ data: [{ co_line_item_id: 'item-1', org_id: 'subcontractor', entered_by_role: 'TC', is_actual_cost: false, line_total: 1500, crew_review_status: null }], error: null }) }) };
+      return { update: (values: unknown) => { update(values); return { eq: async () => ({ error: null }) }; } };
+    },
   },
 }));
 

@@ -25,8 +25,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { sendCONotification, buildCONotification } from '@/lib/coNotifications';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
-import { resolveCOAssignee, snapshotCOSubmission, materializeCrewPricingForOrg } from '@/lib/coSubmitPrep';
+import { resolveCOAssignee, snapshotCOSubmission } from '@/lib/coSubmitPrep';
 import { approvedLaborForReview, summarizeLineReview } from '@/lib/coLineReview';
+import { crewUpstreamPricingError } from '@/lib/crewHourReview';
 import { canApproveOwnOrderInternally, isOwnOrderInternallyApproved } from '@/lib/coInternalApproval';
 import { usePermission } from '@/components/auth/RequirePermission';
 import { toast } from 'sonner';
@@ -126,6 +127,9 @@ export function COStatusActions({
   const crewDraft = isTC && status === 'draft' && co.created_by_role === 'FC' && co.org_id === currentOrgId;
   const crewApproved = (forwardsToGC || crewDraft) && !!co.crew_approved_at;
   const crewPending = (forwardsToGC || crewDraft) && !co.crew_approved_at;
+  const crewForwardPricingError = forwardsToGC
+    ? crewUpstreamPricingError(lineItems, laborEntries, currentOrgId, !!co.use_fc_pricing_base)
+    : null;
   const ownInternalApproved = isOwnOrderInternallyApproved(co, isTC, currentOrgId);
   const ownInternalEligible = canApproveOwnOrderInternally(co, isTC, currentOrgId)
     && canApproveInternal && lineItemCount > 0 && pricingReadiness === 'ready';
@@ -383,22 +387,8 @@ export function COStatusActions({
     setActing(true);
     try {
       if (forwardsToGC) {
-        /* A crew-created work order is submitted by the crew, so this company
-           never pressed Submit — turn its crew-derived price into saved billable
-           rows here, before the work order travels upstream. Without this the
-           upstream party sees a total with every scope line reading "Not priced". */
-        if (isTC && co.use_fc_pricing_base) {
-          const pricedRows = await materializeCrewPricingForOrg({
-            coId: co.id,
-            orgId: currentOrgId,
-            pricingType: co.pricing_type,
-          });
-          if (pricedRows === 0 && (co.tc_submitted_price ?? 0) > 0) {
-            toast.error('Confirm the price on each scope item before sending this up.');
-            return;
-          }
-        }
-
+        /* snapshotCOSubmission materializes the latest approved crew hours and
+           refuses the forward if review or per-item pricing is incomplete. */
         if (!co.crew_approved_at || co.kept_internal) {
           const { error: apprErr } = await supabase.rpc('approve_crew_change_order', { _co_id: co.id, _keep_internal: false });
           if (apprErr) throw apprErr;
@@ -937,6 +927,11 @@ export function COStatusActions({
                 ? `Kept as your internal cost — ${rl.GC} won't see it.`
                 : `Step 2 — send to ${rl.GC} if it should be billed, or keep it internal.`}
             </div>
+          )}
+          {forwardsToGC && crewForwardPricingError && !co.kept_internal && (
+            <p className="rounded-lg border border-state-open/30 bg-state-open-bg px-3 py-2 text-[0.7rem] leading-snug text-state-open-foreground">
+              {crewForwardPricingError}
+            </p>
           )}
           {canApprove && (
             <>

@@ -18,6 +18,7 @@ import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
 import { resolveCOAssignee, snapshotCOSubmission, materializeCrewPricingForOrg } from '@/lib/coSubmitPrep';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
 import { getCOPricingReadiness } from '@/lib/coPricingReadiness';
+import { crewUpstreamPricingError } from '@/lib/crewHourReview';
 import { finalizedCOApprovalAmount } from '@/lib/coLineReview';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -515,6 +516,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     [...materials, ...equipment].filter(row => row.added_by_role !== 'GC' && (role !== 'FC' || row.added_by_role === 'FC')),
   );
   const pricedCount = lineItems.filter(li => getCOPricingReadiness([li], laborEntries, role) === 'ready').length;
+  const crewForwardPricingError = isTC && co.created_by_role === 'FC'
+    ? crewUpstreamPricingError(lineItems, laborEntries, myOrgId, !!co.use_fc_pricing_base)
+    : null;
   // Viewer-scoped per-item amounts for the number-card breakdowns (same rules as each item row).
   const itemBreakdown = lineItems.map(li => {
     const entries = laborEntries.filter(e => e.co_line_item_id === li.id);
@@ -719,7 +723,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           </div>
           <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_340px]">
             <div className="min-w-0 space-y-3">
-              <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} />
+              <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} crewForwardPricingError={crewForwardPricingError} />
             </div>
             <section aria-label="Actions" className="space-y-3 rounded-2xl border-2 border-primary/30 bg-card p-3 shadow-sm xl:sticky xl:top-14">
               {(isTC || isFC) && co.pricing_type !== 'fixed' && canEdit && !nteBlocked && lineItems.some(item => item.approval_status !== 'rejected') && (

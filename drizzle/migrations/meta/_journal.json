@@ -687,6 +687,13 @@
       "when": 1795227614580,
       "tag": "0097_fix_crew_procurement_billing_balance_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1795315977443,
+      "tag": "0098_guard_crew_upstream_pricing",
+      "breakpoints": true
     }
   ]
 }
