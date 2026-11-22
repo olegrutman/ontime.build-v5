@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { ChangeOrder, COStatus, COCreatedByRole } from '@/types/changeOrder';
 import { ArrowRight, Clock3, Gauge, LockKeyhole, Pencil } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -19,6 +19,7 @@ interface COHeaderStripProps {
   myOrgId?: string;
   fromLabel: string;
   toLabel: string;
+  documentActions?: ReactNode;
 }
 
 export function COHeaderStrip({
@@ -28,6 +29,7 @@ export function COHeaderStrip({
   myOrgId,
   fromLabel,
   toLabel,
+  documentActions,
 }: COHeaderStripProps) {
   const status = co.status as COStatus;
   const isWithdrawn = status === 'withdrawn';
@@ -157,6 +159,8 @@ export function COHeaderStrip({
           )}
         </div>
       </div>
+
+      {documentActions}
     </header>
   );
 }

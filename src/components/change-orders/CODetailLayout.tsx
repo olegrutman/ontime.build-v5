@@ -1,6 +1,6 @@
 import { useState, useRef, type RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Flag, Users, ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt, FileText, MessageSquare, Clock3 } from 'lucide-react';
+import { Flag, Users, ArrowLeft, Loader2, Send, Hammer, ShieldCheck, Receipt, MessageSquare, Clock3 } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import { CONextActionBanner } from './CONextActionBanner';
 import { COKPIStrip } from './COKPIStrip';
 import { COHeaderStrip } from './COHeaderStrip';
+import { COHeaderCommandPanel } from './COHeaderCommandPanel';
 import { COPriceRevisionActions, COPriceRevisionCard } from './COPriceRevisionCard';
 import { COPricingUnlockBar } from './COPricingUnlockBar';
 import { canSubmitPriceRevision } from '@/lib/coPriceRevision';
@@ -616,60 +617,34 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     />
   ) : null;
 
+  const documentActions = (
+    <COHeaderCommandPanel
+      documentType={co.document_type}
+      linkedInvoiceNumber={linkedInvoice?.invoice_number ?? null}
+      canCreateInvoice={canCreateProgressInvoice}
+      downloadingPdf={downloadingPdf}
+      downloadingProposal={downloadingProposal}
+      onDownloadPdf={handleDownloadPdf}
+      onDownloadProposal={() => { void handleDownloadProposal(); }}
+      onInvoice={() => {
+        if (linkedInvoice) navigate(`/project/${projectId}/invoices`);
+        else setCreateInvoiceOpen(true);
+      }}
+      onOutsideApproval={() => setOutsideApprovalOpen(true)}
+      onInviteExternal={isGC ? () => setExternalInviteOpen(true) : undefined}
+    />
+  );
+
   return (
     <div className="flex flex-col flex-1 min-h-0" style={{ background: 'hsl(var(--background))' }}>
       {/* Breadcrumb bar */}
       <div className="sticky top-0 z-20 bg-card/95 backdrop-blur border-b border-border">
-        <div className="flex items-center justify-between gap-3 px-4 py-2.5 w-full">
-          <div className="flex items-center gap-2 min-w-0">
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleBack}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div className="min-w-0 text-xs text-muted-foreground truncate">
-              <span className="hidden sm:inline">{co.document_type === 'WO' ? 'Work Orders' : 'Change Orders'} › </span>
-              <span className="font-medium text-foreground font-mono">{co.co_number ?? displayTitle}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs gap-1 text-muted-foreground"
-              onClick={handleDownloadPdf}
-              disabled={downloadingPdf}
-            >
-              {downloadingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />} PDF
-            </Button>
-            {co.document_type === 'WO' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs gap-1 text-muted-foreground"
-                onClick={handleDownloadProposal}
-                disabled={downloadingProposal || downloadingPdf}
-              >
-                {downloadingProposal ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />} Proposal
-              </Button>
-            )}
-            {/* Invoice: show linked or generate */}
-            {linkedInvoice ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs gap-1 text-state-approved"
-                onClick={() => navigate(`/project/${projectId}/invoices`)}
-              >
-                <Receipt className="h-3.5 w-3.5" /> {linkedInvoice.invoice_number}
-              </Button>
-            ) : null}
-            <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => setOutsideApprovalOpen(true)}>
-              <ShieldCheck className="h-3.5 w-3.5" /> Outside approval
-            </Button>
-            {isGC && (
-              <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-muted-foreground" onClick={() => setExternalInviteOpen(true)}>
-                <ExternalLink className="h-3.5 w-3.5" /> Invite External
-              </Button>
-            )}
+        <div className="flex items-center gap-2 px-4 py-2.5 w-full">
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleBack} aria-label="Back to orders">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="min-w-0 truncate font-mono text-xs font-medium text-foreground">
+            {co.co_number ?? displayTitle}
           </div>
         </div>
       </div>
@@ -693,6 +668,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             pricingReadiness={pricingReadiness}
             fromLabel={isGC ? rl.TC : myOrgName}
             toLabel={isFC ? rl.TC : rl.GC}
+            documentActions={documentActions}
           />
 
           {/* Desktop: compact numbers span the page in one row; phones keep their compact grid below the items. */}
