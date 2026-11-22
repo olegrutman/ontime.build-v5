@@ -34,6 +34,7 @@ export function crewUpstreamPricingError(
   upstreamBillerOrgId: string,
   requireReviewedCrewEntries = true,
 ): string | null {
+  if (items.length === 0) return 'Add at least one scope item before sending this order upstream.';
   if (requireReviewedCrewEntries && entries.some(entry => entry.entered_by_role === 'FC' && !entry.is_actual_cost && entry.crew_review_status === 'pending')) {
     return 'Review every crew time entry before sending this order upstream.';
   }

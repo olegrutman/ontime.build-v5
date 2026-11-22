@@ -160,6 +160,31 @@ Deno.serve(async (req) => {
       return json({ error: 'Rejection reason required' }, 400);
     }
 
+    // When the upstream party is NOT on the platform (TC/FC-created CO sent out for
+    // external sign-off), this decision IS the upstream decision. Apply the same
+    // Crew readiness guard used by internal forwarding before recording approval.
+    const externalIsUpstream = approvalType === 'owner' && (co.created_by_role ?? 'GC') !== 'GC';
+    const movableStatuses = ['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'submitted'];
+    if (decision === 'approved' && externalIsUpstream && movableStatuses.includes(co.status) && co.created_by_role === 'FC') {
+      const { data: routing, error: routingError } = await supabase
+        .from('change_orders')
+        .select('org_id, assigned_to_org_id, originating_org_id, use_fc_pricing_base, crew_approved_at')
+        .eq('id', co.id)
+        .single();
+      if (routingError || !routing) return json({ error: 'Could not verify order readiness' }, 400);
+      if (!routing.crew_approved_at) return json({ error: 'Approve the crew work before sending this order upstream' }, 409);
+      const creatingCrewStillOwns = !routing.originating_org_id || routing.originating_org_id === routing.org_id;
+      const upstreamBillerOrgId = creatingCrewStillOwns && routing.assigned_to_org_id !== routing.org_id
+        ? routing.assigned_to_org_id
+        : routing.org_id;
+      const { error: readinessError } = await supabase.rpc('_assert_crew_upstream_pricing_ready', {
+        _co_id: co.id,
+        _upstream_biller_org_id: upstreamBillerOrgId,
+        _require_reviewed_crew_entries: routing.use_fc_pricing_base === true,
+      });
+      if (readinessError) return json({ error: readinessError.message }, 409);
+    }
+
     const prefix = approvalType === 'owner' ? 'owner' : 'architect';
     const patch: Record<string, unknown> = {
       [`${prefix}_approval_status`]: decision,
@@ -179,12 +204,9 @@ Deno.serve(async (req) => {
 
     const label = roleLabelFor(co.created_by_role, approvalType);
 
-    // When the upstream party is NOT on the platform (TC/FC-created CO sent out for
-    // external sign-off), this decision IS the upstream decision — move the CO itself
-    // so `apply_co_contract_delta` books the contract change. GC→owner approvals never
-    // move the CO: the on-platform GC decision stays authoritative.
-    const externalIsUpstream = approvalType === 'owner' && (co.created_by_role ?? 'GC') !== 'GC';
-    const movableStatuses = ['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'submitted'];
+    // GC→owner approvals never move the CO: the on-platform GC decision stays
+    // authoritative. An external upstream decision moves the order only after the
+    // readiness check above, so `apply_co_contract_delta` books complete pricing.
     if (externalIsUpstream && movableStatuses.includes(co.status)) {
       const statusPatch: Record<string, unknown> = { status: decision };
       if (decision === 'approved') statusPatch.approved_at = new Date().toISOString();

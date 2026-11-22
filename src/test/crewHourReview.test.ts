@@ -139,4 +139,8 @@ describe('crew upstream pricing guard', () => {
     const error = crewUpstreamPricingError([{ id: 'item-1' }], [priced('item-1', 0)], 'subcontractor', false);
     expect(error).toBe('Confirm a non-zero price for the scope item before sending this order upstream.');
   });
+
+  it('rejects an empty crew order instead of treating zero items as fully priced', () => {
+    expect(crewUpstreamPricingError([], [], 'subcontractor')).toBe('Add at least one scope item before sending this order upstream.');
+  });
 });

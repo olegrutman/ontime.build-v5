@@ -31,6 +31,7 @@ export default function COApprovalPage() {
   const [roleLabelFromServer, setRoleLabelFromServer] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorTitle, setErrorTitle] = useState('Invalid Link');
   const [done, setDone] = useState<'approved' | 'rejected' | null>(null);
 
   const [approverName, setApproverName] = useState('');
@@ -44,6 +45,18 @@ export default function COApprovalPage() {
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectNote, setRejectNote] = useState('');
   const [acting, setActing] = useState(false);
+
+  async function functionErrorMessage(fnErr: any, data: any, fallback: string) {
+    if (data?.error) return String(data.error);
+    const response = fnErr?.context;
+    if (response && typeof response.clone === 'function') {
+      try {
+        const payload = await response.clone().json();
+        if (payload?.error) return String(payload.error);
+      } catch { /* Fall back to the client error below. */ }
+    }
+    return fnErr?.message ?? fallback;
+  }
 
   useEffect(() => {
     if (!token) { setError('Invalid link'); setLoading(false); return; }
@@ -89,11 +102,12 @@ export default function COApprovalPage() {
           origin: window.location.origin,
         },
       });
-      if (fnErr || (data as any)?.error) throw new Error((data as any)?.error ?? 'Failed to approve');
+      if (fnErr || (data as any)?.error) throw new Error(await functionErrorMessage(fnErr, data, 'Failed to approve'));
       if ((data as any)?.copy_sent) setCopySent(approverEmail.trim());
       setJustSignedAt(new Date().toISOString());
       setDone('approved');
     } catch (err: any) {
+      setErrorTitle('Unable to approve');
       setError(err?.message ?? 'Failed to approve');
     }
     setActing(false);
@@ -114,11 +128,12 @@ export default function COApprovalPage() {
           rejection_note: rejectNote.trim(),
         },
       });
-      if (fnErr || (data as any)?.error) throw new Error((data as any)?.error ?? 'Failed to reject');
+      if (fnErr || (data as any)?.error) throw new Error(await functionErrorMessage(fnErr, data, 'Failed to reject'));
       if ((data as any)?.copy_sent) setCopySent(approverEmail.trim());
       setJustSignedAt(new Date().toISOString());
       setDone('rejected');
     } catch (err: any) {
+      setErrorTitle('Unable to reject');
       setError(err?.message ?? 'Failed to reject');
     }
     setActing(false);
@@ -137,7 +152,7 @@ export default function COApprovalPage() {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="max-w-md text-center space-y-3">
           <AlertTriangle className="h-12 w-12 mx-auto text-destructive" />
-          <h1 className="text-xl font-bold text-foreground">Invalid Link</h1>
+          <h1 className="text-xl font-bold text-foreground">{errorTitle}</h1>
           <p className="text-sm text-muted-foreground">{error}</p>
         </div>
       </div>

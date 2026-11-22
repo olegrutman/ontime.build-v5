@@ -10832,6 +10832,14 @@ export type Database = {
     }
     Functions: {
       _assert_co_line_reviewer: { Args: { _co_id: string }; Returns: undefined }
+      _assert_crew_upstream_pricing_ready: {
+        Args: {
+          _co_id: string
+          _require_reviewed_crew_entries: boolean
+          _upstream_biller_org_id: string
+        }
+        Returns: undefined
+      }
       _audit_co_total: { Args: { _co_id: string }; Returns: number }
       _co_target_contract_id: {
         Args: { _org_a: string; _org_b: string; _project_id: string }
