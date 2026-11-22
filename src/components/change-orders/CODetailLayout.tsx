@@ -691,34 +691,34 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             toLabel={isFC ? rl.TC : rl.GC}
           />
 
-          {/* Desktop: numbers + guidance on the left, one Actions box top right. Phones: actions, then items, then compact numbers. */}
+          {/* Desktop: compact numbers span the page in one row; phones keep their compact grid below the items. */}
+          <div className="hidden lg:block">
+            <COKPIStrip
+              co={co}
+              isGC={isGC}
+              isTC={isTC}
+              isFC={isFC}
+              financials={financials}
+              hasMaterials={co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)}
+              hasEquipment={co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)}
+              materialResponsible={responsibility.materialResponsible}
+              equipmentResponsible={responsibility.equipmentResponsible}
+              tcBillableTotal={tcBillableTotal}
+              onRefresh={refreshDetail}
+              markupVisibility={markupVisibility}
+              pricedCount={pricedCount}
+              itemCount={lineItems.length}
+              itemBreakdown={itemBreakdown}
+              billedToDate={billedToDate}
+              draftBilling={draftBilling}
+              billingLoaded={billingInfo != null}
+              loggedHours={totalLoggedHours}
+              completedItemCount={completedItemCount}
+              activeItemCount={activeLineItems.length}
+            />
+          </div>
           <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_340px]">
             <div className="min-w-0 space-y-3">
-              <div className="hidden lg:block">
-          <COKPIStrip
-            co={co}
-            isGC={isGC}
-            isTC={isTC}
-            isFC={isFC}
-            financials={financials}
-            hasMaterials={co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)}
-            hasEquipment={co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)}
-            materialResponsible={responsibility.materialResponsible}
-            equipmentResponsible={responsibility.equipmentResponsible}
-            tcBillableTotal={tcBillableTotal}
-            onRefresh={refreshDetail}
-            markupVisibility={markupVisibility}
-            pricedCount={pricedCount}
-            itemCount={lineItems.length}
-            itemBreakdown={itemBreakdown}
-            billedToDate={billedToDate}
-            draftBilling={draftBilling}
-            billingLoaded={billingInfo != null}
-            loggedHours={totalLoggedHours}
-            completedItemCount={completedItemCount}
-            activeItemCount={activeLineItems.length}
-          />
-              </div>
               <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} />
             </div>
             <section aria-label="Actions" className="space-y-3 rounded-2xl border-2 border-primary/30 bg-card p-3 shadow-sm xl:sticky xl:top-14">

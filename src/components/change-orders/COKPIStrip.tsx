@@ -1,6 +1,6 @@
-import { Calculator, Pencil } from 'lucide-react';
+import { Calculator, Maximize2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Bar, C, KpiCard } from '@/components/shared/KpiCard';
+import { Bar, C, KpiCard, Pill } from '@/components/shared/KpiCard';
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -389,8 +389,30 @@ function getLegacyTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
   return [];
 }
 
-function EditableBudgetTile({ tile, coId, onRefresh }: { tile: KPITile; coId: string; onRefresh?: () => void }) {
+function DesktopTileButton({ tile, onClick }: { tile: KPITile; onClick: () => void }) {
+  return (
+    <section data-kpi-card={tile.label} className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
+      <div className="h-0.5 shrink-0" style={{ background: tile.color }} />
+      <Button
+        variant="ghost"
+        onClick={onClick}
+        aria-label={`View ${tile.label} breakdown`}
+        className="h-[78px] w-full min-w-0 flex-col items-start justify-center gap-1 whitespace-normal rounded-none px-3 py-2 text-left hover:bg-accent"
+      >
+        <span className="flex w-full min-w-0 items-start justify-between gap-1.5">
+          <span className="min-w-0 text-[10px] font-semibold uppercase leading-tight tracking-wide text-muted-foreground [overflow-wrap:anywhere]">{tile.label}</span>
+          <Maximize2 className="mt-0.5 shrink-0 text-muted-foreground" size={11} />
+        </span>
+        <span className={cn('w-full min-w-0 whitespace-nowrap font-mono font-bold leading-none text-foreground', tile.primary ? 'text-xl' : 'text-lg')}>{tile.value}</span>
+        {tile.meter && <span className="w-full"><Bar pct={tile.meter.percent} color={tile.meter.color} /></span>}
+      </Button>
+    </section>
+  );
+}
+
+function EditableBudgetTile({ tile, coId, onRefresh, compact = false }: { tile: KPITile; coId: string; onRefresh?: () => void; compact?: boolean }) {
   const [editing, setEditing] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [priceDraft, setPriceDraft] = useState(tile.editValue?.toString() ?? '');
   const [markupDraft, setMarkupDraft] = useState(tile.markupPercent?.toString() ?? '');
   const [saving, setSaving] = useState(false);
@@ -403,6 +425,7 @@ function EditableBudgetTile({ tile, coId, onRefresh }: { tile: KPITile; coId: st
     setPriceDraft(tile.editValue?.toString() ?? '');
     setMarkupDraft(tile.markupPercent?.toString() ?? '');
     setEditing(true);
+    if (compact) setDetailsOpen(true);
   }
 
   async function save() {
@@ -434,11 +457,8 @@ function EditableBudgetTile({ tile, coId, onRefresh }: { tile: KPITile; coId: st
     setEditing(false);
   }
 
-  return (
-    <KpiCard label={tile.label} value={tile.value} sub={tile.sub ?? tile.label} accent={tile.color}
-      icon={<Calculator size={18} />} iconBg={C.surface2} pills={tilePills(tile)}
-      headerAction={<Button variant="ghost" size="icon" aria-label={`Edit ${tile.label}`} onClick={open}><Pencil size={14} /></Button>}>
-      <div className="p-4">
+  const editor = (
+    <div className="p-4">
       {editing ? (
         <div className="mt-1.5 space-y-1.5" onClick={e => e.stopPropagation()}>
           <div className="grid grid-cols-2 gap-1.5">
@@ -484,7 +504,32 @@ function EditableBudgetTile({ tile, coId, onRefresh }: { tile: KPITile; coId: st
       ) : (
         <div className="space-y-3"><p className="text-sm text-muted-foreground">{tile.sub}</p><Button variant="outline" onClick={open}><Pencil size={14} />Edit owner price</Button></div>
       )}
-      </div>
+    </div>
+  );
+
+  if (compact) {
+    return (
+      <>
+        <DesktopTileButton tile={tile} onClick={() => { setEditing(false); setDetailsOpen(true); }} />
+        <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+          <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md gap-0 overflow-hidden rounded-2xl p-0">
+            <div className="h-1" style={{ background: tile.color }} />
+            <DialogHeader className="border-b border-border px-4 py-3 text-left">
+              <DialogTitle className="font-heading text-xl">{tile.label}</DialogTitle>
+              <DialogDescription>{tile.value}</DialogDescription>
+            </DialogHeader>
+            {editor}
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
+
+  return (
+    <KpiCard label={tile.label} value={tile.value} sub={tile.sub ?? tile.label} accent={tile.color}
+      icon={<Calculator size={18} />} iconBg={C.surface2} pills={tilePills(tile)}
+      headerAction={<Button variant="ghost" size="icon" aria-label={`Edit ${tile.label}`} onClick={open}><Pencil size={14} /></Button>}>
+      {editor}
     </KpiCard>
   );
 }
@@ -594,6 +639,33 @@ function CompactTile({ tile, items, financials }: { tile: KPITile; items: COKPII
   );
 }
 
+function DesktopCompactTile({ tile, items, financials }: { tile: KPITile; items: COKPIItemBreakdown[]; financials: COFinancials }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <DesktopTileButton tile={tile} onClick={() => setOpen(true)} />
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="flex max-h-[90dvh] w-[calc(100vw-1rem)] max-w-3xl flex-col gap-0 overflow-hidden rounded-2xl p-0">
+          <div className="h-1 shrink-0" style={{ background: tile.color }} />
+          <DialogHeader className="shrink-0 border-b border-border px-4 pb-3 pt-4 text-left sm:px-6">
+            <DialogTitle className="text-[0.7rem] uppercase text-muted-foreground">{tile.label}</DialogTitle>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-3xl font-semibold leading-tight text-foreground">{tile.value}</span>
+              {tilePills(tile).map((pill, index) => <Pill key={`${pill.text}-${index}`} type={pill.type}>{pill.text}</Pill>)}
+            </div>
+            {tile.sub && <DialogDescription className="text-xs text-muted-foreground">{tile.sub}</DialogDescription>}
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-auto">
+            {(tile.kind ?? 'other') !== 'other'
+              ? <Breakdown tile={tile} items={items} financials={financials} />
+              : <div className="p-4 text-sm text-muted-foreground">{tile.sub}<div className="mt-3 font-mono text-xl text-foreground">{tile.value}</div></div>}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 export function COKPIStrip(props: COKPIStripProps) {
   const rl = useRoleLabelsContext();
   const tiles = getTiles(props, rl);
@@ -610,18 +682,16 @@ export function COKPIStrip(props: COKPIStripProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 items-start gap-2.5 sm:grid-cols-2">
-      {tiles.map((tile, idx) => tile.editable
-        ? <EditableBudgetTile key={tile.label} tile={tile} coId={props.co.id} onRefresh={props.onRefresh} />
-        : <KpiCard key={tile.label} label={tile.label} value={tile.value} sub={tile.sub ?? tile.label}
-            icon={<Calculator size={18} />} accent={tile.color} iconBg={C.surface2} idx={idx} pills={tilePills(tile)}
-            className={tile.primary ? 'sm:col-span-2' : undefined}
-            valueClassName={tile.primary ? 'text-3xl sm:text-4xl' : 'text-lg sm:text-xl'}
-            spark={tile.meter ? <Bar pct={tile.meter.percent} color={tile.meter.color} /> : undefined}>
-            {(tile.kind ?? 'other') !== 'other'
-              ? <Breakdown tile={tile} items={items} financials={props.financials} />
-              : undefined}
-          </KpiCard>)}
+    <div className="overflow-x-auto pb-1" aria-label="Order numbers">
+      <div className="flex gap-2">
+        {tiles.map(tile => (
+          <div key={tile.label} className="min-w-[168px] flex-1">
+            {tile.editable
+              ? <EditableBudgetTile compact tile={tile} coId={props.co.id} onRefresh={props.onRefresh} />
+              : <DesktopCompactTile tile={tile} items={items} financials={props.financials} />}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
