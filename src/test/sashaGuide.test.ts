@@ -59,6 +59,34 @@ describe('Sasha live guides', () => {
   });
 });
 
+describe('complete Field Report tour', () => {
+  it('continues after New Field Report through the full draft and review handoff', () => {
+    const guide = SASHA_GUIDES.find((candidate) => candidate.id === 'submit-field-report')!;
+    const steps = resolveGuideSteps(guide, 'project-123');
+    expect(steps.map(step => step.id)).toEqual([
+      'open-field-reports',
+      'new-field-report',
+      'field-report-update',
+      'field-report-manual-entry',
+      'field-report-materials',
+      'field-report-photos',
+      'field-report-check-items',
+      'field-report-send',
+    ]);
+    expect(steps[1].advanceOn).toBe('click');
+    expect(steps.at(-1)?.targetSelector).toBe('[data-sasha-target="field-report-submit"]');
+    expect(steps.at(-1)?.advanceOn).toBe('manual');
+  });
+
+  it('keeps the complete Field Report workflow available to Crew, Subcontractor and General Contractor', () => {
+    for (const role of ['FC', 'TC', 'GC'] as const) {
+      const guide = guidesForRole(role).find(candidate => candidate.id === 'submit-field-report')!;
+      expect(guide.steps.length).toBeGreaterThan(2);
+      expect(guide.steps.some(step => step.id === 'field-report-send')).toBe(true);
+    }
+  });
+});
+
 describe('additional Sasha tours', () => {
   it('offers item pricing only to Subcontractor and Crew', () => {
     expect(guidesForRole('TC').some((g) => g.id === 'price-order-items')).toBe(true);

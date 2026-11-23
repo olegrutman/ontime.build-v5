@@ -434,23 +434,27 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
         {sorting ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : recording ? <Square className="h-5 w-5 mr-2" /> : <Mic className="h-5 w-5 mr-2" />}
         {sorting ? 'Sorting…' : recording ? 'Stop & sort' : 'Dictate'}
       </Button>
-      <p className="text-sm text-muted-foreground">Tell your reviewing company what happened today. Only they see this until they release each item. Don't include prices.</p>
-      <Textarea rows={3} placeholder="What got done, what you need, what's stopping you…" value={text} onChange={e => setText(e.target.value)} onBlur={saveText} />
-      <div className="flex items-center gap-2 flex-wrap">
-        <Button type="button" variant={recording ? 'destructive' : 'outline'} size="sm" onClick={toggleRecord}>
-          {recording ? <><Square className="h-4 w-4 mr-1" />Stop recording</> : <><Mic className="h-4 w-4 mr-1" />{report.audio_path ? 'Re-record voice note' : 'Record voice note'}</>}
-        </Button>
-        {report.audio_path && !recording && <span className="text-xs text-muted-foreground">Voice note attached</span>}
-        <Button type="button" size="sm" onClick={sortWithAi} disabled={sorting || recording || (!text.trim() && !report.audio_path)}>
-          {sorting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}Sort into items
-        </Button>
+      <div data-sasha-target="field-report-update" className="space-y-3">
+        <p className="text-sm text-muted-foreground">Tell your reviewing company what happened today. Only they see this until they release each item. Don't include prices.</p>
+        <Textarea rows={3} placeholder="What got done, what you need, what's stopping you…" value={text} onChange={e => setText(e.target.value)} onBlur={saveText} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button type="button" variant={recording ? 'destructive' : 'outline'} size="sm" onClick={toggleRecord}>
+            {recording ? <><Square className="h-4 w-4 mr-1" />Stop recording</> : <><Mic className="h-4 w-4 mr-1" />{report.audio_path ? 'Re-record voice note' : 'Record voice note'}</>}
+          </Button>
+          {report.audio_path && !recording && <span className="text-xs text-muted-foreground">Voice note attached</span>}
+          <Button type="button" size="sm" onClick={sortWithAi} disabled={sorting || recording || (!text.trim() && !report.audio_path)}>
+            {sorting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}Sort into items
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">Sort into items reads your update or voice note and adds items below. For exact products and quantities, use Choose materials instead—it does not use AI.</p>
+        {report.transcript && <p className="text-xs rounded-lg bg-muted p-2"><span className="font-medium">Voice note text:</span> {report.transcript}</p>}
       </div>
-      <p className="text-xs text-muted-foreground">Sort into items reads your update or voice note and adds items below. For exact products and quantities, use Choose materials instead—it does not use AI.</p>
-      {report.transcript && <p className="text-xs rounded-lg bg-muted p-2"><span className="font-medium">Voice note text:</span> {report.transcript}</p>}
 
-      <FieldReportPhotoEditor report={report} photos={photos} onChange={onChange} />
+      <div data-sasha-target="field-report-photos">
+        <FieldReportPhotoEditor report={report} photos={photos} onChange={onChange} />
+      </div>
 
-      <div className="rounded-xl border border-type-sov/30 bg-type-sov/5 p-3 space-y-2">
+      <div data-sasha-target="field-report-materials" className="rounded-xl border border-type-sov/30 bg-type-sov/5 p-3 space-y-2">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0 space-y-1">
             <p className="flex items-center gap-1.5 text-[0.7rem] uppercase tracking-wide text-muted-foreground"><Package className="h-3.5 w-3.5" />Material request</p>
@@ -460,7 +464,7 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
         </div>
       </div>
 
-      <div className="rounded-xl border p-3 space-y-2">
+      <div data-sasha-target="field-report-manual-entry" className="rounded-xl border p-3 space-y-2">
         <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">Add another update</p>
         <Select value={kind} onValueChange={v => setKind(v as Kind)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
@@ -475,17 +479,20 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
         <Button size="sm" variant="outline" onClick={addItem} disabled={!desc.trim()}><Plus className="h-4 w-4 mr-1" />Add item</Button>
       </div>
 
-      {items.map(i => (
-        <ItemRow key={i.id} item={i}>
-          <div className="flex flex-wrap gap-2">
-            {isStructuredMaterialItem(i) && <FieldMaterialPicker report={report} item={i} onSaved={onChange} />}
-            {i.kind === 'material' && !isStructuredMaterialItem(i) && <FieldMaterialMatch report={report} item={i} onSaved={onChange} />}
-            <Button size="sm" variant="ghost" onClick={() => removeItem(i.id)}><Trash2 className="h-4 w-4 mr-1" />Remove</Button>
-          </div>
-        </ItemRow>
-      ))}
+      <div data-sasha-target="field-report-items" className="space-y-3" aria-label="Draft field items">
+        {items.map(i => (
+          <ItemRow key={i.id} item={i}>
+            <div className="flex flex-wrap gap-2">
+              {isStructuredMaterialItem(i) && <FieldMaterialPicker report={report} item={i} onSaved={onChange} />}
+              {i.kind === 'material' && !isStructuredMaterialItem(i) && <FieldMaterialMatch report={report} item={i} onSaved={onChange} />}
+              <Button size="sm" variant="ghost" onClick={() => removeItem(i.id)}><Trash2 className="h-4 w-4 mr-1" />Remove</Button>
+            </div>
+          </ItemRow>
+        ))}
+        {items.length === 0 && <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">Your draft items will appear here.</p>}
+      </div>
 
-      <Button className="w-full" onClick={submit} disabled={busy || items.length === 0}>
+      <Button data-sasha-target="field-report-submit" className="w-full" onClick={submit} disabled={busy || items.length === 0}>
         {busy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}Send for review
       </Button>
       {items.length === 0 && <p className="text-xs text-muted-foreground text-center">Add at least one item to send.</p>}
