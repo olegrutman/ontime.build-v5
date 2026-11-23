@@ -1336,29 +1336,29 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
               'Save draft'
             )}
           </Button>
-          <Button onClick={() => setLockConfirmOpen(true)} disabled={actionLoading} title="Send your final prices to the buyer for approval">
+          <Button onClick={() => setLockConfirmOpen(true)} disabled={actionLoading} title="Save your final prices and share them with the buyer">
             <Lock className="h-4 w-4 mr-2" />
-            Send quote to buyer
+            Save pricing
           </Button>
         </div>
       )}
       {editingPrices && (
         <p className="text-xs text-muted-foreground text-right">
-          <strong>Save draft</strong> keeps your prices private so you can finish later. <strong>Send quote to buyer</strong> finalizes the prices and asks the buyer to approve.
+          <strong>Save draft</strong> keeps your prices private so you can finish later. <strong>Save pricing</strong> shares the final prices with the buyer; you can then mark the order as Ordered.
         </p>
       )}
 
-      {/* Send Quote Confirmation Dialog */}
+      {/* Save Pricing Confirmation Dialog */}
       <AlertDialog open={lockConfirmOpen} onOpenChange={setLockConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Send quote to the buyer?</AlertDialogTitle>
+            <AlertDialogTitle>Save pricing and share with the buyer?</AlertDialogTitle>
             <AlertDialogDescription>
-              Your quote of{' '}
+              Your pricing of{' '}
               <span className="font-semibold text-foreground">
                 {formatCurrency(computeEditTotal())}
               </span>{' '}
-              will be sent to the buyer for approval, and they'll be notified. You won't be able to change these prices unless the buyer sends the order back to you.
+              will be shared with the buyer. You can then mark the order as Ordered. Prices stay locked unless the buyer returns the order to you.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1367,10 +1367,10 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
               {actionLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Sending {Object.keys(priceEdits).length} items…
+                  Saving {Object.keys(priceEdits).length} items…
                 </>
               ) : (
-                'Send quote'
+                'Save pricing'
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

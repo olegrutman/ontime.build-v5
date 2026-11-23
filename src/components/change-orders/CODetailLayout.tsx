@@ -1,6 +1,6 @@
 import { useState, useRef, type RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Flag, Users, ArrowLeft, Loader2, Send, Hammer, ShieldCheck, Receipt, MessageSquare, Clock3 } from 'lucide-react';
+import { Flag, Users, ArrowLeft, Loader2, Send, Hammer, ShieldCheck, MessageSquare, Clock3 } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -667,7 +667,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto pb-28 lg:pb-8">
+      <div className="flex-1 overflow-y-auto pb-40 lg:pb-8">
         <div className="w-full px-4 lg:px-5 py-4 space-y-4">
 
 
@@ -717,12 +717,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               {(isTC || isFC) && co.pricing_type !== 'fixed' && canEdit && !nteBlocked && lineItems.some(item => item.approval_status !== 'rejected') && (
                 <Button className="min-h-10 w-full gap-2 whitespace-normal" onClick={openFirstEntry}>
                   <Clock3 className="h-4 w-4 shrink-0" />Log hours &amp; actuals
-                </Button>
-              )}
-              {canCreateProgressInvoice && (
-                <Button variant="outline" className="min-h-10 w-full gap-2 whitespace-normal" onClick={() => setCreateInvoiceOpen(true)}>
-                  <Receipt className="h-4 w-4 shrink-0" />
-                  {co.pricing_type === 'fixed' ? 'Create progress invoice' : 'Invoice logged actuals'}
                 </Button>
               )}
               {co.pricing_type === 'nte' && !['submitted', 'approved', 'contracted', 'withdrawn'].includes(co.status) && (
