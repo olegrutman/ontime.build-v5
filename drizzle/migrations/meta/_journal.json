@@ -750,6 +750,13 @@
       "when": 1795397506066,
       "tag": "0106_guard_per_item_crew_price_switch",
       "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1795401902240,
+      "tag": "0107_prevent_invoice_alerts_blocking_closeout",
+      "breakpoints": true
     }
   ]
 }
