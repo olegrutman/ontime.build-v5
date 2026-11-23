@@ -3,6 +3,7 @@
 // an allowlisted set of notification types.
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { serviceClient, queueEmail, renderEmail } from '../_shared/coEmail.ts';
+import { alertIdempotencyKey } from '../_shared/alertDelivery.ts';
 
 const APP_URL = 'https://ontime.build';
 
@@ -133,15 +134,13 @@ Deno.serve(async (req) => {
     const supabase = serviceClient();
 
     const secret = req.headers.get('x-trigger-secret') ?? '';
-    const { data: ok, error: verifyError } = await supabase.rpc(
-      'verify_notification_trigger_secret',
-      { _candidate: secret },
-    );
-    if (verifyError || ok !== true) {
+    const [verification, payload] = await Promise.all([
+      supabase.rpc('verify_notification_trigger_secret', { _candidate: secret }),
+      req.json() as Promise<TriggerBody>,
+    ]);
+    if (verification.error || verification.data !== true) {
       return json({ error: 'unauthorized' }, 401);
     }
-
-    const payload = (await req.json()) as TriggerBody;
     const type = String(payload.type ?? '');
     const category = CATEGORY_BY_TYPE[type];
     if (!category) {
@@ -172,54 +171,46 @@ Deno.serve(async (req) => {
       return json({ skipped: 'no_recipients' });
     }
 
-    // Invoice alerts can carry a download link to the invoice PDF, when the
-    // sender chose to include one at submit time.
-    let invoicePdfUrl: string | null = null;
-    if (type.startsWith('INVOICE_') && payload.entity_id) {
-      const { data: inv } = await supabase
-        .from('invoices')
-        .select('invoice_pdf_url')
-        .eq('id', payload.entity_id)
-        .maybeSingle();
-      const stored = (inv as { invoice_pdf_url?: string | null } | null)?.invoice_pdf_url ?? null;
-      invoicePdfUrl = stored;
-      // Re-sign on every send so later emails (approved/paid) get a fresh 14-day link.
-      const m = stored?.match(/\/object\/sign\/invoice-documents\/([^?]+)/);
-      if (m) {
-        const { data: signed } = await supabase.storage
-          .from('invoice-documents')
-          .createSignedUrl(decodeURIComponent(m[1]), 60 * 60 * 24 * 14);
-        if (signed?.signedUrl) invoicePdfUrl = signed.signedUrl;
-      }
-    }
-
     const actionUrl = payload.action_url
       ? `${APP_URL}${payload.action_url.startsWith('/') ? '' : '/'}${payload.action_url}`
       : `${APP_URL}/dashboard`;
-
-    // Project identity belongs in every project-scoped alert. Most notifications
-    // already carry the project UUID in their action URL, regardless of entity type.
     const projectId = projectIdFromActionUrl(payload.action_url);
-    let projectIdentity: ProjectIdentity | null = null;
-    if (projectId) {
-      const { data: project } = await supabase
-        .from('projects')
-        .select('id, name, address, city, state, zip')
-        .eq('id', projectId)
-        .maybeSingle();
-      if (project) {
-        projectIdentity = {
+
+    // Invoice PDF metadata and project identity are independent lookups.
+    const [invoiceResult, projectResult] = await Promise.all([
+      type.startsWith('INVOICE_') && payload.entity_id
+        ? supabase.from('invoices').select('invoice_pdf_url').eq('id', payload.entity_id).maybeSingle()
+        : Promise.resolve(null),
+      projectId
+        ? supabase.from('projects').select('id, name, address, city, state, zip').eq('id', projectId).maybeSingle()
+        : Promise.resolve(null),
+    ]);
+
+    let invoicePdfUrl: string | null = null;
+    const stored = (invoiceResult?.data as { invoice_pdf_url?: string | null } | null)?.invoice_pdf_url ?? null;
+    invoicePdfUrl = stored;
+    // Re-sign on every send so later emails (approved/paid) get a fresh 14-day link.
+    const match = stored?.match(/\/object\/sign\/invoice-documents\/([^?]+)/);
+    if (match) {
+      const { data: signed } = await supabase.storage
+        .from('invoice-documents')
+        .createSignedUrl(decodeURIComponent(match[1]), 60 * 60 * 24 * 14);
+      if (signed?.signedUrl) invoicePdfUrl = signed.signedUrl;
+    }
+
+    const project = projectResult?.data;
+    const projectIdentity: ProjectIdentity | null = project
+      ? {
           id: project.id,
           name: project.name,
           address: formatProjectAddress(project.address, project.city, project.state, project.zip),
-        };
-      }
-    }
+        }
+      : null;
 
     const results: Array<{ user_id: string; status: string }> = [];
     const cutoff = new Date(Date.now() - THROTTLE_MINUTES * 60_000).toISOString();
 
-    for (const userId of userIds) {
+    await Promise.all(userIds.map(async (userId) => {
       const entityId = payload.entity_id ?? null;
 
       const logSkip = async (email: string, reason: string) => {
@@ -235,33 +226,8 @@ Deno.serve(async (req) => {
         results.push({ user_id: userId, status: `skipped:${reason}` });
       };
 
-      // Preference check: master email switch + category switch.
-      const { data: settings } = await supabase
-        .from('user_settings')
-        .select(`notify_email, ${category}`)
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      const settingsRow = (settings ?? {}) as Record<string, boolean | null>;
-      if (settingsRow.notify_email === false) {
-        await logSkip('', 'email_disabled');
-        continue;
-      }
-      if (settingsRow[category] === false) {
-        await logSkip('', 'category_disabled');
-        continue;
-      }
-
-      // Look up the address.
-      const { data: authUser } = await supabase.auth.admin.getUserById(userId);
-      const email = authUser?.user?.email;
-      if (!email || !authUser?.user?.email_confirmed_at) {
-        await logSkip(email ?? '', 'no_confirmed_email');
-        continue;
-      }
-
-      // Collapse duplicates: one email per person per event kind PER DOCUMENT
-      // per window. Different documents of the same kind each get their email.
+      // Preferences, account lookup and duplicate check are independent. Running
+      // them together removes three serial round trips per recipient.
       let throttleQuery = supabase
         .from('notification_email_log')
         .select('id', { count: 'exact', head: true })
@@ -272,11 +238,35 @@ Deno.serve(async (req) => {
       throttleQuery = entityId
         ? throttleQuery.eq('entity_id', entityId)
         : throttleQuery.is('entity_id', null);
-      const { count } = await throttleQuery;
 
-      if ((count ?? 0) > 0) {
+      const [settingsResult, authUserResult, throttleResult] = await Promise.all([
+        supabase.from('user_settings').select(`notify_email, ${category}`).eq('user_id', userId).maybeSingle(),
+        supabase.auth.admin.getUserById(userId),
+        throttleQuery,
+      ]);
+
+      const settingsRow = (settingsResult.data ?? {}) as Record<string, boolean | null>;
+      if (settingsResult.error) throw settingsResult.error;
+      if (settingsRow.notify_email === false) {
+        await logSkip('', 'email_disabled');
+        return;
+      }
+      if (settingsRow[category] === false) {
+        await logSkip('', 'category_disabled');
+        return;
+      }
+
+      if (authUserResult.error) throw authUserResult.error;
+      const email = authUserResult.data.user?.email;
+      if (!email || !authUserResult.data.user?.email_confirmed_at) {
+        await logSkip(email ?? '', 'no_confirmed_email');
+        return;
+      }
+
+      if (throttleResult.error) throw throttleResult.error;
+      if ((throttleResult.count ?? 0) > 0) {
         await logSkip(email, 'throttled');
-        continue;
+        return;
       }
 
       const heading = payload.title ?? 'Update on your project';
@@ -328,6 +318,9 @@ Deno.serve(async (req) => {
           actionUrl,
         ].filter((line, index, lines) => line || lines[index - 1] !== '').join('\n'),
         label: `notification:${type}`,
+        idempotencyKey: payload.notification_id
+          ? alertIdempotencyKey(payload.notification_id, userId, type)
+          : undefined,
       });
 
       await supabase.from('notification_email_log').insert({
@@ -339,7 +332,7 @@ Deno.serve(async (req) => {
         status: 'sent',
       });
       results.push({ user_id: userId, status: 'sent' });
-    }
+    }));
 
     return json({ ok: true, type, results });
   } catch (err) {

@@ -7,6 +7,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
+import { deliveryDelay, isRetryableDeliveryError } from '../_shared/alertDelivery.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -36,11 +37,23 @@ async function sendToSubs(subs: Sub[], payload: Record<string, unknown>, notific
 
   await Promise.all(subs.map(async (s) => {
     try {
-      await webpush.sendNotification(
-        { endpoint: s.endpoint, keys: { p256dh: s.p256dh_key, auth: s.auth_key } },
-        body,
-        { TTL: 60 * 60 * 24 },
-      );
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          await webpush.sendNotification(
+            { endpoint: s.endpoint, keys: { p256dh: s.p256dh_key, auth: s.auth_key } },
+            body,
+            // The stable tag collapses a rare duplicate if the first response was lost.
+            { TTL: 60 * 60 * 24 },
+          );
+          break;
+        } catch (err) {
+          if (attempt === 1 && isRetryableDeliveryError(err)) {
+            await deliveryDelay(attempt);
+            continue;
+          }
+          throw err;
+        }
+      }
       sent++;
       await admin.from('notification_deliveries').insert({
         notification_id: notificationId,
@@ -85,19 +98,16 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Respect user preference.
-      const { data: prefs } = await admin
-        .from('user_settings').select('notify_push').eq('user_id', user_id).maybeSingle();
+      // Preferences and alert content are independent; load them together.
+      const [{ data: prefs }, { data: notif }] = await Promise.all([
+        admin.from('user_settings').select('notify_push').eq('user_id', user_id).maybeSingle(),
+        admin.from('notifications').select('id,title,body,action_url,type').eq('id', notification_id).maybeSingle(),
+      ]);
       if (prefs && prefs.notify_push === false) {
         return new Response(JSON.stringify({ skipped: 'user disabled push' }), {
           status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-
-      const { data: notif } = await admin
-        .from('notifications')
-        .select('id,title,body,action_url,type')
-        .eq('id', notification_id).maybeSingle();
       if (!notif) {
         return new Response(JSON.stringify({ error: 'notification not found' }), {
           status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },

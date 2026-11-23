@@ -2,6 +2,7 @@
 // Sends through Lovable's managed email API.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { EmailAPIError, sendLovableEmail } from 'npm:@lovable.dev/email-js@0.1.0';
+import { deliveryDelay, isRetryableDeliveryError } from './alertDelivery.ts';
 
 // Must be the verified delegated sending subdomain — the root domain is not verified.
 const SENDER_DOMAIN = 'notify.ontime.build';
@@ -116,12 +117,20 @@ export function renderEmail({ heading, intro, rows, ctaLabel, ctaUrl, footnote, 
 // suppression and the unsubscribe page are handled on Lovable's side.
 export async function queueEmail(
   supabase: ReturnType<typeof createClient>,
-  opts: { to: string; subject: string; html: string; text: string; label: string },
+  opts: {
+    to: string;
+    subject: string;
+    html: string;
+    text: string;
+    label: string;
+    /** Stable across retries of the same logical alert to prevent duplicates. */
+    idempotencyKey?: string;
+  },
 ): Promise<{ sent: boolean }> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY');
   if (!apiKey) throw new Error('LOVABLE_API_KEY is not configured');
 
-  const messageId = crypto.randomUUID();
+  const messageId = opts.idempotencyKey ?? crypto.randomUUID();
 
   const logRow = async (
     status: 'sent' | 'suppressed' | 'failed',
@@ -143,31 +152,40 @@ export async function queueEmail(
     }
   };
 
-  try {
-    await sendLovableEmail(
-      {
-        to: opts.to,
-        from: FROM,
-        sender_domain: SENDER_DOMAIN,
-        subject: opts.subject,
-        html: opts.html,
-        text: opts.text,
-        purpose: 'transactional',
-        label: opts.label,
-        idempotency_key: messageId,
-      },
-      { apiKey, sendUrl: Deno.env.get('LOVABLE_SEND_URL') },
-    );
-  } catch (error) {
-    if (error instanceof EmailAPIError && error.code === 'recipient_suppressed') {
-      await logRow('suppressed', 'Recipient is suppressed');
-      return { sent: false };
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      await sendLovableEmail(
+        {
+          to: opts.to,
+          from: FROM,
+          sender_domain: SENDER_DOMAIN,
+          subject: opts.subject,
+          html: opts.html,
+          text: opts.text,
+          purpose: 'transactional',
+          label: opts.label,
+          idempotency_key: messageId,
+        },
+        { apiKey, sendUrl: Deno.env.get('LOVABLE_SEND_URL') },
+      );
+      await logRow('sent');
+      return { sent: true };
+    } catch (error) {
+      if (error instanceof EmailAPIError && error.code === 'recipient_suppressed') {
+        await logRow('suppressed', 'Recipient is suppressed');
+        return { sent: false };
+      }
+
+      if (attempt === 1 && isRetryableDeliveryError(error)) {
+        await deliveryDelay(attempt);
+        continue;
+      }
+
+      const message = error instanceof Error ? error.message : String(error);
+      await logRow('failed', message);
+      throw error;
     }
-    const message = error instanceof Error ? error.message : String(error);
-    await logRow('failed', message);
-    throw error;
   }
 
-  await logRow('sent');
-  return { sent: true };
+  throw new Error('Email delivery ended without a result');
 }
