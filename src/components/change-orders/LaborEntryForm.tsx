@@ -171,6 +171,8 @@ export function LaborEntryForm({
   }, [lineItemId, coId, isTC, isActualCost, isEditing, useCrewPricingBase]);
 
   const fcAvailable = fcCost > 0 || fcHours > 0;
+  const crewHoursLocked = isTC && useCrewPricingBase && !isActualCost
+    && (fcHours > 0 || !!editingEntry?.crew_pricing_derived);
   function importFCHours() {
     if (fcCost > 0) setInternalCost(String(fcCost));
     if (fcHours > 0 && !hours) { setHours(String(fcHours)); setMode('hourly'); }
@@ -282,7 +284,7 @@ export function LaborEntryForm({
         const { error } = await supabase
           .from('co_labor_entries')
           .update({
-            crew_pricing_derived: false,
+            crew_pricing_derived: isTC && useCrewPricingBase && !isActualCost,
             entry_date: entryDate,
             pricing_mode: getDbMode(),
             hours: getDbHours(),
@@ -404,6 +406,7 @@ export function LaborEntryForm({
               key={opt.key}
               type="button"
               onClick={() => setMode(opt.key)}
+              disabled={crewHoursLocked && opt.key === 'lump_sum'}
               className={cn(
                 'px-3 py-1.5 text-xs font-bold rounded transition-all flex items-center justify-center gap-1.5 whitespace-nowrap',
                 mode === opt.key ? 'shadow-sm' : 'text-muted-foreground hover:text-foreground',
@@ -418,7 +421,12 @@ export function LaborEntryForm({
       </div>
 
       <div className="p-4 space-y-4">
-        {mode === 'hourly' && (
+        {mode === 'hourly' && (crewHoursLocked ? (
+          <section className="rounded-xl border border-border bg-muted/30 p-3" aria-label="Approved crew hours">
+            <h4 className="text-sm font-semibold text-foreground">Approved Crew hours: {fmtHours(hoursValue)}</h4>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">Hours stay tied to this item’s approved Crew time. You can adjust your billable rate and markup.</p>
+          </section>
+        ) : (
           <section className="space-y-2" aria-label="Time entry method">
             <h4 className="text-sm font-semibold text-foreground">How are you entering time?</h4>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -435,7 +443,7 @@ export function LaborEntryForm({
                 : 'Enter the combined hours worked by everyone. For example: 3 workers working 8 hours each = 24 total hours.'}
             </p>
           </section>
-        )}
+        ))}
 
         {/* Billable precision grid — stable 4/4/4 geometry */}
         <div className="grid grid-cols-12 gap-3">
@@ -480,7 +488,9 @@ export function LaborEntryForm({
                   <div className="relative">
                     <input
                       type="number" step="0.25" min="0" value={hours} onChange={e => setHours(e.target.value)} placeholder="0"
-                      className={cn(fieldInput, 'text-right text-base font-semibold pr-12')}
+                      disabled={crewHoursLocked}
+                      aria-label={crewHoursLocked ? 'Approved crew hours' : 'Hours'}
+                      className={cn(fieldInput, 'text-right text-base font-semibold pr-12', crewHoursLocked && 'bg-muted/50 text-muted-foreground')}
                       style={{ ...mono, color: 'hsl(var(--amber-d))' }}
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold uppercase text-muted-foreground pointer-events-none">hrs</span>
@@ -555,7 +565,7 @@ export function LaborEntryForm({
                   </span>
                 </div>
               </div>
-            ) : !isActualCost && (
+            ) : !isActualCost && !crewHoursLocked && (
               <div className="flex items-center gap-2">
                 <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground shrink-0">Quick</span>
                 <div className="flex gap-2 flex-1">

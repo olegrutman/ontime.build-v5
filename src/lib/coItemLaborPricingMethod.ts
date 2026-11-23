@@ -19,3 +19,21 @@ export function hasCrewLaborPricing(
 ): boolean {
   return items.some(item => itemLaborPricingMethod(item, orderUseCrewPricing) === 'crew');
 }
+
+export interface ItemLaborMethodEntryFields {
+  org_id: string;
+  entered_by_role: string;
+  is_actual_cost: boolean;
+  crew_pricing_derived?: boolean | null;
+}
+
+/** Saved manual prices must be removed explicitly before an item can derive from crew time. */
+export function manualItemPriceBlocksCrew(
+  entries: readonly ItemLaborMethodEntryFields[],
+  orgId: string,
+): boolean {
+  return entries.some(entry => entry.org_id === orgId
+    && entry.entered_by_role === 'TC'
+    && !entry.is_actual_cost
+    && !entry.crew_pricing_derived);
+}

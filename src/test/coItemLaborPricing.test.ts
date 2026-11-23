@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasCrewLaborPricing, itemLaborPricingMethod, summarizeMixedItemLabor } from '@/lib/coItemLaborPricing';
+import { hasCrewLaborPricing, itemLaborPricingMethod, manualItemPriceBlocksCrew, summarizeMixedItemLabor } from '@/lib/coItemLaborPricing';
 
 const item = (id: string, labor_pricing_method: 'crew' | 'manual' | null = null) => ({ id, labor_pricing_method });
 const labor = (
@@ -56,5 +56,19 @@ describe('per-item labor pricing method', () => {
 
     expect(result.laborTotal).toBe(200);
     expect(result.approvedCrewHours).toBe(8);
+  });
+
+  it('blocks a manual $300 item price from silently mixing into crew-derived billing', () => {
+    expect(manualItemPriceBlocksCrew([
+      { ...labor('manual-price', 'item-1', 'TC', 300), org_id: 'subcontractor', crew_pricing_derived: false },
+    ], 'subcontractor')).toBe(true);
+  });
+
+  it('allows crew-derived prices and keeps crew source and private costs out of the switch decision', () => {
+    expect(manualItemPriceBlocksCrew([
+      { ...labor('derived-price', 'item-1', 'TC', 440), org_id: 'subcontractor', crew_pricing_derived: true },
+      { ...labor('crew-source', 'item-1', 'FC', 200, false, 'approved'), org_id: 'crew' },
+      { ...labor('private-cost', 'item-1', 'TC', 200, true), org_id: 'subcontractor', crew_pricing_derived: false },
+    ], 'subcontractor')).toBe(false);
   });
 });

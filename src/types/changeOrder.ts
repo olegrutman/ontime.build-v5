@@ -167,6 +167,8 @@ export interface COLaborEntry {
   crew_size: number | null;
   days: number | null;
   hours_per_day: number | null;
+  /** True when this row mirrors approved crew time rather than an independent manual price. */
+  crew_pricing_derived?: boolean;
   /** NULL means a historical entry that predates crew review. */
   crew_review_status?: 'pending' | 'approved' | 'rejected' | null;
   crew_reviewed_by_user_id?: string | null;

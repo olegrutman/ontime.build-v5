@@ -204,6 +204,7 @@ interface COItemPricingDialogProps {
   onConfirmCrewPrice?: () => void;
   laborPricingMethod?: COLaborPricingMethod;
   canChangeLaborPricingMethod?: boolean;
+  crewMethodBlockedReason?: string | null;
   onLaborPricingMethodChange?: (method: COLaborPricingMethod) => Promise<void>;
   canCompleteItem?: boolean;
   completingItem?: boolean;
@@ -235,6 +236,7 @@ export function COItemPricingDialog({
   onConfirmCrewPrice,
   laborPricingMethod = 'manual',
   canChangeLaborPricingMethod = false,
+  crewMethodBlockedReason = null,
   onLaborPricingMethodChange,
   canCompleteItem = false,
   completingItem = false,
@@ -251,12 +253,12 @@ export function COItemPricingDialog({
     if (open) {
       setActiveTab('billing');
       setEditingEntry(null);
-      setFormMode(openFormOnOpen ? 'billable' : null);
+      setFormMode(openFormOnOpen && !(isTC && laborPricingMethod === 'crew') ? 'billable' : null);
     } else {
       setEditingEntry(null);
       setFormMode(null);
     }
-  }, [open, openFormOnOpen]);
+  }, [open, openFormOnOpen, isTC, laborPricingMethod]);
 
   const myRole = isFC ? 'FC' : isTC ? 'TC' : null;
   const billableRows = useMemo(() => laborEntries.filter(entry => !entry.is_actual_cost), [laborEntries]);
@@ -380,20 +382,22 @@ export function COItemPricingDialog({
   const methodButton = (method: COLaborPricingMethod) => {
     const selected = laborPricingMethod === method;
     const crew = method === 'crew';
+    const methodBlocked = crew && !!crewMethodBlockedReason;
     return (
       <button
         key={method}
         type="button"
         aria-pressed={selected}
         aria-label={crew ? 'Use crew hours' : 'Set manually'}
-        disabled={!canChangeLaborPricingMethod || changingLaborMethod}
+        title={methodBlocked ? crewMethodBlockedReason ?? undefined : undefined}
+        disabled={!canChangeLaborPricingMethod || changingLaborMethod || methodBlocked}
         onClick={() => void changeLaborMethod(method)}
         className={cn(
           'relative flex min-w-0 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors',
           selected && crew && 'border-primary bg-primary/10',
           selected && !crew && 'border-foreground bg-muted/40',
           !selected && 'border-border bg-card hover:bg-muted/30',
-          (!canChangeLaborPricingMethod || changingLaborMethod) && 'cursor-not-allowed opacity-70',
+          (!canChangeLaborPricingMethod || changingLaborMethod || methodBlocked) && 'cursor-not-allowed opacity-70',
         )}
       >
         <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', selected && crew ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>
@@ -454,9 +458,11 @@ export function COItemPricingDialog({
                   ? 'Saving this item’s pricing method…'
                   : !canChangeLaborPricingMethod
                     ? 'Recall the upstream submission before changing this item’s billing.'
-                    : laborPricingMethod === 'crew'
-                      ? 'Only this item uses approved crew hours × your billable rate. Crew pay stays private.'
-                      : 'Only this item is set manually. Other items can still use crew hours; crew pay stays private.'}
+                    : crewMethodBlockedReason
+                      ? crewMethodBlockedReason
+                      : laborPricingMethod === 'crew'
+                        ? 'Only this item uses approved crew hours × your billable rate. Crew pay stays private.'
+                        : 'Only this item is set manually. Other items can still use crew hours; crew pay stays private.'}
               </p>
             </div>
           </section>
@@ -518,7 +524,7 @@ export function COItemPricingDialog({
                         )}
                       </div>
                     )}
-                    {canAddLabor && (
+                    {canAddLabor && !(isTC && laborPricingMethod === 'crew') && (
                       <Button type="button" className="mt-3 gap-2" onClick={() => setFormMode('billable')}>
                         <Plus className="h-4 w-4" /> {pricingType === 'fixed' ? 'Add pricing entry' : 'Log hours & actuals'}
                       </Button>

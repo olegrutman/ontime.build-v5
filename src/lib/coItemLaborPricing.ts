@@ -1,7 +1,7 @@
 import { crewPricingEntries } from '@/lib/crewHourReview';
 import { itemLaborPricingMethod, type ItemLaborPricingFields } from '@/lib/coItemLaborPricingMethod';
 
-export { hasCrewLaborPricing, itemLaborPricingMethod } from '@/lib/coItemLaborPricingMethod';
+export { hasCrewLaborPricing, itemLaborPricingMethod, manualItemPriceBlocksCrew } from '@/lib/coItemLaborPricingMethod';
 export type { COLaborPricingMethod, ItemLaborPricingFields } from '@/lib/coItemLaborPricingMethod';
 
 export interface MixedLaborEntryFields {

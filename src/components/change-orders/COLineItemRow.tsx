@@ -19,7 +19,7 @@ import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { actualEntryBaseCost } from '@/lib/laborEntryMath';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
 import { crewPricingEntries } from '@/lib/crewHourReview';
-import { itemLaborPricingMethod } from '@/lib/coItemLaborPricingMethod';
+import { itemLaborPricingMethod, manualItemPriceBlocksCrew } from '@/lib/coItemLaborPricingMethod';
 
 interface COLineItemRowProps {
   item: COLineItem;
@@ -205,6 +205,9 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
   const fcTotal = fcBillable.reduce((s, e) => s + (e.line_total ?? 0), 0);
   const tcTotal = tcBillable.reduce((s, e) => s + (e.line_total ?? 0), 0);
+  const crewMethodBlockedReason = laborPricingMethod === 'manual' && manualItemPriceBlocksCrew(tcBillable, orgId)
+    ? 'Remove this item’s manual billing entries before using crew hours.'
+    : null;
   const actualTotal = actualCosts.reduce((s, e) => s + actualEntryBaseCost(e), 0);
 
   // Crew log hours without a rate — those hours carry no dollar value until
@@ -749,6 +752,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
         onConfirmCrewPrice={confirmCrewPrice}
         laborPricingMethod={laborPricingMethod}
         canChangeLaborPricingMethod={canChangeLaborPricingMethod}
+        crewMethodBlockedReason={crewMethodBlockedReason}
         onLaborPricingMethodChange={changeLaborPricingMethod}
         canCompleteItem={canCompleteItem}
         completingItem={completing}

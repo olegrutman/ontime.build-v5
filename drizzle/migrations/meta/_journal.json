@@ -743,6 +743,13 @@
       "when": 1795396041688,
       "tag": "0105_fix_picker_actor_order_column",
       "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1795397506066,
+      "tag": "0106_guard_per_item_crew_price_switch",
+      "breakpoints": true
     }
   ]
 }
