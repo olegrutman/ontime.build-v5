@@ -558,6 +558,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
           <Button
             size="sm"
             aria-label="Bill Change Orders"
+            data-sasha-target="create-invoice"
             onClick={() => { setBulkMode(true); setCreateDialogOpen(true); }}
             className="bg-primary text-primary-foreground font-semibold shadow-[0_0_0_3px_hsl(var(--primary)/0.25),0_6px_16px_-6px_hsl(var(--primary)/0.7)] hover:bg-primary/90 ring-1 ring-primary/60"
           >
@@ -572,7 +573,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
-                  <Button size="sm" variant="default" aria-label={isTM ? 'Create invoice from work orders' : 'New Invoice'} onClick={() => { if (isTM) setCreateFromCOsOpen(true); else { setBulkMode(false); setCreateDialogOpen(true); } }} disabled={isBlocked}>
+                  <Button size="sm" variant="default" aria-label={isTM ? 'Create invoice from work orders' : 'New Invoice'} data-sasha-target="create-invoice" onClick={() => { if (isTM) setCreateFromCOsOpen(true); else { setBulkMode(false); setCreateDialogOpen(true); } }} disabled={isBlocked}>
                     <Plus className="h-4 w-4 mr-1.5 sm:mr-2" />
                     <span className="sm:hidden">New</span>
                     <span className="hidden sm:inline">New Invoice</span>

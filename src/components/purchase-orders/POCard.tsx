@@ -118,6 +118,7 @@ export function POCard({
       className="group cursor-pointer hover:shadow-md transition-shadow"
       onClick={onClick}
       data-sasha-card="Purchase Order"
+      data-sasha-target="purchase-order-row"
     >
       <CardContent className="p-4">
         {/* Row 1: PO number + badges */}

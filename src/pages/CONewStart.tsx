@@ -141,6 +141,7 @@ export default function CONewStartPage() {
             <button
               key={mode}
               type="button"
+              data-sasha-target={`change-order-${mode}`}
               onClick={() => pick(mode)}
               className={cn(
                 'group relative flex flex-col items-start text-left p-5 bg-card border border-border rounded-2xl shadow-sm',

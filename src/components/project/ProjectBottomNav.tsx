@@ -130,6 +130,7 @@ function MoreItemRow({
   return (
     <button
       onClick={() => onNavigate(item.route)}
+      data-sasha-target={`project-nav-${item.route}`}
       className={cn(
         'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] w-full text-left',
         isActive ? 'text-primary bg-primary/10' : 'text-foreground hover:bg-muted/30'
@@ -186,6 +187,7 @@ export function ProjectBottomNav({ isSupplier = false, isTM = false, isFC = fals
               <button
                 key={item.label}
                 onClick={() => handleNavigateRoute(item.route)}
+                data-sasha-target={`project-nav-${item.route}`}
                 className={cn(
                   'flex flex-col items-center justify-center gap-0.5 flex-1 transition-colors min-h-[56px]',
                   active ? 'text-primary' : 'text-muted-foreground'

@@ -205,7 +205,7 @@ export function ProjectCard({ name, status, budget, costs, labels, onClick }: {
   const dotColor = status === 'active' ? C.green : status === 'on_hold' ? C.yellow : status === 'completed' ? C.blue : C.faint;
   const l = labels || { budget: 'Contract', costs: 'Cost', margin: 'Margin' };
   return (
-    <div style={{ background: C.surface, borderRadius: 12, border: `1px solid ${C.border}`, padding: '14px 16px', cursor: 'pointer', ...fontLabel }} className="hover:border-primary hover:shadow-sm transition-all" onClick={onClick}>
+    <div data-sasha-target="dashboard-projects" style={{ background: C.surface, borderRadius: 12, border: `1px solid ${C.border}`, padding: '14px 16px', cursor: 'pointer', ...fontLabel }} className="hover:border-primary hover:shadow-sm transition-all" onClick={onClick}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor }} />
         <span style={{ fontWeight: 700, color: C.ink, fontSize: '0.82rem', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>

@@ -185,6 +185,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
               onClick={openNewPicker}
               className="gap-1.5 shrink-0"
               aria-label={`New ${coLabel(dt, false)}`}
+              data-sasha-target="create-change-order"
             >
               <Plus className="h-4 w-4" />
               New {coAbbrev(dt)}
@@ -235,7 +236,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
           <p className="text-lg font-medium text-foreground">No {coLabel(dt, true).toLowerCase()} yet</p>
           <p className="text-sm text-muted-foreground max-w-sm">Create a {coLabel(dt).toLowerCase()} to track scope changes on this project.</p>
           {canCreateCO && (
-            <Button onClick={openNewPicker} className="gap-1.5 mt-2">
+            <Button onClick={openNewPicker} data-sasha-target="create-change-order" className="gap-1.5 mt-2">
               <Plus className="h-4 w-4" />
               New {coLabel(dt)}
             </Button>

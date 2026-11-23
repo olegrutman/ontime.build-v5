@@ -153,6 +153,7 @@ function NavRow({
   return (
     <button
       onClick={() => navigate(`/project/${projectId}/${item.route}`)}
+      data-sasha-target={`project-nav-${item.route}`}
       title={item.premium ? `${item.label} — premium` : item.label}
       className={cn(
         'flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors text-left w-full',

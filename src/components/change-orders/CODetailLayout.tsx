@@ -819,7 +819,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
 
               {/* ====== SCOPE & LABOR ====== */}
-              <div ref={scopeRef} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+              <div ref={scopeRef} data-sasha-target="scope-labor" className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                 {/* Card header */}
                 <div className="px-3 py-3 sm:px-5 sm:py-4 border-b border-border">
                   <div className="flex items-start justify-between gap-3 flex-wrap">

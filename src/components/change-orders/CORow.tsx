@@ -50,6 +50,7 @@ export function CORow({ co, onClick, needsAction = false, selectable = false, is
     <article
       onClick={() => (selectable ? onSelect?.(co.id, !isSelected) : onClick(co.id))}
       data-sasha-card="Change Order"
+      data-sasha-target="change-order-row"
       className={cn(
         'group cursor-pointer rounded-2xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md',
         'flex flex-col gap-3 md:grid md:grid-cols-12 md:items-center md:gap-4 md:px-6 md:py-4',

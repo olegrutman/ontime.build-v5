@@ -1096,6 +1096,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
             {canCreatePO && !isProjectNotActive && (
               <Button
                 size="sm"
+                data-sasha-target="create-purchase-order"
                 onClick={() => setWizardOpen(true)}
                 disabled={isSupplier && (!ownSupplierId || !buyerOrg)}
               >

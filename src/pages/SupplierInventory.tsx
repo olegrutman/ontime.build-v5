@@ -513,7 +513,7 @@ export default function SupplierInventory() {
               {xlsxUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
               Import
             </Button>
-            <Button onClick={() => setAddDialogOpen(true)} disabled={!supplierId}>
+            <Button onClick={() => setAddDialogOpen(true)} disabled={!supplierId} data-sasha-target="supplier-add-product">
               <Plus className="h-4 w-4 mr-2" />
               Add Product
             </Button>
@@ -558,7 +558,7 @@ export default function SupplierInventory() {
                     <Upload className="h-4 w-4 mr-2" />
                     Import file
                   </Button>
-                  <Button onClick={() => setAddDialogOpen(true)} disabled={!supplierId}>
+                  <Button onClick={() => setAddDialogOpen(true)} disabled={!supplierId} data-sasha-target="supplier-add-product">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Product
                   </Button>

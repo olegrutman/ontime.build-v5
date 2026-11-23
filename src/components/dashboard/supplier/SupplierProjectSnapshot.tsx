@@ -114,6 +114,7 @@ export function SupplierProjectSnapshot({ rows, deliveries }: Props) {
 
   return (
     <div
+      data-sasha-target="dashboard-projects"
       className="rounded-2xl p-4 sm:p-5"
       style={{ background: C.surface, border: `1px solid ${C.border}` }}
     >

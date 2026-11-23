@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDemo } from "@/contexts/DemoContext";
 import { DemoBanner } from "@/components/demo";
 import { SashaBubble } from "@/components/sasha";
-import { BoltGuide } from "@/components/bolt";
+import { SashaGuideProvider } from "@/hooks/useSashaGuide";
 import { RequirePlatformRole } from "@/components/platform/RequirePlatformRole";
 import { ImpersonationBanner } from "@/components/platform/ImpersonationBanner";
 import { NativeDeepLinkHandler } from "@/components/auth/NativeDeepLinkHandler";
@@ -204,8 +204,6 @@ function AuthenticatedSashaBubble() {
 }
 
 function AppRoutes() {
-  const { isDemoMode } = useDemo();
-
   return (
     <div className="flex flex-col min-h-screen">
       <ImpersonationBanner />
@@ -303,7 +301,6 @@ function AppRoutes() {
         </Suspense>
       </ErrorBoundary>
       <AuthenticatedSashaBubble />
-      {!isDemoMode && <BoltGuide />}
     </div>
   );
 }
@@ -318,7 +315,9 @@ const App = () => (
           <Sonner />
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <NativeDeepLinkHandler />
-            <AppRoutes />
+            <SashaGuideProvider>
+              <AppRoutes />
+            </SashaGuideProvider>
           </BrowserRouter>
         </TooltipProvider>
       </DemoProvider>

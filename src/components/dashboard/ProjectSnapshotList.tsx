@@ -103,7 +103,7 @@ export function ProjectSnapshotList({
   }, [projects, statusFilter]);
 
   return (
-    <SurfaceCard>
+    <SurfaceCard data-sasha-target="dashboard-projects">
       <SurfaceCardHeader
         title={TITLE_MAP[statusFilter] || 'Projects'}
         action={

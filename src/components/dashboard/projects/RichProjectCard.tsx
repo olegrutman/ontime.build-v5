@@ -77,6 +77,7 @@ export function RichProjectCard({
   return (
     <div
       onClick={() => navigate(`/project/${projectId}`)}
+      data-sasha-target="dashboard-projects"
       style={{
         background: C.surface,
         borderRadius: 14,

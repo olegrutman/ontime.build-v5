@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { X, Send, MousePointer2, RotateCcw, MoreHorizontal, Mic, MicOff } from 'lucide-react';
+import { X, Send, MousePointer2, RotateCcw, MoreHorizontal, Mic, MicOff, GraduationCap } from 'lucide-react';
 import { SashaAvatarStage } from './SashaAvatarStage';
 import { useSashaVoice } from '@/hooks/useSashaVoice';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
@@ -17,6 +17,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDemo } from '@/contexts/DemoContext';
 import { useSashaContext } from '@/hooks/useSashaContext';
+import { useSashaGuide } from '@/hooks/useSashaGuide';
 import { SashaMessage, SashaThinking, type SashaChatMessage } from './SashaMessage';
 import { SashaHighlightOverlay } from './SashaHighlightOverlay';
 import { collectPageSnapshot } from '@/lib/sashaPageSnapshot';
@@ -30,33 +31,34 @@ function buildGreeting(pathname: string): SashaChatMessage {
   const tabMatch = pathname.match(/\/project\/[^/]+\/([^/?]+)/);
   const tab = tabMatch?.[1];
 
-  let actions: string[] = ["What's on this page?", 'Explore a demo project'];
+  let actions: string[] = ['Guide me', "What's on this page?"];
 
   if (pathname === '/dashboard') {
-    actions = ["What's on this page?", 'Explain change orders'];
+    actions = ['Guide me', 'Explain change orders'];
   } else if (tab === 'change-orders') {
-    actions = ['Explain change orders', 'How do I create one?'];
+    actions = ['Guide me', 'How do I create one?'];
   } else if (tab === 'purchase-orders') {
-    actions = ['Explain purchase orders', 'How do I create one?'];
+    actions = ['Guide me', 'How do I create one?'];
   } else if (tab === 'invoices') {
-    actions = ['Explain invoices', 'How do I create one?'];
+    actions = ['Guide me', 'How do I create one?'];
   } else if (tab === 'sov') {
-    actions = ['What is an SOV?', 'How do I bill from it?'];
+    actions = ['Guide me', 'How do I bill from it?'];
   } else if (tab === 'financials') {
-    actions = ["What's on this page?", 'Explain profit position'];
+    actions = ['Guide me', 'Explain profit position'];
   } else if (pathname.startsWith('/project/')) {
-    actions = ["What's on this page?", 'Explain this project'];
+    actions = ['Guide me', 'Explain this project'];
   }
 
   return { role: 'assistant', content: base, actions };
 }
 
 export function SashaBubble() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { isDemoMode, demoProjectId } = useDemo();
   const context = useSashaContext();
+  const { activeGuide, availableGuides, startGuide, isGuideCompleted } = useSashaGuide();
 
   const [open, setOpen] = useState(false);
   const initialGreeting = useMemo(() => buildGreeting(location.pathname), [location.pathname]);
@@ -106,9 +108,40 @@ export function SashaBubble() {
     if (open) setTimeout(() => inputRef.current?.focus(), 100);
   }, [open]);
 
+  const showGuideLibrary = useCallback(() => {
+    const guideList = availableGuides
+      .map((guide) => `${isGuideCompleted(guide.id) ? '✓ ' : ''}${guide.title} — ${guide.description}`)
+      .join('\n');
+    setMessages((previous) => [
+      ...previous,
+      {
+        role: 'assistant',
+        content: availableGuides.length
+          ? `Choose a live walkthrough. I’ll highlight each real control and move on when you use it.\n${guideList}`
+          : 'Your walkthroughs will appear here after your company setup is complete.',
+        actions: availableGuides.map((guide) => `Guide: ${guide.title}`),
+      },
+    ]);
+    setOpen(true);
+  }, [availableGuides, isGuideCompleted]);
+
   const handleAction = useCallback(
     (action: string) => {
       const lower = action.toLowerCase();
+      if (action === 'Guide me') {
+        showGuideLibrary();
+        return;
+      }
+      if (action.startsWith('Guide: ')) {
+        const title = action.slice('Guide: '.length);
+        const guide = availableGuides.find((candidate) => candidate.title === title);
+        if (guide) {
+          setOpen(false);
+          setVoiceMode(false);
+          startGuide(guide.id);
+        }
+        return;
+      }
       const pathMatch = location.pathname.match(/^\/project\/([^/?]+)/);
       const currentProjectId = pathMatch?.[1] || (isDemoMode ? demoProjectId : null);
 
@@ -161,7 +194,7 @@ export function SashaBubble() {
 
       sendMessage(action);
     },
-    [location.pathname, isDemoMode, demoProjectId, navigate]
+    [location.pathname, isDemoMode, demoProjectId, navigate, showGuideLibrary, availableGuides, startGuide]
   );
 
   const sendMessage = useCallback(
@@ -308,6 +341,14 @@ export function SashaBubble() {
     });
   }, [stopListening, stopSpeaking]);
 
+  useEffect(() => {
+    if (!activeGuide) return;
+    setOpen(false);
+    setVoiceMode(false);
+    stopListening();
+    stopSpeaking();
+  }, [activeGuide, stopListening, stopSpeaking]);
+
   const handleClose = () => {
     setOpen(false);
     setHighlightMode(false);
@@ -327,7 +368,8 @@ export function SashaBubble() {
   }, [sendMessage]);
 
   const hiddenPaths = ['/', '/auth'];
-  if (!isDemoMode && (!user || hiddenPaths.includes(location.pathname))) return null;
+  if (activeGuide) return null;
+  if (!isDemoMode && (authLoading || !user || hiddenPaths.includes(location.pathname))) return null;
 
   return (
     <>
@@ -353,6 +395,17 @@ export function SashaBubble() {
               </div>
             </div>
             <div className="flex items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 gap-1.5 px-2.5 sm:h-8"
+                onClick={showGuideLibrary}
+                aria-label="Open interactive walkthroughs"
+                title="Interactive walkthroughs"
+              >
+                <GraduationCap className="h-4 w-4" />
+                <span className="text-xs">Guide me</span>
+              </Button>
               {micSupported && (
                 <Button
                   variant={voiceMode ? 'default' : 'ghost'}
@@ -377,7 +430,11 @@ export function SashaBubble() {
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={showGuideLibrary} className="gap-2">
+                    <GraduationCap className="h-4 w-4" />
+                    Interactive walkthroughs
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => setHighlightMode((h) => !h)}
                     className="gap-2"
