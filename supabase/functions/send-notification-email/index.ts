@@ -303,7 +303,7 @@ Deno.serve(async (req) => {
       });
 
 
-      await queueEmail(supabase, {
+      const delivery = await queueEmail(supabase, {
         to: email,
         subject: emailSubject,
         html,
@@ -322,6 +322,11 @@ Deno.serve(async (req) => {
           ? alertIdempotencyKey(payload.notification_id, userId, type)
           : undefined,
       });
+
+      if (!delivery.sent) {
+        await logSkip(email, 'recipient_suppressed');
+        return;
+      }
 
       await supabase.from('notification_email_log').insert({
         notification_id: payload.notification_id ?? null,
