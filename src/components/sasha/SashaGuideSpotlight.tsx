@@ -26,7 +26,14 @@ export function useGuideTarget(selector: string | undefined, enabled: boolean) {
         window.setTimeout(() => {
           if (cancelled) return;
           const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-          target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+          const behavior: ScrollBehavior = reduceMotion ? 'auto' : 'smooth';
+          if (window.innerWidth < 640) {
+            // The guide card covers the lower half on phones; keep the target near the top.
+            const top = target.getBoundingClientRect().top + window.scrollY - 72;
+            window.scrollTo({ top: Math.max(0, top), behavior });
+          } else {
+            target.scrollIntoView({ block: 'center', inline: 'nearest', behavior });
+          }
         }, 120);
       }
     };
