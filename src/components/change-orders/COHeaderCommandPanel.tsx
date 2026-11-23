@@ -34,7 +34,7 @@ export function COHeaderCommandPanel({
   const invoiceActionLabel = canCreateInvoice ? 'Create invoice' : 'Invoice';
 
   return (
-    <div className="mt-4 border-t border-command-foreground/15 pt-4" aria-label="Order document actions">
+    <div className="mt-4 border-t border-command-foreground/15 pt-4" aria-label="Order document actions" data-sasha-target="order-actions">
       <div className="grid grid-cols-2 gap-2 xl:flex xl:items-stretch xl:gap-2.5">
         <div className="contents xl:flex xl:gap-2.5">
           <div className="min-w-0 xl:w-36">

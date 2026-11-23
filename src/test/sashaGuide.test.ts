@@ -58,3 +58,15 @@ describe('Sasha live guides', () => {
     expect(Object.keys(window.localStorage).filter((key) => key.includes('create-work-item'))).toHaveLength(1);
   });
 });
+
+describe('additional Sasha tours', () => {
+  it('offers item pricing only to Subcontractor and Crew', () => {
+    expect(guidesForRole('TC').some((g) => g.id === 'price-order-items')).toBe(true);
+    expect(guidesForRole('FC').some((g) => g.id === 'price-order-items')).toBe(true);
+    expect(guidesForRole('GC').some((g) => g.id === 'price-order-items')).toBe(false);
+  });
+  it('keeps outside approval tour away from Crew and Supplier', () => {
+    expect(guidesForRole('FC').some((g) => g.id === 'order-documents-approval')).toBe(false);
+    expect(guidesForRole('SUPPLIER').some((g) => g.id === 'order-documents-approval')).toBe(false);
+  });
+});
