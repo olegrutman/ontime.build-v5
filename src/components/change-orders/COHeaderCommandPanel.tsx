@@ -31,6 +31,7 @@ export function COHeaderCommandPanel({
 }: COHeaderCommandPanelProps) {
   const isWorkOrder = documentType === 'WO';
   const invoiceDisabled = !linkedInvoiceNumber && !canCreateInvoice;
+  const invoiceActionLabel = canCreateInvoice ? 'Create invoice' : 'Invoice';
 
   return (
     <div className="mt-4 border-t border-command-foreground/15 pt-4" aria-label="Order document actions">
@@ -71,12 +72,12 @@ export function COHeaderCommandPanel({
               onClick={onInvoice}
               disabled={invoiceDisabled}
               title={invoiceDisabled ? 'No billable balance is currently available' : undefined}
-              aria-label={linkedInvoiceNumber ? `Open linked invoice ${linkedInvoiceNumber}` : 'Create invoice'}
+              aria-label={canCreateInvoice ? 'Create invoice' : linkedInvoiceNumber ? `Open linked invoice ${linkedInvoiceNumber}` : 'Invoice'}
             >
               <Receipt />
               <span className="min-w-0 flex-1">
-                <span className="block break-words">{linkedInvoiceNumber ? 'Invoice' : 'Create invoice'}</span>
-                {linkedInvoiceNumber && (
+                <span className="block break-words">{invoiceActionLabel}</span>
+                {!canCreateInvoice && linkedInvoiceNumber && (
                   <span className="mt-0.5 block font-mono text-[10px] font-medium leading-tight opacity-70 [overflow-wrap:anywhere]">
                     {linkedInvoiceNumber}
                   </span>

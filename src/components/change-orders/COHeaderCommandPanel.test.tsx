@@ -30,7 +30,7 @@ describe('CO header document commands', () => {
   beforeEach(() => Object.values(callbacks).forEach(callback => callback.mockReset()));
 
   it('shows the linked invoice number and keeps its open action', () => {
-    renderPanel({ linkedInvoiceNumber: 'INV-5 C-PA-IM-COMULTI-0002' });
+    renderPanel({ linkedInvoiceNumber: 'INV-5 C-PA-IM-COMULTI-0002', canCreateInvoice: false });
     const invoice = screen.getByRole('button', { name: 'Open linked invoice INV-5 C-PA-IM-COMULTI-0002' });
     expect(invoice).toBeEnabled();
     expect(screen.getByText('INV-5 C-PA-IM-COMULTI-0002')).toBeInTheDocument();
@@ -46,7 +46,7 @@ describe('CO header document commands', () => {
 
   it('does not offer invoice creation without a linked invoice or available balance', () => {
     renderPanel({ canCreateInvoice: false });
-    expect(screen.getByRole('button', { name: 'Create invoice' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Invoice' })).toBeDisabled();
   });
 
   it('preserves download and signing callbacks and disables unavailable actions', () => {

@@ -638,8 +638,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       onDownloadPdf={handleDownloadPdf}
       onDownloadProposal={() => { void handleDownloadProposal(); }}
       onInvoice={() => {
-        if (linkedInvoice) navigate(`/project/${projectId}/invoices`);
-        else setCreateInvoiceOpen(true);
+        if (canCreateProgressInvoice) setCreateInvoiceOpen(true);
+        else if (linkedInvoice) navigate(`/project/${projectId}/invoices`);
       }}
       onOutsideApproval={() => setOutsideApprovalOpen(true)}
       onInviteExternal={isGC ? () => setExternalInviteOpen(true) : undefined}
