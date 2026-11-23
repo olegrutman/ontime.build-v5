@@ -47,7 +47,10 @@ export function SashaGuideOverlay({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onStop();
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      // Let an open material picker, photo preview, or other modal consume Escape first.
+      if (document.querySelector('[role="dialog"]:not([aria-modal="false"])')) return;
+      onStop();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);

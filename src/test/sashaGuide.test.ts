@@ -75,7 +75,20 @@ describe('complete Field Report tour', () => {
     ]);
     expect(steps[1].advanceOn).toBe('click');
     expect(steps.at(-1)?.targetSelector).toBe('[data-sasha-target="field-report-submit"]');
-    expect(steps.at(-1)?.advanceOn).toBe('manual');
+    expect(steps.at(-1)?.advanceOn).toBe('action');
+  });
+
+  it('advances only after each real Field Report action succeeds', () => {
+    const guide = SASHA_GUIDES.find((candidate) => candidate.id === 'submit-field-report')!;
+    const steps = resolveGuideSteps(guide, 'project-123');
+    expect(Object.fromEntries(steps.filter(step => step.advanceOn === 'action').map(step => [step.id, step.action]))).toEqual({
+      'field-report-update': 'field-report-sorted',
+      'field-report-manual-entry': 'field-report-item-added',
+      'field-report-materials': 'field-report-material-saved',
+      'field-report-photos': 'field-report-photos-added',
+      'field-report-send': 'field-report-submitted',
+    });
+    expect(steps.find(step => step.id === 'field-report-check-items')?.advanceOn).toBe('manual');
   });
 
   it('keeps the complete Field Report workflow available to Crew, Subcontractor and General Contractor', () => {

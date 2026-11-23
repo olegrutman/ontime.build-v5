@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SmartPicker, type SmartPickerHandle } from '@/components/po-wizard-v2/SmartPicker';
 import type { POWizardV2LineItem, ProjectSupplier } from '@/types/poWizardV2';
 import { fieldMaterialSelection, pickerLineForFieldItem } from '@/lib/fieldMaterialRequests';
+import { emitSashaGuideAction } from '@/lib/sashaGuideActions';
 
 const db = supabase as any;
 
@@ -92,6 +93,7 @@ export function FieldMaterialPicker({ report, item, replaceItemId, onSaved }: Pr
         if (error) throw error;
         if (replaceItemId) await db.from('field_report_items').delete().eq('id', replaceItemId).eq('status', 'draft');
       }
+      emitSashaGuideAction('field-report-material-saved');
       toast({ title: item ? 'Material request updated' : 'Material added to report', description: 'The reviewing company will create and send the order.' });
       onSaved();
       setOpen(false);

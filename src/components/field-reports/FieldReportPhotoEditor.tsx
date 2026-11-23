@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { fieldPhotoValidationError } from '@/lib/fieldReportPhotos';
 import { FieldReportPhotoGallery, type FieldReportPhoto } from './FieldReportPhotoGallery';
+import { emitSashaGuideAction } from '@/lib/sashaGuideActions';
 
 const db = supabase as any;
 
@@ -58,6 +59,7 @@ export function FieldReportPhotoEditor({ report, photos, onChange }: {
         added += 1;
       }
       if (added) {
+        emitSashaGuideAction('field-report-photos-added');
         toast({ title: `${added} photo${added === 1 ? '' : 's'} added` });
         onChange();
       }

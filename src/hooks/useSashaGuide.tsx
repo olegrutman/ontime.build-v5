@@ -5,6 +5,7 @@ import { useDemo } from '@/contexts/DemoContext';
 import { guidesForRole, resolveGuideSteps } from '@/data/sashaGuides';
 import { findVisibleGuideTarget } from '@/lib/sashaGuideDom';
 import { markGuideCompleted, pathMatches, readCompletedGuides } from '@/lib/sashaGuideProgress';
+import { SASHA_GUIDE_ACTION_EVENT } from '@/lib/sashaGuideActions';
 import type { SashaGuideContextValue, SashaGuideDefinition, SashaGuideRole, SashaGuideStep } from '@/types/sashaGuide';
 import { SashaGuideOverlay } from '@/components/sasha/SashaGuideOverlay';
 
@@ -81,6 +82,16 @@ export function SashaGuideProvider({ children }: { children: ReactNode }) {
     if (!activeGuide || !currentStep || currentStep.advanceOn !== 'route') return;
     if (pathMatches(currentStep.matchPath, location.pathname)) nextStep();
   }, [activeGuide, currentStep, location.pathname, nextStep]);
+
+  useEffect(() => {
+    if (!activeGuide || !currentStep || currentStep.advanceOn !== 'action' || !currentStep.action) return;
+    const expectedAction = currentStep.action;
+    const onAction = (event: Event) => {
+      if ((event as CustomEvent<string>).detail === expectedAction) nextStep();
+    };
+    window.addEventListener(SASHA_GUIDE_ACTION_EVENT, onAction);
+    return () => window.removeEventListener(SASHA_GUIDE_ACTION_EVENT, onAction);
+  }, [activeGuide, currentStep, nextStep]);
 
   useEffect(() => {
     if (!activeGuide || !currentStep || currentStep.advanceOn !== 'click' || !currentStep.targetSelector) return;

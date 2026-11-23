@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FieldReportPhotoEditor } from './FieldReportPhotoEditor';
 import { FieldReportPhotoGallery, type FieldReportPhoto } from './FieldReportPhotoGallery';
 import { FieldMaterialPicker } from './FieldMaterialPicker';
+import { emitSashaGuideAction } from '@/lib/sashaGuideActions';
 import { FieldMaterialMatch } from './FieldMaterialMatch';
 import { fieldMaterialOrderStatusLabel, isStructuredMaterialItem } from '@/lib/fieldMaterialRequests';
 import { cn } from '@/lib/utils';
@@ -353,6 +354,7 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
       created_by: u.user?.id, status: 'draft',
     });
     if (error) { toast({ title: 'Could not add item', description: error.message, variant: 'destructive' }); return; }
+    emitSashaGuideAction('field-report-item-added');
     setDesc(''); setLoc(''); setQty(''); setUnit('');
     onChange();
   };
@@ -382,6 +384,7 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
         created_by: u.user?.id, status: 'draft', ai_generated: true,
       })));
       if (insErr) throw new Error(insErr.message);
+      emitSashaGuideAction('field-report-sorted');
       toast({ title: `${found.length} item${found.length === 1 ? '' : 's'} added`, description: found.some(f => f.kind === 'material') ? 'Materials found — choose the exact product for each before sending.' : 'Check each one. Remove anything that is wrong before sending.' });
       onChange();
     } catch (e: any) {
@@ -423,7 +426,11 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
     const { error } = await db.rpc('submit_field_report', { p_report_id: report.id });
     setBusy(false);
     if (error) toast({ title: 'Could not send report', description: error.message, variant: 'destructive' });
-    else { toast({ title: 'Report sent for review' }); onChange(); }
+    else {
+      emitSashaGuideAction('field-report-submitted');
+      toast({ title: 'Report sent for review' });
+      onChange();
+    }
   };
 
   return (

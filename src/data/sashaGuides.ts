@@ -63,14 +63,16 @@ const fieldReportSteps: SashaGuideStep[] = [
     instruction: 'Type or record what happened, then choose Sort into items. Check the suggested items carefully; Sasha never adds prices or invents details.',
     explanation: 'The draft is visible only to your company and its reviewing company. Individual items reach the project only after review and release.',
     targetSelector: '[data-sasha-target="field-report-update"]',
-    advanceOn: 'manual',
+    advanceOn: 'action',
+    action: 'field-report-sorted',
   },
   {
     id: 'field-report-manual-entry',
     title: 'Add hours, progress, or a blocker',
     instruction: 'Choose an update type, describe it, and add its location or quantity when known. Choose Add item, then repeat for anything else that happened.',
     targetSelector: '[data-sasha-target="field-report-manual-entry"]',
-    advanceOn: 'manual',
+    advanceOn: 'action',
+    action: 'field-report-item-added',
   },
   {
     id: 'field-report-materials',
@@ -78,14 +80,16 @@ const fieldReportSteps: SashaGuideStep[] = [
     instruction: 'Choose materials, select the supplier catalog, exact product and quantity, then Add to report. The reviewing company creates and sends the order—this does not mark it Ordered.',
     explanation: 'Use only known specifications and quantities. Prices stay out of Field Reports.',
     targetSelector: '[data-sasha-target="field-report-materials"]',
-    advanceOn: 'manual',
+    advanceOn: 'action',
+    action: 'field-report-material-saved',
   },
   {
     id: 'field-report-photos',
     title: 'Attach field photos',
     instruction: 'Choose Add photos for useful jobsite evidence. Photos stay private with the report and can be linked to resulting work or material orders.',
     targetSelector: '[data-sasha-target="field-report-photos"]',
-    advanceOn: 'manual',
+    advanceOn: 'action',
+    action: 'field-report-photos-added',
   },
   {
     id: 'field-report-check-items',
@@ -97,9 +101,10 @@ const fieldReportSteps: SashaGuideStep[] = [
   {
     id: 'field-report-send',
     title: 'Send it to the reviewer',
-    instruction: 'When at least one item is ready, choose Send for review. After the report sends, choose Finish here; the reviewer can then release or hold each item.',
+    instruction: 'When at least one item is ready, choose Send for review. A successful send completes this tour; the reviewer can then release or hold each item.',
     targetSelector: '[data-sasha-target="field-report-submit"]',
-    advanceOn: 'manual',
+    advanceOn: 'action',
+    action: 'field-report-submitted',
   },
 ];
 

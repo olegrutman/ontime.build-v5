@@ -1,6 +1,13 @@
 export type SashaGuideRole = 'GC' | 'TC' | 'FC' | 'SUPPLIER';
 
-export type SashaGuideAdvance = 'click' | 'route' | 'manual';
+export type SashaGuideAdvance = 'click' | 'route' | 'action' | 'manual';
+
+export type SashaGuideAction =
+  | 'field-report-sorted'
+  | 'field-report-item-added'
+  | 'field-report-material-saved'
+  | 'field-report-photos-added'
+  | 'field-report-submitted';
 
 export interface SashaGuideStep {
   id: string;
@@ -10,6 +17,7 @@ export interface SashaGuideStep {
   targetSelector?: string;
   route?: (projectId: string | null) => string;
   advanceOn: SashaGuideAdvance;
+  action?: SashaGuideAction;
   matchPath?: RegExp;
 }
 
