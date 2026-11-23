@@ -1,5 +1,6 @@
 import { forwardRef } from 'react';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
 import { FCInputRequestCard } from './FCInputRequestCard';
 import { COSOVPanel } from './COSOVPanel';
 import { COTeamCard } from './COTeamCard';
@@ -24,8 +25,8 @@ interface COSidebarProps {
   canRequestFCInput: boolean;
   canCompleteFCInput: boolean;
   nteLog: CONTELogEntry[];
-  requestFCInput: { mutateAsync: (orgId: string) => Promise<any> };
-  completeFCInput: { mutateAsync: () => Promise<any> };
+  requestFCInput: { mutateAsync: (orgId: string) => Promise<any>; isPending?: boolean };
+  completeFCInput: { mutateAsync: () => Promise<any>; isPending?: boolean };
   requestNTEIncrease: UseMutationResult<any, Error, any, unknown>;
   approveNTEIncrease: UseMutationResult<any, Error, any, unknown>;
   rejectNTEIncrease: UseMutationResult<any, Error, any, unknown>;
@@ -48,6 +49,10 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
     onRefresh, financials,
   } = props;
   const rl = useRoleLabelsContext();
+  const { data: routing } = useCORoutingTargets(props.projectId);
+  const ownCollaborator = collaborators.find(c => c.organization_id === props.myOrgId && ['active', 'completed'].includes(String(c.status)));
+  const showCrewCard = isFC && !!ownCollaborator;
+  const showSubcontractorCard = isTC && (collaborators.length > 0 || canRequestFCInput);
 
   return (
     <div ref={ref} className="space-y-3">
@@ -55,21 +60,22 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
 
       <COSOVPanel coId={co.id} isGC={isGC} isTC={isTC} isFC={isFC} myOrgId={props.myOrgId} />
 
-      {isTC && (canCompleteFCInput || (canRequestFCInput && !collaborators.some(c => ['active', 'completed'].includes(String(c.status))))) && (
+      {(showSubcontractorCard || showCrewCard) && (
         <div id="fc-request-card" className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           <div className="border-b border-border px-4 py-3">
-            <h3 className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">{rl.FC} involvement</h3>
+            <h3 className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">{showCrewCard ? 'Your input handoff' : `${rl.FC} involvement`}</h3>
           </div>
           <div className="px-4 py-3">
             <FCInputRequestCard
-              canRequest={canRequestFCInput}
-              canComplete={canCompleteFCInput}
+              canRequest={showSubcontractorCard && canRequestFCInput}
+              canComplete={showCrewCard && canCompleteFCInput}
+              recipientName={showCrewCard ? (routing?.targets[0]?.name ?? rl.TC) : undefined}
               coStatus={co.status}
               crewTotal={financials.fcLaborTotal}
               billedUpstream={financials.tcBillableToGC}
               options={fcOrgOptions}
-              collaborators={collaborators}
-              acting={false}
+              collaborators={showCrewCard ? collaborators.filter(c => c.organization_id === props.myOrgId) : collaborators}
+              acting={!!(requestFCInput.isPending || completeFCInput.isPending)}
               creatorCrewName={co.created_by_role === 'FC' ? (fcCollabName || undefined) : undefined}
               onRequest={async (orgId) => { await requestFCInput.mutateAsync(orgId); onRefresh(); }}
               onComplete={async () => { await completeFCInput.mutateAsync(); onRefresh(); }}

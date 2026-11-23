@@ -13,6 +13,7 @@ interface StepPricingAndRoutingProps {
   state: PickerState;
   dispatch: React.Dispatch<PickerAction>;
   projectId: string;
+  gcName?: string;
 }
 
 const PRICING_OPTIONS: { type: COPricingType; tag: string; name: string; desc: string; isDefault?: boolean }[] = [
@@ -29,7 +30,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function StepPricingAndRouting({ state, dispatch, projectId }: StepPricingAndRoutingProps) {
+export function StepPricingAndRouting({ state, dispatch, projectId, gcName }: StepPricingAndRoutingProps) {
   const cur = state.items[state.currentItemIndex];
   const rl = useRoleLabelsContext();
   const { data: fcOrgs = [] } = useProjectFCOrgs(projectId);
@@ -74,7 +75,7 @@ export function StepPricingAndRouting({ state, dispatch, projectId }: StepPricin
   return (
     <div>
       <div className="mb-3.5">
-        <p className="text-[0.6rem] font-bold text-state-open-foreground uppercase tracking-[1.5px] mb-1">Step 3 of 4 · Routing & Responsibilities</p>
+        <p className="text-[0.6rem] font-bold text-state-open-foreground uppercase tracking-[1.5px] mb-1">Step 5 of 6 · Routing & Responsibilities</p>
         <h2 className="font-heading text-[1.6rem] font-black text-foreground leading-tight tracking-tight">
           Who's involved and what's needed?
         </h2>
@@ -196,6 +197,8 @@ export function StepPricingAndRouting({ state, dispatch, projectId }: StepPricin
         tcInitials={selectedTc?.initials}
         fcName={selectedFc?.name}
         fcInitials={selectedFc?.name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+        gcName={gcName}
+        gcInitials={gcName?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
         requestFc={collab.requestFcInput}
       />
 
@@ -227,7 +230,7 @@ export function StepPricingAndRouting({ state, dispatch, projectId }: StepPricin
                   <button key={r} type="button"
                     onClick={() => dispatch({ type: 'SET_MATERIAL_RESPONSIBLE', value: r })}
                     className={cn('px-3 py-1 rounded-md text-[0.68rem] font-bold transition-all', active && r === 'TC' && 'bg-state-approved text-white', active && r === 'GC' && 'bg-type-sov text-white', !active && 'text-white/60')}
-                  >{r}</button>
+                  >{r === 'TC' ? rl.TC : rl.GC}</button>
                 );
               })}
             </div>
@@ -258,7 +261,7 @@ export function StepPricingAndRouting({ state, dispatch, projectId }: StepPricin
                   <button key={r} type="button"
                     onClick={() => dispatch({ type: 'SET_EQUIPMENT_RESPONSIBLE', value: r })}
                     className={cn('px-3 py-1 rounded-md text-[0.68rem] font-bold transition-all', active && r === 'TC' && 'bg-state-approved text-white', active && r === 'GC' && 'bg-type-sov text-white', !active && 'text-white/60')}
-                  >{r}</button>
+                  >{r === 'TC' ? rl.TC : rl.GC}</button>
                 );
               })}
             </div>

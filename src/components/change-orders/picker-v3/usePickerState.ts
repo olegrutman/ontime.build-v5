@@ -82,7 +82,7 @@ export function pickerReducer(state: PickerState, action: PickerAction): PickerS
       });
 
     case 'SET_PRICING':
-      return updateItem({ pricingType: action.pricingType, pricingName: action.pricingName });
+      return updateItem({ pricingType: action.pricingType, pricingName: action.pricingName, pricingConfirmed: true });
 
     case 'TOGGLE_WORK_TYPE': {
       const wt = new Set(cur.workTypes);

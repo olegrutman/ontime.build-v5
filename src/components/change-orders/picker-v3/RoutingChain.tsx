@@ -44,19 +44,19 @@ export function RoutingChain({
   if (role === 'GC') {
     nodes.push({ label: 'You', initials: gcI, roleColor: 'bg-type-sov', sub: 'Create CO', isYou: true });
     if (requestFc) {
-      nodes.push({ label: resolvedFcName, initials: fcI, roleColor: 'bg-state-open', sub: 'Logs hours' });
+      nodes.push({ label: resolvedFcName, initials: fcI, roleColor: 'bg-state-open', sub: 'Logs & submits input' });
     }
-    nodes.push({ label: resolvedTcName, initials: tcI, roleColor: 'bg-state-approved', sub: 'Prices & submits' });
-    nodes.push({ label: 'You', initials: gcI, roleColor: 'bg-type-sov', sub: 'Approve', isYou: true });
+    nodes.push({ label: resolvedTcName, initials: tcI, roleColor: 'bg-state-approved', sub: 'Reviews, prices & submits' });
+    nodes.push({ label: 'You', initials: gcI, roleColor: 'bg-type-sov', sub: 'Approves', isYou: true });
   } else if (role === 'TC') {
     if (requestFc) {
-      nodes.push({ label: resolvedFcName, initials: fcI, roleColor: 'bg-state-open', sub: 'Logs hours' });
+      nodes.push({ label: resolvedFcName, initials: fcI, roleColor: 'bg-state-open', sub: 'Logs & submits input' });
     }
-    nodes.push({ label: 'You', initials: tcI, roleColor: 'bg-state-approved', sub: 'Price & submit', isYou: true });
+    nodes.push({ label: 'You', initials: tcI, roleColor: 'bg-state-approved', sub: 'Review, price & submit', isYou: true });
     nodes.push({ label: resolvedGcName, initials: gcI, roleColor: 'bg-type-sov', sub: 'Approves' });
   } else {
-    nodes.push({ label: 'You', initials: fcI, roleColor: 'bg-state-open', sub: 'Log hours', isYou: true });
-    nodes.push({ label: resolvedTcName, initials: tcI, roleColor: 'bg-state-approved', sub: 'Prices' });
+    nodes.push({ label: 'You', initials: fcI, roleColor: 'bg-state-open', sub: 'Create & submit work', isYou: true });
+    nodes.push({ label: resolvedTcName, initials: tcI, roleColor: 'bg-state-approved', sub: 'Reviews, prices & submits' });
     nodes.push({ label: resolvedGcName, initials: gcI, roleColor: 'bg-type-sov', sub: 'Approves' });
   }
 

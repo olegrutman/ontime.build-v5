@@ -12,10 +12,12 @@ interface PickerAsideProps {
   onNext: () => void;
   onSubmit: () => void;
   canGoBack: boolean;
+  canSubmit: boolean;
+  isSubmitting: boolean;
 }
 
 export function PickerAside({
-  state, onSwitchItem, onAddItem, onBack, onNext, onSubmit, canGoBack,
+  state, onSwitchItem, onAddItem, onBack, onNext, onSubmit, canGoBack, canSubmit, isSubmitting,
 }: PickerAsideProps) {
   const rl = useRoleLabelsContext();
   const isReview = state.step === REVIEW_STEP;
@@ -196,9 +198,10 @@ export function PickerAside({
           <button
             type="button"
             onClick={onSubmit}
-            className="flex-[2] flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-[0.84rem] font-bold bg-state-approved text-white hover:bg-state-approved shadow-sm transition-all"
+            disabled={!canSubmit || isSubmitting}
+            className="flex-[2] flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-[0.84rem] font-bold bg-state-approved text-white hover:bg-state-approved shadow-sm transition-all disabled:opacity-50"
           >
-            ✓ Create {cur.docType}
+            {isSubmitting ? 'Saving…' : `✓ Create ${cur.docType}`}
           </button>
         ) : (
           <button

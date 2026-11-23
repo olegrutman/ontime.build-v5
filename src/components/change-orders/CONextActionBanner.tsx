@@ -113,14 +113,13 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
       ? { label: `Submit to ${upstream}`, action: submitActionName }
       : { label: `Assign ${upstream} to submit`, action: 'noop' };
     // FC was explicitly asked for input — say so plainly instead of a generic prompt.
-    if (isFC && isFCCollaborator && ['draft', 'shared', 'work_in_progress'].includes(status)) {
+    if (isFC && isFCCollaborator && ['draft', 'shared', 'work_in_progress', 'closed_for_pricing'].includes(status)) {
       return {
         icon: <ClipboardList className="h-5 w-5" />,
         title: `${upstream} requested your input`,
-        subtitle: `Log your hours and materials, then submit to ${upstream}`,
+        subtitle: `Log your hours and materials, then use the single Submit input action in your handoff card.`,
         actions: [
-          { label: `Submit to ${upstream}`, action: submitActionName, primary: true },
-          { label: 'Log Hours', action: 'log_hours' },
+          { label: 'Log Hours', action: 'log_hours', primary: true },
           { label: 'Add Materials', action: 'scroll_materials' },
         ],
       };

@@ -78,6 +78,8 @@ export interface PickerItem {
   // Step 5: Routing & Responsibilities
   pricingType: COPricingType;
   pricingName: string;
+  /** Routing is incomplete until the user explicitly confirms the model, including the Fixed Price default. */
+  pricingConfirmed: boolean;
 
   // Scope narrative (auto-built from catalog selections)
   narrative: string;
@@ -172,6 +174,7 @@ export function blankItem(): PickerItem {
     reason: null,
     pricingType: 'fixed',
     pricingName: 'Fixed Price',
+    pricingConfirmed: false,
     workTypes: new Set(),
     workNames: {},
     narrative: '',

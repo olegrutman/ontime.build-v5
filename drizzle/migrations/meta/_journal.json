@@ -729,6 +729,20 @@
       "when": 1795379278398,
       "tag": "0103_close_phase1_approval_and_ceiling_bypasses",
       "breakpoints": true
+    },
+    {
+      "idx": 104,
+      "version": "7",
+      "when": 1795395837020,
+      "tag": "0104_atomic_picker_order_scope_save",
+      "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "7",
+      "when": 1795396041688,
+      "tag": "0105_fix_picker_actor_order_column",
+      "breakpoints": true
     }
   ]
 }

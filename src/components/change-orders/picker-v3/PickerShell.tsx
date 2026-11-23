@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { generateCONumber } from '@/lib/generateCONumber';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
 
 import { usePickerState } from './usePickerState';
 import { PickerStepper } from './PickerStepper';
@@ -17,8 +18,9 @@ import { StepScope } from './StepScope';
 import { StepCause } from './StepCause';
 import { StepPricingAndRouting } from './StepPricingAndRouting';
 import { StepReview } from './StepReview';
-import { REVIEW_STEP } from './types';
-import { buildLineRowsFromItem } from './buildLineRows';
+import { PICKER_STEPS, REVIEW_STEP } from './types';
+import { completedPickerSteps, pickerStepError } from './pickerFlow';
+import { savePickerOrder } from './savePickerOrder';
 import type { COCreatedByRole } from '@/types/changeOrder';
 
 interface PickerShellProps {
@@ -31,6 +33,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
   const navigate = useNavigate();
   const { userOrgRoles, user } = useAuth();
   const queryClient = useQueryClient();
+  const rl = useRoleLabelsContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Resolve current user's role using project participant context
@@ -60,6 +63,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
   const orgId = (myParticipant?.organization_id ?? userOrgRoles?.[0]?.organization_id) as string;
 
   const [state, dispatch] = usePickerState(detectedRole);
+  const { data: routing } = useCORoutingTargets(projectId);
 
   // Sync detected role into state when async query resolves
   useEffect(() => {
@@ -97,29 +101,50 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
     staleTime: Infinity,
   });
 
+  const { data: parties = [] } = useQuery({
+    queryKey: ['picker-project-parties', projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('project_participants')
+        .select('organization_id, role, organization:organizations!project_participants_organization_id_fkey(id, name, type)')
+        .eq('project_id', projectId)
+        .eq('invite_status', 'ACCEPTED');
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!projectId,
+    staleTime: 60_000,
+  });
+
   const isTM = projectInfo?.contract_mode === 'tm';
   const cur = state.items[state.currentItemIndex];
+  const assignedToOrgId = detectedRole === 'GC' ? state.collaboration.assignedTcOrgId : routing?.defaultId ?? null;
+  const hasUpstreamTarget = !!assignedToOrgId;
+  const partyName = (type: 'GC' | 'TC' | 'FC') => {
+    const party = parties.find(row => (row.organization as { type?: string } | null)?.type === type);
+    return (party?.organization as { name?: string } | null)?.name;
+  };
+  const selectedTc = parties.find(row => row.organization_id === state.collaboration.assignedTcOrgId);
+  const selectedFc = parties.find(row => row.organization_id === state.collaboration.assignedFcOrgId);
+  const tcName = (selectedTc?.organization as { name?: string } | null)?.name ?? routing?.targets[0]?.name ?? partyName('TC');
+  const fcName = (selectedFc?.organization as { name?: string } | null)?.name ?? partyName('FC');
+  const gcName = partyName('GC');
 
-  // Compute completed steps for the stepper (6 steps: Location → System → Scope → Cause → Routing → Review)
-  const completedSteps = useMemo(() => {
-    const done = new Set<number>();
-    if (cur.locations.length > 0) done.add(1);
-    if (cur.system) done.add(2);
-    if (cur.workTypes.size > 0) done.add(3);
-    if (cur.causeId) done.add(4);
-    if (cur.pricingType) done.add(5);
-    return done;
-  }, [cur]);
-
-  const canSubmit = cur.locations.length > 0 && !!cur.system && cur.workTypes.size > 0 && !!cur.causeId;
+  const completedSteps = completedPickerSteps(state, hasUpstreamTarget);
+  const canSubmit = !pickerStepError(state, REVIEW_STEP, hasUpstreamTarget);
 
   const handleStepClick = useCallback((step: number) => {
     dispatch({ type: 'SET_STEP', step });
   }, [dispatch]);
 
   const handleNext = useCallback(() => {
+    const error = pickerStepError(state, state.step, hasUpstreamTarget);
+    if (error) {
+      toast.error(error);
+      return;
+    }
     if (state.step < REVIEW_STEP) dispatch({ type: 'SET_STEP', step: state.step + 1 });
-  }, [state.step, dispatch]);
+  }, [state, hasUpstreamTarget, dispatch]);
 
   const handleBack = useCallback(() => {
     if (state.step > 1) dispatch({ type: 'SET_STEP', step: state.step - 1 });
@@ -135,224 +160,39 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
 
   const handleSubmit = useCallback(async () => {
     if (!user || !orgId || isSubmitting) return;
+    if (state.step !== REVIEW_STEP) {
+      toast.error('Open Review before creating the order.');
+      return;
+    }
+    const validationError = pickerStepError(state, REVIEW_STEP, hasUpstreamTarget);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
     setIsSubmitting(true);
-
     try {
-      if (isAddMode && addToCoId) {
-        // ─── ADD MODE: insert scope items into existing CO ───
-        const maxSort = await supabase
-          .from('co_line_items')
-          .select('sort_order')
-          .eq('co_id', addToCoId)
-          .order('sort_order', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        let nextSort = (maxSort.data?.sort_order ?? 0) + 1;
-
-        for (let i = 0; i < state.items.length; i++) {
-          const item = state.items[i];
-          const rows = buildLineRowsFromItem(item, nextSort, i);
-          if (rows.length === 0) continue;
-
-          const payload = rows.map((r) => ({
-            co_id: addToCoId,
-            org_id: orgId,
-            created_by_role: detectedRole,
-            item_name: r.item_name,
-            description: r.description,
-            unit: r.unit,
-            sort_order: r.sort_order,
-            location_tag: r.location_tag,
-            reason: r.reason,
-            task_phase: r.task_phase,
-            group_key: r.group_key,
-          }));
-
-          const { error: liError } = await supabase.from('co_line_items').insert(payload);
-          if (liError) console.error('Line item insert error:', liError);
-          nextSort += rows.length;
-
-          // Update CO flags if needs were flagged
-          if (item.materialsNeeded || item.equipmentNeeded) {
-            await supabase.from('change_orders').update({
-              materials_needed: item.materialsNeeded || undefined,
-              equipment_needed: item.equipmentNeeded || undefined,
-              materials_responsible: item.materialResponsible,
-              equipment_responsible: item.equipmentResponsible,
-              updated_at: new Date().toISOString(),
-            }).eq('id', addToCoId);
-          }
-        }
-
-        // Activity log
-        const totalItems = state.items.length;
-        await supabase.from('co_activity').insert({
-          co_id: addToCoId,
-          project_id: projectId,
-          actor_user_id: user.id,
-          actor_role: detectedRole,
-          action: 'scope_added',
-          detail: `Added ${totalItems} item(s) via picker`,
-        });
-
-        queryClient.invalidateQueries({ queryKey: ['co-detail'] });
-        queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
-
-        toast.success(`${totalItems} item(s) added`);
-        navigate(`/project/${projectId}/change-orders/${addToCoId}`, { replace: true });
-      } else {
-        // ─── CREATE MODE ───
-        let assignedToOrgId: string | null = null;
-        let firstCreatedCoId: string | null = null;
-
-        // Resolve FC org for collaborator insert (fall back to first project FC).
-        // FC creators have no downstream FC, so this is skipped entirely for them.
-        let resolvedFcOrgId: string | null = state.collaboration.assignedFcOrgId ?? null;
-        if (detectedRole !== 'FC' && state.collaboration.requestFcInput && !resolvedFcOrgId) {
-          const { data: fcParticipant } = await supabase
-            .from('project_participants')
-            .select('organization_id')
-            .eq('project_id', projectId)
-            .eq('role', 'FC')
-            .eq('invite_status', 'ACCEPTED')
-            .limit(1)
-            .maybeSingle();
-          resolvedFcOrgId = fcParticipant?.organization_id ?? null;
-        }
-        const fcInputNeeded = detectedRole !== 'FC' && state.collaboration.requestFcInput && !!resolvedFcOrgId;
-
-        if (detectedRole === 'FC') {
-          const { data: upstreamContract } = await supabase
-            .from('project_contracts')
-            .select('from_org_id')
-            .eq('project_id', projectId)
-            .eq('to_org_id', orgId)
-            .maybeSingle();
-          if (upstreamContract?.from_org_id) {
-            assignedToOrgId = upstreamContract.from_org_id;
-          } else {
-            const { data: tcParticipant } = await supabase
-              .from('project_participants')
-              .select('organization_id')
-              .eq('project_id', projectId)
-              .eq('role', 'TC')
-              .eq('invite_status', 'ACCEPTED')
-              .maybeSingle();
-            assignedToOrgId = tcParticipant?.organization_id ?? null;
-          }
-        } else if (detectedRole === 'TC') {
-          const { data: gcParticipant } = await supabase
-            .from('project_participants')
-            .select('organization_id')
-            .eq('project_id', projectId)
-            .eq('role', 'GC')
-            .eq('invite_status', 'ACCEPTED')
-            .maybeSingle();
-          assignedToOrgId = gcParticipant?.organization_id ?? null;
-        } else if (state.collaboration.assignedTcOrgId) {
-          assignedToOrgId = state.collaboration.assignedTcOrgId;
-        }
-
-        for (const item of state.items) {
-          const docType = item.docType === 'WO' || isTM ? 'WO' : 'CO';
-          const coNumber = await generateCONumber({
-            projectId,
-            creatorOrgId: orgId,
-            assignedToOrgId,
-            isTM: docType === 'WO',
-          });
-
-          const locationTag = item.locations.length > 0
-            ? item.locations.join(' + ')
-            : null;
-
-          const { data: co, error: coError } = await supabase
-            .from('change_orders')
-            .insert({
-              org_id: orgId,
-              project_id: projectId,
-              created_by_user_id: user.id,
-              created_by_role: detectedRole,
-              co_number: coNumber,
-              title: item.narrative
-                ? item.narrative.substring(0, 120)
-                : `${item.systemName ?? ''} · ${item.causeName ?? ''}`.trim() || coNumber,
-              status: 'draft',
-              pricing_type: item.pricingType,
-              document_type: docType,
-              reason: item.reason ?? 'owner_request',
-              reason_note: item.causeName ?? null,
-              location_tag: locationTag,
-              assigned_to_org_id: assignedToOrgId,
-              fc_input_needed: fcInputNeeded,
-              materials_needed: item.materialsNeeded,
-              equipment_needed: item.equipmentNeeded,
-              materials_responsible: item.materialResponsible,
-              equipment_responsible: item.equipmentResponsible,
-              blocked_by_rfi_id: state.linkedRfiId ?? null,
-            })
-            .select()
-            .single();
-
-          if (coError) throw coError;
-          firstCreatedCoId ??= co.id;
-
-          // Break the picker item into SOV-style line rows (Labor / Materials / Equipment per work type × location)
-          const itemIndex = state.items.indexOf(item);
-          const rows = buildLineRowsFromItem(item, 1, itemIndex);
-          if (rows.length > 0) {
-            const payload = rows.map((r) => ({
-              co_id: co.id,
-              org_id: orgId,
-              created_by_role: detectedRole,
-              item_name: r.item_name,
-              description: r.description,
-              unit: r.unit,
-              sort_order: r.sort_order,
-              location_tag: r.location_tag,
-              reason: r.reason,
-              task_phase: r.task_phase,
-              group_key: r.group_key,
-            }));
-            const { error: liError } = await supabase.from('co_line_items').insert(payload);
-            if (liError) console.error('Line item insert error:', liError);
-          }
-
-          // FC collaboration invite
-          if (fcInputNeeded && resolvedFcOrgId) {
-            const { error: collabError } = await supabase
-              .from('change_order_collaborators')
-              .insert({
-                co_id: co.id,
-                organization_id: resolvedFcOrgId,
-                collaborator_type: 'FC',
-                status: 'active',
-                invited_by_user_id: user.id,
-              });
-            if (collabError) {
-              console.error('FC collaborator insert error:', collabError);
-              toast.error('Crew assignment failed: ' + collabError.message);
-            }
-          } else if (state.collaboration.requestFcInput && !resolvedFcOrgId) {
-            toast.warning('No crew on this project — the crew request was skipped.');
-          }
-        }
-
-        queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
-
-        toast.success(`${cur.docType === 'WO' ? 'Work Order' : 'Change Order'} created successfully`);
-        if (firstCreatedCoId) {
-          navigate(`/project/${projectId}/change-orders/${firstCreatedCoId}`, { replace: true });
-        }
-      }
+      const coIds = await savePickerOrder({
+        projectId,
+        addToCoId,
+        state,
+        detectedRole,
+        orgId,
+        assignedToOrgId,
+        isTM,
+      });
+      queryClient.invalidateQueries({ queryKey: ['co-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
+      const totalItems = state.items.length;
+      toast.success(isAddMode ? `${totalItems} item(s) added` : `${cur.docType === 'WO' ? 'Work Order' : 'Change Order'} created successfully`);
+      const destinationId = isAddMode ? addToCoId : coIds[0];
+      navigate(`/project/${projectId}/change-orders/${destinationId}`, { replace: true });
     } catch (err: any) {
       console.error('Failed to save:', err);
-      toast.error(err.message ?? 'Failed to save');
+      toast.error(err?.message ?? 'Nothing was saved. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
-  }, [user, orgId, isSubmitting, isAddMode, addToCoId, detectedRole, projectId, state, cur.docType, isTM, queryClient, navigate]);
-
+  }, [user, orgId, isSubmitting, state, hasUpstreamTarget, projectId, addToCoId, detectedRole, assignedToOrgId, isTM, queryClient, isAddMode, cur.docType, navigate]);
 
   const stepContent = (() => {
     switch (state.step) {
@@ -360,8 +200,8 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
       case 2: return <StepSystem state={state} dispatch={dispatch} />;
       case 3: return <StepScope state={state} dispatch={dispatch} />;
       case 4: return <StepCause state={state} dispatch={dispatch} />;
-      case 5: return <StepPricingAndRouting state={state} dispatch={dispatch} projectId={projectId} />;
-      case 6: return <StepReview state={state} dispatch={dispatch} onSwitchItem={handleSwitchItem} onAddItem={handleAddItem} />;
+      case 5: return <StepPricingAndRouting state={state} dispatch={dispatch} projectId={projectId} gcName={gcName} />;
+      case 6: return <StepReview state={state} dispatch={dispatch} onSwitchItem={handleSwitchItem} onAddItem={handleAddItem} tcName={tcName} fcName={fcName} gcName={gcName} />;
       default: return null;
     }
   })();
@@ -438,7 +278,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
           </div>
           <div className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted border border-border">
             <span className={`w-2 h-2 rounded-full ${detectedRole === 'GC' ? 'bg-type-sov' : detectedRole === 'FC' ? 'bg-state-open' : 'bg-state-approved'}`} />
-            <span className="text-[0.72rem] font-semibold text-muted-foreground">{isAddMode ? 'Adding as' : 'Creating as'} {detectedRole}</span>
+            <span className="text-[0.72rem] font-semibold text-muted-foreground">{isAddMode ? 'Adding as' : 'Creating as'} {(myParticipant?.organization as { name?: string } | null)?.name ?? rl[detectedRole]}</span>
           </div>
         </header>
 
@@ -475,13 +315,15 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
           onNext={handleNext}
           onSubmit={handleSubmit}
           canGoBack={state.step > 1}
+          canSubmit={canSubmit}
+          isSubmitting={isSubmitting}
         />
       </div>
 
       {/* Mobile bottom bar */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t px-4 py-3 flex items-center justify-between gap-3 z-40 shadow-[0_-4px_16px_rgba(0,0,0,0.04)]">
         <span className="text-[0.72rem] text-muted-foreground">
-          Step <span className="font-bold text-foreground">{state.step}</span> of 4
+          Step <span className="font-bold text-foreground">{state.step}</span> of {PICKER_STEPS.length}
         </span>
         <div className="flex gap-2">
           <button
@@ -492,7 +334,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
           >
             ← Back
           </button>
-          {state.step === 4 ? (
+          {state.step === REVIEW_STEP ? (
             <button
               type="button"
               onClick={handleSubmit}

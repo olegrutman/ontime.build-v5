@@ -13,7 +13,7 @@ export function StepCause({ state, dispatch }: StepCauseProps) {
   return (
     <div>
       <div className="mb-3.5">
-        <p className="text-[0.6rem] font-bold text-state-open-foreground uppercase tracking-[1.5px] mb-1">Step 3 of 5 · Cause</p>
+        <p className="text-[0.6rem] font-bold text-state-open-foreground uppercase tracking-[1.5px] mb-1">Step 4 of 6 · Cause</p>
         <h2 className="font-heading text-[1.6rem] font-black text-foreground leading-tight tracking-tight">
           What caused the change?
         </h2>

@@ -6,15 +6,19 @@ import { useParams } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MessageSquareMore } from 'lucide-react';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import { RoutingChain } from './RoutingChain';
 
 interface StepReviewProps {
   state: PickerState;
   dispatch: React.Dispatch<PickerAction>;
   onSwitchItem: (index: number) => void;
   onAddItem: () => void;
+  tcName?: string;
+  fcName?: string;
+  gcName?: string;
 }
 
-export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepReviewProps) {
+export function StepReview({ state, dispatch, onSwitchItem, onAddItem, tcName, fcName, gcName }: StepReviewProps) {
   const { id: projectId } = useParams<{ id: string }>();
   const { data: openRFIs = [] } = useOpenRFIs(projectId);
   const rl = useRoleLabelsContext();
@@ -22,9 +26,9 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
   return (
     <div>
       <div className="mb-3.5">
-        <p className="text-[0.6rem] font-bold text-state-open-foreground uppercase tracking-[1.5px] mb-1">Step 4 of 4 · Final Review</p>
+        <p className="text-[0.6rem] font-bold text-state-open-foreground uppercase tracking-[1.5px] mb-1">Step 6 of 6 · Final Review</p>
         <h2 className="font-heading text-[1.6rem] font-black text-foreground leading-tight tracking-tight">
-          Review and submit.
+          Review and create.
         </h2>
         <p className="text-[0.78rem] text-muted-foreground mt-1 max-w-xl leading-relaxed">
           Here's the full {state.items[0]?.docType === 'CO' ? 'Change Order' : 'Work Order'} with all items rolled up.
@@ -127,52 +131,37 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
               <div className="flex items-center gap-1.5 text-[0.75rem]">
                 <span>📦</span>
                 <span className="font-semibold text-foreground">Materials</span>
-                <span className="text-muted-foreground">· {state.items[0].materialResponsible} procures</span>
+                <span className="text-muted-foreground">· {state.items[0].materialResponsible === 'TC' ? rl.TC : rl.GC} procures</span>
               </div>
             )}
             {state.items.some(it => it.equipmentNeeded) && (
               <div className="flex items-center gap-1.5 text-[0.75rem]">
                 <span>🔧</span>
                 <span className="font-semibold text-foreground">Equipment</span>
-                <span className="text-muted-foreground">· {state.items[0].equipmentResponsible} procures</span>
+                <span className="text-muted-foreground">· {state.items[0].equipmentResponsible === 'TC' ? rl.TC : rl.GC} procures</span>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Approval chain placeholder */}
-      <div className="bg-background border rounded-xl p-[18px] mb-3.5 shadow-xs">
-        <p className="text-[0.62rem] font-bold text-muted-foreground uppercase tracking-[1.2px] mb-3.5">Approval Chain</p>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-state-open-bg border border-state-open rounded-lg">
-            <span className="w-[30px] h-[30px] rounded-full bg-state-open text-white flex items-center justify-center text-[0.78rem] font-extrabold">You</span>
-            <div>
-              <p className="text-[0.78rem] font-bold text-foreground">You</p>
-              <p className="text-[0.62rem] text-muted-foreground">Submitted</p>
-            </div>
-          </div>
-          <span className="text-muted-foreground/50 text-[0.85rem]">→</span>
-          <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-muted/30 border rounded-lg">
-            <span className="w-[30px] h-[30px] rounded-full bg-type-sov text-white flex items-center justify-center text-[0.78rem] font-extrabold">{rl.initials('GC')}</span>
-            <div>
-              <p className="text-[0.78rem] font-bold text-foreground">{rl.GC} approval</p>
-              <p className="text-[0.62rem] text-muted-foreground">Required</p>
-            </div>
-          </div>
-        </div>
-        <p className="text-[0.7rem] text-muted-foreground mt-3.5 pt-3.5 border-t flex items-center gap-2">
-          <span className="w-[18px] h-[18px] rounded-full bg-state-approved-bg text-state-approved flex items-center justify-center text-[0.65rem]">✓</span>
-          Auto-routed based on project settings.
-        </p>
-      </div>
+      <RoutingChain
+        role={state.role}
+        tcName={tcName}
+        fcName={fcName}
+        gcName={gcName}
+        requestFc={state.collaboration.requestFcInput}
+      />
+      <p className="mb-3.5 mt-1.5 text-xs text-muted-foreground">
+        Draft route only. Add pricing on the detail page, then submit through the approval chain shown above.
+      </p>
 
       {/* Review meta */}
       <div className="grid grid-cols-2 gap-2.5 max-sm:grid-cols-1">
         <div className="p-3.5 bg-background border rounded-xl">
           <p className="text-[0.62rem] font-bold text-muted-foreground uppercase tracking-[1.2px] mb-1.5">Work Start</p>
-          <p className="text-[0.92rem] font-semibold text-foreground">After {rl.GC} approval</p>
-          <p className="text-[0.7rem] text-muted-foreground mt-0.5">Estimated 2 days from submit</p>
+          <p className="text-[0.92rem] font-semibold text-foreground">After required approvals</p>
+          <p className="text-[0.7rem] text-muted-foreground mt-0.5">Your project team confirms when work can begin.</p>
         </div>
         <div className="p-3.5 bg-background border rounded-xl">
           <p className="text-[0.62rem] font-bold text-muted-foreground uppercase tracking-[1.2px] mb-1.5">Pricing</p>

@@ -11586,6 +11586,10 @@ export type Database = {
         }
       }
       run_integrity_audit: { Args: { _source?: string }; Returns: string }
+      save_picker_order: {
+        Args: { _existing_co_id: string; _orders: Json; _project_id: string }
+        Returns: Json
+      }
       search_catalog: {
         Args: {
           category_filter?: string

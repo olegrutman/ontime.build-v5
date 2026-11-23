@@ -26,6 +26,8 @@ interface FCInputRequestCardProps {
   crewTotal?: number;
   /** What the subcontractor bills the general contractor for labor. */
   billedUpstream?: number;
+  /** Set for the active Crew view; this is the company receiving its input. */
+  recipientName?: string;
   onRequest: (orgId: string) => Promise<void>;
   onComplete: () => Promise<void>;
 }
@@ -43,6 +45,7 @@ export function FCInputRequestCard({
   coStatus,
   crewTotal = 0,
   billedUpstream = 0,
+  recipientName,
   onRequest,
   onComplete,
 }: FCInputRequestCardProps) {
@@ -62,9 +65,9 @@ export function FCInputRequestCard({
   );
 
   const statusLabel = activeCollaborator
-    ? `Waiting on ${rl.FC}`
+    ? recipientName ? 'Input in progress — review your entries, then submit when ready' : `Waiting on ${rl.FC}`
     : completedCollaborator
-      ? `${rl.FC} input complete`
+      ? recipientName ? `Submitted to ${recipientName}` : `${rl.FC} input complete`
       : creatorCrewName
         ? `Input received from ${creatorCrewName}`
         : `No ${rl.FC.toLowerCase()} requested yet`;
@@ -88,7 +91,7 @@ export function FCInputRequestCard({
         </div>
         {crewName && (
           <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
-            {activeCollaborator ? 'Waiting' : 'Received'}
+            {activeCollaborator ? recipientName ? 'In progress' : 'Waiting' : recipientName ? 'Submitted' : 'Received'}
           </span>
         )}
       </div>
@@ -147,7 +150,7 @@ export function FCInputRequestCard({
             onClick={() => void onComplete()}
           >
             {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-            Mark {rl.FC.toLowerCase()} input complete
+            Submit input to {recipientName ?? rl.TC}
           </Button>
         )}
     </div>
