@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { X, Send, MousePointer2, RotateCcw, MoreHorizontal, Mic, MicOff, GraduationCap } from 'lucide-react';
+import { X, Send, MousePointer2, RotateCcw, MoreHorizontal, Mic, MicOff, GraduationCap, ArrowRight, HelpCircle } from 'lucide-react';
 import { SashaAvatarStage } from './SashaAvatarStage';
 import { useSashaVoice } from '@/hooks/useSashaVoice';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
@@ -52,8 +52,17 @@ function buildGreeting(pathname: string): SashaChatMessage {
   return { role: 'assistant', content: base, actions };
 }
 
+function sashaPageLabel(pathname: string): string {
+  if (pathname === '/dashboard') return 'Dashboard';
+  const tab = pathname.match(/\/project\/[^/]+\/([^/?]+)/)?.[1];
+  if (tab) return tab.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
+  if (pathname.startsWith('/project/')) return 'Project overview';
+  const seg = pathname.split('/').filter(Boolean)[0] ?? 'App';
+  return seg.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
+}
+
 export function SashaBubble() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { isDemoMode, demoProjectId } = useDemo();
@@ -367,6 +376,16 @@ export function SashaBubble() {
     sendMessage(prompt);
   }, [sendMessage]);
 
+  const showWelcome = !voiceMode && messages.length === 1 && messages[0]?.role === 'assistant';
+  const meta = (user?.user_metadata ?? {}) as Record<string, string | undefined>;
+  const firstName = (profile?.first_name || profile?.full_name || meta.first_name || meta.full_name || '').split(' ')[0];
+  const pageLabel = sashaPageLabel(location.pathname);
+  const welcomeActions = (initialGreeting.actions ?? []).map((label) => ({
+    action: label,
+    label: label === 'Guide me' ? 'Guide me through this page' : label,
+    hint: label === 'Guide me' ? 'Step-by-step tour · nothing gets saved' : 'Plain-English answer',
+    icon: label === 'Guide me' ? GraduationCap : HelpCircle,
+  }));
   const hiddenPaths = ['/', '/auth'];
   if (activeGuide) return null;
   if (!isDemoMode && (authLoading || !user || hiddenPaths.includes(location.pathname))) return null;
@@ -386,19 +405,20 @@ export function SashaBubble() {
           className="fixed inset-0 bottom-0 z-[60] h-[100dvh] bg-background flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200 sm:inset-auto sm:left-auto sm:right-4 sm:bottom-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] sm:w-[400px] sm:max-h-[min(560px,75vh)] sm:rounded-2xl sm:border sm:shadow-2xl"
         >
           {/* Header — avatar + name + kebab + close */}
-          <div className="flex items-center justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 border-b bg-background sm:py-2.5">
-            <div className="flex items-center gap-2.5">
-              <img src={sashaAvatar} alt="Sasha" className="h-8 w-8 rounded-full object-cover" />
-              <div>
+          <div className="bg-sidebar text-white px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <img src={sashaAvatar} alt="Sasha" className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-primary/50" />
+              <div className="min-w-0">
                 <p className="text-sm font-semibold leading-tight">Sasha</p>
-                <p className="text-[10px] font-semibold uppercase text-muted-foreground">Assistant</p>
+                <p className="text-[0.7rem] text-white/60 truncate">Knows this page · {pageLabel}</p>
               </div>
             </div>
             <div className="flex items-center gap-0.5">
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-9 gap-1.5 px-2.5 sm:h-8"
+                className={`h-9 gap-1.5 px-2.5 sm:h-8 whitespace-nowrap text-white hover:bg-white/10 hover:text-white ${showWelcome ? 'hidden' : ''}`}
                 onClick={showGuideLibrary}
                 aria-label="Open interactive walkthroughs"
                 title="Interactive walkthroughs"
@@ -410,7 +430,7 @@ export function SashaBubble() {
                 <Button
                   variant={voiceMode ? 'default' : 'ghost'}
                   size="sm"
-                  className="h-9 gap-1.5 px-2.5 sm:h-8 sm:w-8 sm:px-0"
+                  className={`h-9 gap-1.5 px-2.5 sm:h-8 sm:w-8 sm:px-0 ${voiceMode ? '' : 'text-white hover:bg-white/10 hover:text-white'}`}
                   onClick={toggleVoiceMode}
                   aria-label={voiceMode ? 'Turn off voice conversation' : 'Talk to Sasha'}
                   title={voiceMode ? 'Turn off voice conversation' : 'Talk to Sasha'}
@@ -424,7 +444,7 @@ export function SashaBubble() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-8 w-8 text-white hover:bg-white/10 hover:text-white"
                     aria-label="More options"
                   >
                     <MoreHorizontal className="h-4 w-4" />
@@ -451,7 +471,7 @@ export function SashaBubble() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 text-white hover:bg-white/10 hover:text-white"
                 onClick={handleClose}
                 aria-label="Close Sasha"
               >
@@ -459,6 +479,32 @@ export function SashaBubble() {
               </Button>
             </div>
           </div>
+          {showWelcome && (
+            <p className="mt-3 pb-3 font-heading text-xl font-bold leading-tight">
+              Hi{firstName ? ` ${firstName}` : ''} — what do you need?
+            </p>
+          )}
+          </div>
+          {showWelcome && (
+            <div className="relative z-10 -mt-4 mx-3 rounded-xl border bg-card p-1.5 shadow-md">
+              {welcomeActions.map(({ action, label, hint, icon: Icon }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => handleAction(action)}
+                  disabled={isLoading}
+                  className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-muted disabled:opacity-50"
+                >
+                  <Icon className="h-5 w-5 shrink-0 text-primary" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold">{label}</span>
+                    <span className="block text-xs text-muted-foreground">{hint}</span>
+                  </span>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Voice stage */}
           {voiceMode && (
@@ -474,7 +520,7 @@ export function SashaBubble() {
           {/* Messages */}
           <div className="flex-1 min-h-0 overflow-y-auto bg-background" ref={scrollRef}>
             <div className="space-y-4 px-4 py-5 sm:space-y-3 sm:p-4">
-              {messages.map((msg, i) => (
+              {!showWelcome && messages.map((msg, i) => (
                 <SashaMessage
                   key={i}
                   message={msg}
