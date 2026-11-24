@@ -220,7 +220,7 @@ export const SASHA_GUIDES: SashaGuideDefinition[] = [
   },
   {
     id: 'create-invoice',
-    roles: ['GC', 'TC', 'FC'],
+    roles: ['TC', 'FC'],
     title: 'Create an invoice',
     description: 'Find the normal billing entry point without bypassing eligibility rules.',
     completion: 'You’ve found the billing action. Available balances and approval rules still determine what can be invoiced.',

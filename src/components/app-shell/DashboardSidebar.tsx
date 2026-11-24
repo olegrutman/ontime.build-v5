@@ -112,6 +112,7 @@ export function DashboardSidebar() {
               return (
                 <button
                   key={item.path}
+                  data-sasha-target={item.path === '/supplier/inventory' ? 'supplier-catalog' : undefined}
                   onClick={() => navigate(item.path)}
                   className={cn(
                     'flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-colors text-left w-full',

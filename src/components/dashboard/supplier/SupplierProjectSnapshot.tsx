@@ -114,7 +114,6 @@ export function SupplierProjectSnapshot({ rows, deliveries }: Props) {
 
   return (
     <div
-      data-sasha-target="dashboard-projects"
       className="rounded-2xl p-4 sm:p-5"
       style={{ background: C.surface, border: `1px solid ${C.border}` }}
     >
@@ -309,6 +308,7 @@ export function SupplierProjectSnapshot({ rows, deliveries }: Props) {
         {effective !== 'all' && (
           <button
             type="button"
+            data-sasha-target="dashboard-projects"
             onClick={() => navigate(`/project/${effective}`)}
             className="ml-auto inline-flex items-center gap-1"
             style={{ ...fontLabel, fontSize: '0.7rem', fontWeight: 800, color: C.amberD }}

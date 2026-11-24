@@ -76,6 +76,8 @@ export function MobileBottomNav() {
           {moreItems.length > 0 && (
             <button
               onClick={() => setMoreOpen(true)}
+              aria-label="More options"
+              data-sasha-target="global-nav-more"
               className={cn(
                 'flex flex-col items-center justify-center gap-0.5 flex-1 transition-colors min-h-[58px]',
                 moreIsActive ? 'text-primary' : 'text-muted-foreground'
@@ -98,6 +100,7 @@ export function MobileBottomNav() {
               return (
                 <button
                   key={item.label}
+                  data-sasha-target={item.path === '/supplier/inventory' ? 'supplier-catalog' : undefined}
                   onClick={() => {
                     if (item.path) navigate(item.path);
                     setMoreOpen(false);

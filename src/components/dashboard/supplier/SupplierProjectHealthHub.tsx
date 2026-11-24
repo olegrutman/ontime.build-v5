@@ -112,9 +112,9 @@ export function SupplierProjectHealthHub({ rows, deliveries }: { rows: HubRow[];
                 const stages = [['Estimated', r.estimate], ['Ordered', r.ordered], ['Billed', r.billed], ['Paid', r.received]] as const;
                 const reached = stages.filter(([, v]) => v > 0).length;
                 return (
-                  <div key={r.projectId} data-sasha-target="dashboard-projects" style={{ ...card, padding: 18, display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+                  <div key={r.projectId} style={{ ...card, padding: 18, display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-                      <button onClick={() => navigate(`/project/${r.projectId}`)} style={{ minWidth: 0, textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+                      <button data-sasha-target="dashboard-projects" onClick={() => navigate(`/project/${r.projectId}`)} style={{ minWidth: 0, textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
                         <div className="font-heading" style={{ fontSize: '1.2rem', fontWeight: 700, color: C.ink, lineHeight: 1.15, overflowWrap: 'anywhere' }}>{r.name}</div>
                         <div style={{ fontSize: '0.74rem', color: C.muted, marginTop: 3 }}>{r.builder} · {r.phase}</div>
                       </button>

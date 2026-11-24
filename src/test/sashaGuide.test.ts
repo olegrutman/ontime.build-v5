@@ -111,4 +111,10 @@ describe('additional Sasha tours', () => {
     expect(guidesForRole('FC').some((g) => g.id === 'order-documents-approval')).toBe(false);
     expect(guidesForRole('SUPPLIER').some((g) => g.id === 'order-documents-approval')).toBe(false);
   });
+  it('offers invoice creation only to companies with a billing action', () => {
+    expect(guidesForRole('TC').some((g) => g.id === 'create-invoice')).toBe(true);
+    expect(guidesForRole('FC').some((g) => g.id === 'create-invoice')).toBe(true);
+    expect(guidesForRole('GC').some((g) => g.id === 'create-invoice')).toBe(false);
+    expect(guidesForRole('SUPPLIER').some((g) => g.id === 'create-invoice')).toBe(false);
+  });
 });

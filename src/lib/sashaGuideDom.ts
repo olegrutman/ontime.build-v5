@@ -17,6 +17,8 @@ const PROJECT_NAV_FALLBACK = '[data-sasha-target="project-nav-more"]';
  */
 export function findGuideSpotlightTarget(selector: string): HTMLElement | null {
   const target = findVisibleGuideTarget(selector);
-  if (target || !selector.includes('project-nav-')) return target;
-  return findVisibleGuideTarget(PROJECT_NAV_FALLBACK);
+  if (target) return target;
+  if (selector.includes('project-nav-')) return findVisibleGuideTarget(PROJECT_NAV_FALLBACK);
+  if (selector.includes('supplier-catalog')) return findVisibleGuideTarget('[data-sasha-target="global-nav-more"]');
+  return null;
 }
