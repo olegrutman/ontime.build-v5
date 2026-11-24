@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useDemo } from '@/contexts/DemoContext';
 import { guidesForRole, resolveGuideSteps } from '@/data/sashaGuides';
-import { findVisibleGuideTarget } from '@/lib/sashaGuideDom';
 import { markGuideCompleted, pathMatches, readCompletedGuides } from '@/lib/sashaGuideProgress';
 import { SASHA_GUIDE_ACTION_EVENT } from '@/lib/sashaGuideActions';
 import type { SashaGuideContextValue, SashaGuideDefinition, SashaGuideRole, SashaGuideStep } from '@/types/sashaGuide';
@@ -98,8 +97,8 @@ export function SashaGuideProvider({ children }: { children: ReactNode }) {
     const onClick = (event: MouseEvent) => {
       const eventTarget = event.target as HTMLElement | null;
       if (eventTarget?.closest('[data-sasha-guide-ui]')) return;
-      const target = findVisibleGuideTarget(currentStep.targetSelector!);
-      if (target && eventTarget && target.contains(eventTarget)) nextStep();
+      // Any matching control counts, including copies inside phone sheets.
+      if (eventTarget?.closest(currentStep.targetSelector!)) nextStep();
     };
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);

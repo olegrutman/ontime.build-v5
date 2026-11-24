@@ -7,3 +7,16 @@ export function findVisibleGuideTarget(selector: string): HTMLElement | null {
     return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
   }) ?? null;
 }
+
+const PROJECT_NAV_FALLBACK = '[data-sasha-target="project-nav-more"]';
+
+/**
+ * Element to spotlight for a step. On phones some project sections live in the
+ * bottom "More" sheet, so when a section link is hidden we point at More until
+ * the sheet opens. Click-to-advance still requires the real target.
+ */
+export function findGuideSpotlightTarget(selector: string): HTMLElement | null {
+  const target = findVisibleGuideTarget(selector);
+  if (target || !selector.includes('project-nav-')) return target;
+  return findVisibleGuideTarget(PROJECT_NAV_FALLBACK);
+}

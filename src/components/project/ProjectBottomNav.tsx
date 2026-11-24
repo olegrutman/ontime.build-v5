@@ -202,6 +202,7 @@ export function ProjectBottomNav({ isSupplier = false, isTM = false, isFC = fals
           <button
             onClick={() => setMoreOpen(true)}
             aria-label="More sections"
+            data-sasha-target="project-nav-more"
             className={cn(
               'flex flex-col items-center justify-center gap-0.5 flex-1 transition-colors min-h-[56px]',
               moreIsActive ? 'text-primary' : 'text-muted-foreground'

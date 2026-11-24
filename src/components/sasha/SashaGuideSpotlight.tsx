@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { findVisibleGuideTarget } from '@/lib/sashaGuideDom';
+import { findGuideSpotlightTarget } from '@/lib/sashaGuideDom';
 
 export function useGuideTarget(selector: string | undefined, enabled: boolean) {
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -9,25 +9,29 @@ export function useGuideTarget(selector: string | undefined, enabled: boolean) {
     if (!selector || !enabled) return;
 
     let frame = 0;
-    let scrolled = false;
+    let scrolledTarget: HTMLElement | null = null;
     let cancelled = false;
 
     const update = () => {
       if (cancelled) return;
-      const target = findVisibleGuideTarget(selector);
+      const target = findGuideSpotlightTarget(selector);
       if (!target) {
         setRect(null);
         return;
       }
       const nextRect = target.getBoundingClientRect();
       setRect(nextRect);
-      if (!scrolled) {
-        scrolled = true;
+      // Re-scroll when the target changes (e.g. More button -> item inside the phone sheet).
+      if (scrolledTarget !== target) {
+        scrolledTarget = target;
         window.setTimeout(() => {
           if (cancelled) return;
           const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
           const behavior: ScrollBehavior = reduceMotion ? 'auto' : 'smooth';
-          if (window.innerWidth < 640) {
+          if (window.innerWidth < 640 && target.closest('[role="dialog"]')) {
+            // Sheets scroll on their own; bring the item to the top of the sheet, above the guide card.
+            target.scrollIntoView({ block: 'start', inline: 'nearest', behavior });
+          } else if (window.innerWidth < 640) {
             // The guide card covers the lower half on phones; keep the target near the top.
             const top = target.getBoundingClientRect().top + window.scrollY - 72;
             window.scrollTo({ top: Math.max(0, top), behavior });
