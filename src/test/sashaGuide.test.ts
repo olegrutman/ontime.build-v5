@@ -91,12 +91,13 @@ describe('complete Field Report tour', () => {
     expect(steps.find(step => step.id === 'field-report-check-items')?.advanceOn).toBe('manual');
   });
 
-  it('keeps the complete Field Report workflow available to Crew, Subcontractor and General Contractor', () => {
-    for (const role of ['FC', 'TC', 'GC'] as const) {
+  it('offers report authoring only to companies with an upstream reviewer', () => {
+    for (const role of ['FC', 'TC'] as const) {
       const guide = guidesForRole(role).find(candidate => candidate.id === 'submit-field-report')!;
       expect(guide.steps.length).toBeGreaterThan(2);
       expect(guide.steps.some(step => step.id === 'field-report-send')).toBe(true);
     }
+    expect(guidesForRole('GC').some(candidate => candidate.id === 'submit-field-report')).toBe(false);
   });
 });
 

@@ -166,7 +166,7 @@ export const SASHA_GUIDES: SashaGuideDefinition[] = [
   },
   {
     id: 'submit-field-report',
-    roles: ['GC', 'TC', 'FC'],
+    roles: ['TC', 'FC'],
     title: 'Create a Field Report',
     description: 'Complete a draft with work, hours, materials and photos, then send it for review.',
     completion: 'You’ve walked through the complete Field Report: update, items, exact materials, photos, final check, and reviewer handoff. Sasha did not submit the report for you.',
