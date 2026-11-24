@@ -75,6 +75,7 @@ const ProposalBuilderPage = lazy(() => import("./pages/ProposalBuilder"));
 
 const COGuidedBuilderPage = lazy(() => import("./pages/COGuidedBuilder"));
 const COActionsDesign2Preview = lazy(() => import("./pages/COActionsDesign2Preview"));
+const SashaPopupDesignsPreview = lazy(() => import("./pages/SashaPopupDesignsPreview"));
 const FinishProjectSetup = lazy(() => import("./pages/FinishProjectSetup"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 
@@ -231,6 +232,7 @@ function AppRoutes() {
             <Route path="/external/invoice/:token" element={<InvoiceApprovalPage />} />
             <Route path="/external/po/:token" element={<POSupplierPricingPage />} />
             <Route path="/co-actions-design-2-preview" element={<COActionsDesign2Preview />} />
+            <Route path="/sasha-popup-designs" element={<SashaPopupDesignsPreview />} />
 
             {/* Protected routes */}
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
