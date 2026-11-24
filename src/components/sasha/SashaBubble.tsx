@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { X, Send, MousePointer2, RotateCcw, MoreHorizontal, Mic, MicOff, GraduationCap, ArrowRight, HelpCircle } from 'lucide-react';
+import { X, Send, MousePointer2, RotateCcw, MoreHorizontal, Mic, MicOff, GraduationCap, ArrowRight, HelpCircle, CheckCircle2, Circle } from 'lucide-react';
 import { SashaAvatarStage } from './SashaAvatarStage';
 import { useSashaVoice } from '@/hooks/useSashaVoice';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
@@ -380,6 +380,11 @@ export function SashaBubble() {
   const meta = (user?.user_metadata ?? {}) as Record<string, string | undefined>;
   const firstName = (profile?.first_name || profile?.full_name || meta.first_name || meta.full_name || '').split(' ')[0];
   const pageLabel = sashaPageLabel(location.pathname);
+  // Setup checklist: the first four tours for this role, shown until all are finished.
+  const setupGuides = availableGuides.slice(0, 4);
+  const setupDone = setupGuides.filter((g) => isGuideCompleted(g.id)).length;
+  const showSetup = setupGuides.length > 0 && setupDone < setupGuides.length;
+
   const welcomeActions = (initialGreeting.actions ?? []).map((label) => ({
     action: label,
     label: label === 'Guide me' ? 'Guide me through this page' : label,
@@ -503,6 +508,34 @@ export function SashaBubble() {
                   <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                 </button>
               ))}
+              {showSetup && (
+                <div className="mt-1 border-t px-3 pb-1.5 pt-2.5">
+                  <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <span>Get set up</span>
+                    <span className="font-mono">{setupDone} of {setupGuides.length}</span>
+                  </div>
+                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${(setupDone / setupGuides.length) * 100}%` }} />
+                  </div>
+                  <ul className="mt-2 space-y-0.5">
+                    {setupGuides.map((g) => {
+                      const done = isGuideCompleted(g.id);
+                      return (
+                        <li key={g.id}>
+                          <button
+                            type="button"
+                            onClick={() => startGuide(g.id)}
+                            className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-sm hover:bg-muted"
+                          >
+                            {done ? <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" /> : <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                            <span className={`min-w-0 flex-1 break-words ${done ? 'text-muted-foreground line-through' : 'font-medium'}`}>{g.title}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
 
