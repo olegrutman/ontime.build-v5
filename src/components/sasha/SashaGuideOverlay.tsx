@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, HelpCircle, RotateCcw, Volume2, VolumeX, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronUp, HelpCircle, RotateCcw, Volume2, VolumeX, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GuideSpotlightMask, useGuideTarget } from './SashaGuideSpotlight';
 import { useSashaVoice } from '@/hooks/useSashaVoice';
@@ -36,8 +36,10 @@ export function SashaGuideOverlay({
   const { speak, stop: stopSpeaking, isSpeaking, isPreparing } = useSashaVoice();
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [showWhy, setShowWhy] = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState(false);
 
   useEffect(() => setShowWhy(false), [step?.id]);
+  useEffect(() => setMobileExpanded(false), [step?.id, isComplete]);
 
   useEffect(() => {
     if (!voiceEnabled) return;
@@ -69,6 +71,7 @@ export function SashaGuideOverlay({
   }, [rect, isComplete]);
 
   const isLast = stepIndex >= totalSteps - 1;
+  const compactTitle = isComplete ? 'Tour complete' : step?.title ?? guide.title;
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[80]" data-sasha-guide-ui>
@@ -77,11 +80,46 @@ export function SashaGuideOverlay({
       <section
         role="dialog"
         aria-modal="false"
-        aria-label={isComplete ? `${guide.title} complete` : `Sasha guide: ${step?.title ?? guide.title}`}
-        className="pointer-events-auto fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-2xl sm:inset-x-auto sm:bottom-auto sm:w-96"
-        style={cardStyle ?? (isComplete && typeof window !== 'undefined' && window.innerWidth >= 640 ? { right: 24, top: 80, width: 384 } : undefined)}
+        aria-label={`Sasha guide: ${compactTitle}`}
+        className={`${mobileExpanded ? 'hidden' : 'flex'} pointer-events-auto fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom,0px)+5.75rem)] h-14 items-center gap-2 rounded-2xl border border-border bg-card px-2.5 text-card-foreground shadow-2xl sm:hidden`}
+        data-sasha-guide-compact
       >
-        <div className="flex items-center gap-3 border-b border-border bg-primary px-4 py-3 text-primary-foreground">
+        <img src={sashaAvatar} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-primary/25" />
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-lg py-2 text-left"
+          onClick={() => setMobileExpanded(true)}
+          aria-label="Expand Sasha guide"
+          aria-expanded={false}
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[11px] font-medium text-muted-foreground">
+              {isComplete ? guide.title : `Step ${stepIndex + 1} of ${totalSteps} · ${guide.title}`}
+            </span>
+            <span className="block truncate text-sm font-semibold">{compactTitle}</span>
+          </span>
+          <ChevronUp className="h-5 w-5 shrink-0 text-primary" />
+        </button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 shrink-0 text-muted-foreground"
+          onClick={onStop}
+          aria-label="Exit guide"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </section>
+
+      <section
+        role="dialog"
+        aria-modal="false"
+        aria-label={isComplete ? `${guide.title} complete` : `Sasha guide: ${step?.title ?? guide.title}`}
+        className={`${mobileExpanded ? '' : 'hidden '}pointer-events-auto fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom,0px)+5.75rem)] overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-2xl sm:inset-x-auto sm:bottom-auto sm:block sm:w-96`}
+        style={cardStyle ?? (isComplete && typeof window !== 'undefined' && window.innerWidth >= 640 ? { right: 24, top: 80, width: 384 } : undefined)}
+        data-sasha-guide-expanded
+      >
+        <div className="flex items-center gap-2 border-b border-border bg-primary px-3 py-3 text-primary-foreground sm:gap-3 sm:px-4">
           <img src={sashaAvatar} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-white/30" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">Sasha · {guide.title}</p>
@@ -89,6 +127,16 @@ export function SashaGuideOverlay({
               {isComplete ? 'Guide complete' : `Step ${stepIndex + 1} of ${totalSteps}`}
             </p>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground sm:hidden"
+            onClick={() => setMobileExpanded(false)}
+            aria-label="Minimize Sasha guide"
+            title="Minimize guide"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -164,7 +212,7 @@ export function SashaGuideOverlay({
                 <RotateCcw className="h-3.5 w-3.5" /> Replay
               </Button>
               <Button size="sm" onClick={onFinish} className="ml-auto gap-1.5">
-                Done <Check className="h-3.5 w-3.5" />
+                Done <Check className="h-4 w-4" />
               </Button>
             </>
           ) : (
