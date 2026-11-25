@@ -50,6 +50,6 @@
 - Multi-item CO/WO review persists protected per-line decisions and a final approved_amount; parent finalization, contract deltas, SOVs and invoice paths must exclude rejected scope because whole-order status alone cannot represent partial approval.
 
 - Field reports: no prices, status via RPCs; others see released items (Sub is the firewall).
-- Correction flags auto-clear when billing matches the approved snapshot.
+- Correction flags auto-clear once billing matches approval.
 - WO draft invoices edit in place, releasing only their own lines.
-- Approved T&M/NTE orders accrue tickets without correction flags; close-out blocks new billable entries, since T&M runs until closed.
+- Approved T&M/NTE orders accrue tickets unflagged; close-out blocks new billable entries.
