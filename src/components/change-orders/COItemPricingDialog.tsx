@@ -247,6 +247,25 @@ export function COItemPricingDialog({
   const [formMode, setFormMode] = useState<'billable' | 'cost' | null>(null);
   const [editingEntry, setEditingEntry] = useState<COLaborEntry | null>(null);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+  const [billedEntryIds, setBilledEntryIds] = useState<Set<string>>(new Set());
+  const entryIdKey = laborEntries.map(entry => entry.id).sort().join(',');
+  useEffect(() => {
+    if (!open || !entryIdKey) { setBilledEntryIds(new Set()); return; }
+    let cancelled = false;
+    const ids = entryIdKey.split(',');
+    (async () => {
+      const { data } = await supabase
+        .from('invoice_line_items')
+        .select('source_entry_ids, invoices!inner(status)')
+        .overlaps('source_entry_ids', ids)
+        .neq('invoices.status', 'REJECTED');
+      if (cancelled) return;
+      const billed = new Set<string>();
+      for (const row of (data ?? []) as any[]) for (const id of row.source_entry_ids ?? []) billed.add(id);
+      setBilledEntryIds(billed);
+    })();
+    return () => { cancelled = true; };
+  }, [open, entryIdKey]);
   const [changingLaborMethod, setChangingLaborMethod] = useState(false);
 
   useEffect(() => {
@@ -293,12 +312,16 @@ export function COItemPricingDialog({
       myOrgId: orgId,
       canEditExternal,
       canEditInternal,
+      pricingType,
+      billed: billedEntryIds.has(entry.id),
     });
   }
 
   async function deleteEntry(entry: COLaborEntry) {
     if (!canEditEntry(entry)) {
-      toast.error('This entry is locked — it belongs to an agreed amount.');
+      toast.error(billedEntryIds.has(entry.id)
+        ? 'This entry is already on an invoice — remove it from that invoice first.'
+        : 'This entry is locked — it belongs to an agreed amount.');
       return;
     }
     const amount = entry.is_actual_cost ? actualEntryBaseCost(entry) : Number(entry.line_total ?? 0);

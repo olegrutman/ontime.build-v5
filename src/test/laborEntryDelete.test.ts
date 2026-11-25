@@ -40,3 +40,21 @@ describe('canRemoveLaborEntry', () => {
     expect(canRemoveLaborEntry({ ...base, myRole: null })).toBe(false);
   });
 });
+
+describe('canRemoveLaborEntry — unbilled T&M entries', () => {
+  it('lets the owner delete an unbilled T&M billing entry after approval', () => {
+    expect(canRemoveLaborEntry({ ...base, canEditExternal: false, pricingType: 'tm' })).toBe(true);
+  });
+  it('lets the owner delete an unbilled NTE billing entry after approval', () => {
+    expect(canRemoveLaborEntry({ ...base, canEditExternal: false, pricingType: 'nte' })).toBe(true);
+  });
+  it('keeps fixed-price entries locked after approval', () => {
+    expect(canRemoveLaborEntry({ ...base, canEditExternal: false, pricingType: 'fixed' })).toBe(false);
+  });
+  it('never allows deleting a billed entry', () => {
+    expect(canRemoveLaborEntry({ ...base, pricingType: 'tm', billed: true })).toBe(false);
+  });
+  it('still blocks another company deleting an unbilled T&M entry', () => {
+    expect(canRemoveLaborEntry({ ...base, pricingType: 'tm', entryOrgId: 'org-fc' })).toBe(false);
+  });
+});
