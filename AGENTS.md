@@ -24,7 +24,6 @@
 - Crew-base billable rows and mirrored costs carry explicit provenance; switching the order-wide base off clears only these rows atomically, preserving manual entries and upstream submission freezes.
 
 - Project Info derives headline revenue from the viewer's own earning contracts, never the sum of revenue and downstream costs; shared details and contract edits use their respective user-level creator identities.
-- Project Info uses semantic command-surface tokens and shared headings for consistent styling.
 
 - Crew Tracker posts spending once into actual_cost_entries and stores reusable workers separately; this keeps project financials on one ledger without counting labor twice.
 - Hired crew tasks keep pricing/progress apart from daily workers; draws lock the task and post only actual payments to the private ledger, since completed work isn't paid payroll.
@@ -52,4 +51,4 @@
 
 - Field reports: no prices, status via RPCs; others see released items (Sub is the firewall).
 - Correction flags auto-clear when billing matches the approved snapshot.
-- Draft work-order invoices are edited in place in the work-order billing screen, releasing only their own lines first; number and contract totals stay unchanged.
+- WO draft invoices edit in place via the WO builder, releasing only their own lines.
