@@ -38,7 +38,14 @@ export function DailyReportsPage({ projectId, projectName = 'Project', projectAd
   const orgIds = userOrgRoles.map(r => r.organization_id);
   const crewIds = userOrgRoles.filter(r => ['FC', 'TC'].includes(r.organization?.type as string)).map(r => r.organization_id);
   const key = ['daily-report-register', projectId, user?.id];
-  const refresh = () => { qc.invalidateQueries({ queryKey: key }); qc.invalidateQueries({ queryKey: ['field-reports', projectId] }); qc.invalidateQueries({ queryKey: ['field-summary', projectId] }); qc.invalidateQueries({ queryKey: ['field-operations-overview', projectId] }); };
+  const refresh = async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: key }),
+      qc.invalidateQueries({ queryKey: ['field-reports', projectId] }),
+      qc.invalidateQueries({ queryKey: ['field-summary', projectId] }),
+      qc.invalidateQueries({ queryKey: ['field-operations-overview', projectId] }),
+    ]);
+  };
   const { data, isLoading, error } = useQuery({ queryKey: key, enabled: !!user, queryFn: async () => {
     const [headers, sourceItems, photos] = await Promise.all([allRows('field_reports', projectId), allRows('field_report_items', projectId), allRows('field_report_photos', projectId)]);
     const own = (r: any) => orgIds.includes(r.crew_org_id) || orgIds.includes(r.reviewer_org_id);
@@ -73,15 +80,20 @@ export function DailyReportsPage({ projectId, projectName = 'Project', projectAd
     if (existing) { open(existing.id); return; }
     setBusy(true);
     const { data: created, error: createError } = await db.from('field_reports').insert({ project_id: projectId, crew_org_id: data.pair.from_org_id, reviewer_org_id: data.pair.to_org_id, report_date: today, created_by: user.id, status: 'draft' }).select('id').single();
-    setBusy(false);
-    if (createError) toast({ title: 'Could not start report', description: createError.message, variant: 'destructive' });
-    else { refresh(); open(created.id); }
+    if (createError) {
+      setBusy(false);
+      toast({ title: 'Could not start report', description: createError.message, variant: 'destructive' });
+    } else {
+      await refresh();
+      setBusy(false);
+      open(created.id);
+    }
   };
   const statusBadge = (r: any) => <span className={cn('self-start rounded-full px-2.5 py-1 text-[11px] font-semibold', status(r) === 'Released' || status(r) === 'Reviewed' ? 'bg-state-approved-bg text-state-approved-foreground' : status(r) === 'Draft' ? 'bg-muted text-muted-foreground' : 'bg-state-open-bg text-state-open-foreground')}>{status(r)}</span>;
   if (isLoading) return <div className="flex items-center gap-2 py-10 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" />Loading field reports…</div>;
   if (error) return <div className="py-6 space-y-3"><p className="text-destructive">Could not load field reports.</p><Button variant="outline" onClick={refresh}>Try again</Button></div>;
   if (params.get('report') && !selected) return <div className="space-y-3 py-6"><p className="text-muted-foreground">This report is not available.</p><Button variant="outline" onClick={() => open()}><ArrowLeft />All Field Reports</Button></div>;
-  if (selected) return <DailyReportDetailPage key={selected.id} report={selected} items={reportItems(selected.id)} photos={photosFor(selected.id)} projectName={projectName} projectAddress={projectAddress} crewName={companyName(selected)} reviewerName={data?.companies.find((c: any) => c.id === selected.reviewer_org_id)?.name || 'Subcontractor'} isCrewDraft={selected.status === 'draft' && crewIds.includes(selected.crew_org_id)} reviewer={orgIds.includes(selected.reviewer_org_id)} privateParty={privateParty(selected)} status={status(selected)} onChange={refresh} onBack={() => open()} />;
+  if (selected) return <DailyReportDetailPage key={selected.id} report={selected} items={reportItems(selected.id)} photos={photosFor(selected.id)} projectName={projectName} projectAddress={projectAddress} crewName={companyName(selected)} reviewerName={data?.companies.find((c: any) => c.id === selected.reviewer_org_id)?.name || 'Subcontractor'} isCrewDraft={selected.status === 'draft' && crewIds.includes(selected.crew_org_id)} reviewer={orgIds.includes(selected.reviewer_org_id)} privateParty={privateParty(selected)} status={status(selected)} onChange={refresh} onBack={() => open()} onDeleted={async () => { await refresh(); open(); }} />;
   return <div className="space-y-4"><header className="flex flex-wrap justify-between items-end gap-3"><div><p className="text-[11px] font-semibold uppercase text-muted-foreground">Field operations</p><h1 className="font-heading text-4xl font-semibold">Field Reports</h1><p className="mt-1 flex items-center gap-2 text-xs text-muted-foreground"><CalendarDays size={14} />{format(new Date(), 'EEEE, MMMM d, yyyy')}</p></div>{data?.pair && <Button disabled={busy} onClick={start} data-sasha-target="new-field-report">{busy ? <Loader2 className="animate-spin" /> : <Plus />}New Field Report</Button>}</header>
     <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5"><KpiCard accent={C.amber} icon={<ClipboardList size={18} />} iconBg={C.amberPale} label="Reports today" value={String(todayReports.length)} sub="Reports visible to your company" /><KpiCard accent={C.blue} icon={<Clock3 size={18} />} iconBg={C.blueBg} label="Reported crew hours" value={`${todayItems.filter(i => i.kind === 'hours').reduce((s,i) => s + (Number(i.quantity) || 0), 0)} h`} sub="Reported today · not payroll" /><KpiCard accent={C.green} icon={<ShieldCheck size={18} />} iconBg={C.greenBg} label="Released updates" value={String(todayItems.filter(i => ['released','converted'].includes(i.status)).length)} sub="From today’s reports" /><KpiCard accent={C.red} icon={<TriangleAlert size={18} />} iconBg={C.redBg} label="Awaiting your review" value={String(pending.length)} sub="Reports with undecided items"><div className="p-4 space-y-2">{pending.length ? pending.map(r => <Button key={r.id} variant="outline" onClick={() => open(r.id)}>{companyName(r)} · {r.report_date}<ArrowRight /></Button>) : <p className="text-sm text-muted-foreground">No reports awaiting your review.</p>}</div></KpiCard></div>
     <div className="flex flex-wrap items-center gap-2"><div className="flex flex-wrap gap-1">{['All reports','Draft','Awaiting review','Released','Reviewed'].map(f => <Button key={f} size="sm" variant="ghost" aria-pressed={filter === f} onClick={() => setFilter(f)} className={cn('text-xs', filter === f && 'bg-command text-command-foreground hover:bg-command hover:text-command-foreground')}>{f}</Button>)}</div><div className="relative w-full sm:ml-auto sm:w-56"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input aria-label="Search field reports" placeholder="Search crew or report…" className="pl-9" value={search} onChange={e => setSearch(e.target.value)} /></div><Input className="w-full sm:w-40" type="date" aria-label="Filter report date" value={date} onChange={e => setDate(e.target.value)} />{date && <Button variant="ghost" size="sm" onClick={() => setDate('')}>All dates</Button>}</div>

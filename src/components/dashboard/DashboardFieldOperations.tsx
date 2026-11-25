@@ -36,7 +36,8 @@ export function DashboardFieldOperations({ projects, role }: Props) {
   const visible = expanded ? ranked : ranked.slice(0, 4);
   const blockers = rows.reduce((n, r) => n + r.model.todayBlockers.length, 0);
   const reviews = rows.reduce((n, r) => n + r.model.pendingReviewReports.length, 0);
-  const reportedToday = rows.filter((r) => r.model.todayReports.length > 0).length;
+  const submittedToday = rows.filter((r) => r.model.todayReports.some((report) => report.status !== 'draft')).length;
+  const draftsToSubmit = rows.filter((r) => r.model.ownDraft).length;
   const top = ranked[0];
   const go = (projectId: string, tab: string) => navigate(`/project/${projectId}/${tab}`);
 
@@ -53,7 +54,8 @@ export function DashboardFieldOperations({ projects, role }: Props) {
         <div className="flex min-w-0 items-center justify-between gap-3 sm:justify-end">
           {!isLoading && !isError && (
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <span><span className="font-mono font-semibold text-foreground">{reportedToday}/{active.length}</span> reported today</span>
+              <span><span className="font-mono font-semibold text-foreground">{submittedToday}/{active.length}</span> submitted today</span>
+              {role !== 'GC' && <span><span className={cn('font-mono font-semibold', draftsToSubmit ? 'text-state-open-foreground' : 'text-foreground')}>{draftsToSubmit}</span> drafts to submit</span>}
               <span><span className={cn('font-mono font-semibold', reviews ? 'text-state-open-foreground' : 'text-foreground')}>{reviews}</span> awaiting your review</span>
               <span><span className={cn('font-mono font-semibold', blockers ? 'text-destructive' : 'text-foreground')}>{blockers}</span> blockers</span>
             </div>

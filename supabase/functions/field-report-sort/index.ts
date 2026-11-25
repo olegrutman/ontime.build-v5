@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     // Row policies decide whether this user may see the report.
     const { data: rep } = await sb.from("field_reports").select("id,status,raw_text,transcript,audio_path,crew_org_id").eq("id", reportId).maybeSingle();
     if (!rep) return json({ error: "Report not found" }, 404);
-    if (rep.status !== "draft") return json({ error: "Report already sent" }, 400);
+    if (rep.status !== "draft") return json({ error: "Report already submitted" }, 400);
     const { data: member } = await sb.from("user_org_roles").select("id").eq("user_id", u.user.id).eq("organization_id", rep.crew_org_id).maybeSingle();
     if (!member) return json({ error: "Only the crew can sort its report" }, 403);
 

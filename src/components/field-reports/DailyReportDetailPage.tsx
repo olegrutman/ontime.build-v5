@@ -31,9 +31,10 @@ interface Props {
   status: string;
   onChange: () => void;
   onBack: () => void;
+  onDeleted?: () => void;
 }
 
-export function DailyReportDetailPage({ report, items, photos, projectName, projectAddress, crewName, reviewerName, isCrewDraft, reviewer, privateParty, status, onChange, onBack }: Props) {
+export function DailyReportDetailPage({ report, items, photos, projectName, projectAddress, crewName, reviewerName, isCrewDraft, reviewer, privateParty, status, onChange, onBack, onDeleted }: Props) {
   const [view, setView] = useState<'board' | 'typed'>('board');
   const released = items.filter(item => ['released', 'converted'].includes(item.status)).length;
   const pending = items.filter(item => item.status === 'crew_confirmed').length;
@@ -105,7 +106,7 @@ export function DailyReportDetailPage({ report, items, photos, projectName, proj
       {isCrewDraft ? (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
           <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm sm:p-5">
-            <DraftEditor key={report.id} report={report} items={items} photos={photos} onChange={onChange} />
+            <DraftEditor key={report.id} report={report} items={items} photos={photos} onChange={onChange} onDeleted={onDeleted || onBack} />
           </div>
           <DraftSummary crewName={crewName} reviewerName={reviewerName} items={items} />
         </div>

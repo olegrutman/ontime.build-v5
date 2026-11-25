@@ -8,6 +8,7 @@ import { trimRequestFromMaterialContext } from '@/lib/trimMaterial';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -106,7 +107,7 @@ export function FieldReportsCard({ projectId, date }: Props) {
       {myDraft && <DraftEditor report={myDraft} items={items.filter(i => i.report_id === myDraft.id)} photos={photos.filter(p => p.report_id === myDraft.id)} onChange={refresh} />}
 
       {mySent.map(r => (
-        <ReportBlock key={r.id} title="Sent for review" report={r} items={items.filter(i => i.report_id === r.id)} photos={photos.filter(p => p.report_id === r.id)} />
+        <ReportBlock key={r.id} title="Submitted for review" report={r} items={items.filter(i => i.report_id === r.id)} photos={photos.filter(p => p.report_id === r.id)} />
       ))}
 
       {toReview.map(r => (
@@ -324,7 +325,7 @@ function ReviewActions({ item, onChange }: { item: any; onChange: () => void }) 
   );
 }
 
-export function DraftEditor({ report, items, photos, onChange }: { report: any; items: any[]; photos: FieldReportPhoto[]; onChange: () => void }) {
+export function DraftEditor({ report, items, photos, onChange, onDeleted }: { report: any; items: any[]; photos: FieldReportPhoto[]; onChange: () => void; onDeleted?: () => void }) {
   const { toast } = useToast();
   const [text, setText] = useState(report.raw_text || '');
   const [kind, setKind] = useState<Kind>('progress');
@@ -334,6 +335,8 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
   const [unit, setUnit] = useState('');
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const recRef = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const autoSortRef = useRef(false);
@@ -385,7 +388,7 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
       })));
       if (insErr) throw new Error(insErr.message);
       emitSashaGuideAction('field-report-sorted');
-      toast({ title: `${found.length} item${found.length === 1 ? '' : 's'} added`, description: found.some(f => f.kind === 'material') ? 'Materials found — choose the exact product for each before sending.' : 'Check each one. Remove anything that is wrong before sending.' });
+      toast({ title: `${found.length} item${found.length === 1 ? '' : 's'} added`, description: found.some(f => f.kind === 'material') ? 'Materials found — choose the exact product for each before submitting.' : 'Check each one. Remove anything that is wrong before submitting.' });
       onChange();
     } catch (e: any) {
       toast({ title: 'Could not sort the update', description: e.message, variant: 'destructive' });
@@ -425,12 +428,31 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
     await saveText();
     const { error } = await db.rpc('submit_field_report', { p_report_id: report.id });
     setBusy(false);
-    if (error) toast({ title: 'Could not send report', description: error.message, variant: 'destructive' });
+    if (error) toast({ title: 'Could not submit report', description: error.message, variant: 'destructive' });
     else {
       emitSashaGuideAction('field-report-submitted');
-      toast({ title: 'Report sent for review' });
+      toast({ title: 'Report submitted for review' });
       onChange();
     }
+  };
+
+  const deleteDraft = async () => {
+    setDeleting(true);
+    const { data, error } = await supabase.functions.invoke('delete-field-report', { body: { report_id: report.id } });
+    let serverMessage: string | undefined = data?.error;
+    if (error && !serverMessage) {
+      try { serverMessage = (await (error as any).context?.json?.())?.error; } catch { /* use the generic message */ }
+    }
+    if (error || serverMessage) {
+      setDeleting(false);
+      toast({ title: 'Could not delete draft', description: serverMessage || error?.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Draft deleted', description: 'Its draft items and attached media were removed.' });
+    setDeleteOpen(false);
+    setDeleting(false);
+    if (onDeleted) onDeleted();
+    else onChange();
   };
 
   return (
@@ -499,10 +521,31 @@ export function DraftEditor({ report, items, photos, onChange }: { report: any; 
         {items.length === 0 && <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">Your draft items will appear here.</p>}
       </div>
 
-      <Button data-sasha-target="field-report-submit" className="w-full" onClick={submit} disabled={busy || items.length === 0}>
-        {busy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}Send for review
-      </Button>
-      {items.length === 0 && <p className="text-xs text-muted-foreground text-center">Add at least one item to send.</p>}
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <Button data-sasha-target="field-report-submit" className="w-full" onClick={submit} disabled={busy || deleting || items.length === 0}>
+          {busy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}Submit for review
+        </Button>
+        <Button type="button" variant="outline" className="w-full text-destructive hover:text-destructive sm:w-auto" onClick={() => setDeleteOpen(true)} disabled={busy || deleting}>
+          <Trash2 className="h-4 w-4 mr-1" />Delete draft
+        </Button>
+      </div>
+      {items.length === 0 && <p className="text-xs text-muted-foreground text-center">Add at least one item to submit.</p>}
+      <AlertDialog open={deleteOpen} onOpenChange={open => { if (!deleting) setDeleteOpen(open); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this draft?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the draft, its items, photos and voice note. This cannot be undone. Submitted reports are not affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Keep draft</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={deleting} onClick={event => { event.preventDefault(); void deleteDraft(); }}>
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}Delete draft
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

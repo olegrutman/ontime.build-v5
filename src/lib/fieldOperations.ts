@@ -221,9 +221,9 @@ export function buildFieldOperationsModel({
     actionLabel = `Review ${pendingReviewReports.length === 1 ? 'report' : 'reports'}`;
     actionTab = `daily-reports?report=${pendingReviewReports[0].id}`;
   } else if (role !== 'GC' && ownDraft) {
-    headline = 'Today’s report is in progress';
+    headline = 'Today’s Field Report is still a draft';
     statusDetail = 'Finish and submit it for review when the field update is complete.';
-    actionLabel = 'Continue today’s report';
+    actionLabel = 'Continue to submission';
     actionTab = `daily-reports?report=${ownDraft.id}`;
   } else if (role !== 'GC' && ownTodayReports.length > 0) {
     const reviewed = ownTodayReports.every((report) => ['reviewed', 'released'].includes(report.status));
@@ -232,11 +232,11 @@ export function buildFieldOperationsModel({
     actionLabel = 'Open today’s report';
     actionTab = `daily-reports?report=${ownTodayReports[0].id}`;
   } else if (role !== 'GC' && canAuthor) {
-    headline = 'No report filed today';
+    headline = 'No report submitted today';
     statusDetail = 'Record progress, hours, materials and blockers for today’s work.';
-    actionLabel = 'File today’s report';
+    actionLabel = 'New Field Report';
   } else if (todayReports.length > 0) {
-    headline = `${plural(todayReports.length, 'report')} filed today`;
+    headline = `${plural(todayReports.length, 'report')} submitted today`;
     statusDetail = `${plural(todayItems.length, 'field update')} visible to your company.`;
   }
 
@@ -245,8 +245,8 @@ export function buildFieldOperationsModel({
     : pendingReviewReports.length
       ? plural(pendingReviewReports.length, 'report') + ' awaiting review'
       : todayReports.length
-        ? plural(todayReports.length, 'report') + ' filed today'
-        : 'No field reports filed today';
+        ? plural(todayReports.length, 'report') + ' submitted today'
+        : 'No field reports submitted today';
 
   return {
     role,
@@ -296,6 +296,25 @@ export function fieldOperationsAttention(model: FieldOperationsModel): FieldOper
       value: plural(model.pendingReviewReports.length, 'report'),
       pill: 'Review',
       tab: `daily-reports?report=${model.pendingReviewReports[0].id}`,
+    });
+  }
+  if (model.ownDraft) {
+    attention.push({
+      tone: 'yellow',
+      title: 'Today’s Field Report is still a draft',
+      sub: 'Finish and submit it for review.',
+      value: 'Draft',
+      pill: 'Submit',
+      tab: `daily-reports?report=${model.ownDraft.id}`,
+    });
+  } else if (model.role !== 'GC' && model.canAuthor && model.ownTodayReports.length === 0) {
+    attention.push({
+      tone: 'yellow',
+      title: 'No Field Report submitted today',
+      sub: 'Record today’s progress, hours, materials and blockers.',
+      value: 'Today',
+      pill: 'New report',
+      tab: 'daily-reports',
     });
   }
   return attention;

@@ -42,8 +42,9 @@ describe('unified Field Operations overview', () => {
     const model = buildFieldOperationsModel({
       reports: [], items: [], orgIds: ['sub'], currentOrgId: 'sub', role: 'TC', canAuthor: true, today,
     });
-    expect(model.headline).toBe('No report filed today');
-    expect(model.actionLabel).toBe('File today’s report');
+    expect(model.headline).toBe('No report submitted today');
+    expect(model.actionLabel).toBe('New Field Report');
+    expect(fieldOperationsAttention(model)).toContainEqual(expect.objectContaining({ title: 'No Field Report submitted today', pill: 'New report' }));
     expect(model.actionTab).toBe('daily-reports');
   });
 
@@ -75,8 +76,10 @@ describe('unified Field Operations overview', () => {
     const draftBlocker = { ...progress, kind: 'blocker' as const, status: 'draft' };
     const model = build('TC', [draftBlocker], [draftReport]);
     expect(model.todayBlockers).toHaveLength(0);
-    expect(fieldOperationsAttention(model)).toEqual([]);
-    expect(model.actionLabel).toBe('Continue today’s report');
+    expect(fieldOperationsAttention(model)).toEqual([
+      expect.objectContaining({ title: 'Today’s Field Report is still a draft', pill: 'Submit', tab: 'daily-reports?report=report-1' }),
+    ]);
+    expect(model.actionLabel).toBe('Continue to submission');
   });
 });
 

@@ -6,7 +6,7 @@ import { C, fontLabel, fmt, WarnItem, type PillType } from '@/components/shared/
 import { CanonicalKpiGrid } from '@/components/project/kpi/CanonicalKpiGrid';
 
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
-import { FieldOperationsCard } from '@/components/field-reports/FieldOperationsCard';
+import { FieldOperationsCard, fieldOperationsWarnings } from '@/components/field-reports/FieldOperationsCard';
 import { useFieldOperations } from '@/hooks/useFieldOperations';
 import { useCrewTracker } from '@/hooks/useCrewTracker';
 import { CrewBudgetOverview } from '@/components/project/CrewBudgetOverview';
@@ -200,6 +200,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
 
   // Warnings
   const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = [];
+  warnings.push(...fieldOperationsWarnings(fieldOperations.model));
   if (pendingInvoices.length > 0) {
     warnings.push({ color: C.yellow, icon: '💰', title: `Invoice Awaiting ${tcName} Approval`, sub: `${pendingInvoices.length} invoice${pendingInvoices.length > 1 ? 's' : ''} submitted`, value: fmt(totalPendingSubmitted), pill: 'Pending', pillType: 'pw', tab: 'invoices' });
   }

@@ -72,9 +72,14 @@ export function useFieldOperationsPortfolio(projects: { id: string; name: string
   return { ...query, rows };
 }
 
-/** Urgency order: blockers, then awaiting your review, then today's activity, then the rest. */
+/** Urgency order: blockers, review, drafts to submit, today's activity, missing reports, then the rest. */
 export function rankPortfolioRows(rows: PortfolioFieldRow[]) {
   const score = (m: FieldOperationsModel) =>
-    m.todayBlockers.length ? 0 : m.pendingReviewReports.length ? 1 : m.todayReports.length ? 2 : m.reports.length ? 3 : 4;
+    m.todayBlockers.length ? 0
+      : m.pendingReviewReports.length ? 1
+        : m.ownDraft ? 2
+          : m.todayReports.length ? 3
+            : m.canAuthor ? 4
+              : m.reports.length ? 5 : 6;
   return [...rows].sort((a, b) => score(a.model) - score(b.model) || a.projectName.localeCompare(b.projectName));
 }
