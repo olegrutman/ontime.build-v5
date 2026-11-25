@@ -1,3 +1,4 @@
+import { Textarea } from '@/components/ui/textarea';
 import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -96,6 +97,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
   const [billedMap, setBilledMap] = useState<Map<string, WoBilledInfo>>(new Map());
   const [billingBalances, setBillingBalances] = useState<Map<string, { grand_total: number; already_billed: number; remaining: number }>>(new Map());
   const [percentById, setPercentById] = useState<Record<string, number>>({});
+  const [workNoteById, setWorkNoteById] = useState<Record<string, string>>({});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [lineItems, setLineItems] = useState<GeneratedLineItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -412,7 +414,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         const isFinal = amount >= s.remaining - 0.005;
         const label = co.co_number ?? co.title ?? 'WO';
         generated.push({
-          description: `${label} — ${isFinal ? 'Final billing' : 'Progress billing'} (${pct}% of $${value.toLocaleString('en-US', { minimumFractionDigits: 2 })}) — ${scopeItems.filter(item => item.co_id === id).map(item => item.item_name).join('; ')}`,
+          description: `${label} — ${isFinal ? 'Final billing' : 'Progress billing'} (${pct}% of $${value.toLocaleString('en-US', { minimumFractionDigits: 2 })}) — ${scopeItems.filter(item => item.co_id === id).map(item => item.item_name).join('; ')}${(workNoteById[id] ?? '').trim() ? ` — Work done: ${(workNoteById[id] ?? '').trim()}` : ''}`,
           amount, coId: id, type: 'progress', entryIds: [], percent: pct,
         });
       }
@@ -775,6 +777,14 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
                                   className="w-20 h-8"
                                 />
                                 <span className="text-xs text-muted-foreground">% of price = <span className="font-mono text-foreground">{fmtCurrency(fixedProgressAmount(value, pct, s.billed + (billedMap.get(co.id)?.draft ?? 0)))}</span></span>
+                                <Textarea
+                                  aria-label="What was done (optional)"
+                                  placeholder="What was done this period (optional)"
+                                  value={workNoteById[co.id] ?? ''}
+                                  maxLength={500}
+                                  onChange={e => setWorkNoteById(p => ({ ...p, [co.id]: e.target.value }))}
+                                  className="basis-full min-h-[60px] text-sm"
+                                />
                               </div>
                             );
                           })()}
