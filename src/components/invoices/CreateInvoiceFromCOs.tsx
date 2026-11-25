@@ -24,6 +24,8 @@ import { woBillingSummary, fixedProgressAmount, hasBillableBalance } from '@/lib
 import { completedItemClaims, isCompletedBillableItem } from '@/lib/coItemCompletion';
 import { untaggedProgressAmount } from '@/lib/coInvoiceRows';
 import { canBillCrewLaborEntry, canCrewBillOrder } from '@/lib/crewHourReview';
+import { releaseEditedInvoice, type EditableWoInvoice } from '@/lib/woInvoiceEdit';
+import { splitWorkDone } from './InvoiceLineDescription';
 
 
 interface CreateInvoiceFromCOsProps {
@@ -32,6 +34,8 @@ interface CreateInvoiceFromCOsProps {
   projectId: string;
   onSuccess: () => void;
   isTM?: boolean;
+  /** Draft invoice to edit in place; its own lines are released before re-billing. */
+  editInvoice?: EditableWoInvoice;
 }
 
 interface ApprovedCO {
@@ -81,7 +85,7 @@ function fmtCurrency(value: number) {
   return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess, isTM = false }: CreateInvoiceFromCOsProps) {
+export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess, isTM = false, editInvoice }: CreateInvoiceFromCOsProps) {
   const { user, userOrgRoles } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const coV4 = useCoV4Flag();
@@ -199,12 +203,32 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
           .select('co_id').in('co_id', filtered.map(c => c.id)).eq('approval_status', 'approved').not('completed_at', 'is', null);
         if (completedError) throw completedError;
         setCompletedCoIds(new Set((completed ?? []).map(item => item.co_id)));
-        setBilledMap(billed);
-        setBillingBalances(new Map((balanceResult.data ?? []).map(row => [row.co_id, {
+        let balanceMap = new Map((balanceResult.data ?? []).map(row => [row.co_id, {
           grand_total: Number(row.grand_total ?? 0),
           already_billed: Number(row.already_billed ?? 0),
           remaining: Number(row.remaining ?? 0),
-        }])));
+        }]));
+        let billedInfo = billed;
+        if (editInvoice) {
+          const released = releaseEditedInvoice(billed, balanceMap, editInvoice.lines);
+          billedInfo = released.billed;
+          balanceMap = released.balances;
+          const coIds = [...new Set(editInvoice.lines.map(l => l.source_co_id).filter((id): id is string => !!id))];
+          setSelectedIds(new Set(coIds.filter(id => filtered.some(c => c.id === id))));
+          const pct: Record<string, number> = {};
+          const notes: Record<string, string> = {};
+          for (const line of editInvoice.lines) {
+            if (!line.source_co_id || line.billed_percent == null) continue;
+            pct[line.source_co_id] = Number(line.billed_percent);
+            const note = splitWorkDone(line.description).note;
+            if (note) notes[line.source_co_id] = note;
+          }
+          setPercentById(pct);
+          setWorkNoteById(notes);
+          setRetainagePercent(editInvoice.retainagePercent || 0);
+        }
+        setBilledMap(billedInfo);
+        setBillingBalances(balanceMap);
         setApprovedCOs(filtered as ApprovedCO[]);
       } catch (err: any) {
         const message = err?.message || 'Failed to load billable orders';
@@ -214,7 +238,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         setLoading(false);
       }
     })();
-  }, [open, projectId, currentOrgId, invoicingRole, loadVersion]);
+  }, [open, projectId, currentOrgId, invoicingRole, loadVersion, editInvoice?.id]);
 
   // Load the upstream contracts this org can bill on, so duplicates are caught
   // BEFORE an invoice lands on the wrong contract.
@@ -246,7 +270,8 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       const matching = rows.filter(c => c.to_role === upstreamRole);
       const eligible = matching.length > 0 ? matching : rows;
       setEligibleContracts(eligible);
-      if (eligible.length === 1) setSelectedContractId(eligible[0].id);
+      if (editInvoice?.contractId && eligible.some(c => c.id === editInvoice.contractId)) setSelectedContractId(editInvoice.contractId);
+      else if (eligible.length === 1) setSelectedContractId(eligible[0].id);
     })();
   }, [open, projectId, currentOrgId, upstreamRole]);
 
@@ -555,40 +580,57 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       const contractId = contract.id;
 
 
+      let invoice: { id: string };
+      if (editInvoice) {
+        const { data: updated, error: updErr } = await supabase
+          .from('invoices')
+          .update({ contract_id: contractId, co_ids: coIds, subtotal, retainage_amount: retainageAmount, total_amount: total })
+          .eq('id', editInvoice.id)
+          .eq('status', 'DRAFT')
+          .select('id')
+          .maybeSingle();
+        if (updErr) throw updErr;
+        if (!updated) throw new Error('Only draft invoices can be edited.');
+        const { error: delErr } = await supabase.from('invoice_line_items').delete().eq('invoice_id', editInvoice.id);
+        if (delErr) throw delErr;
+        invoice = updated;
+      } else {
       const invoiceNumber = await buildInvoiceNumber({
-        projectId,
-        fromOrgName: contract.from_org_name,
-        toOrgName: contract.to_org_name,
-
-        coNumber: coIds.length === 1
-          ? (approvedCOs.find(c => c.id === coIds[0])?.co_number ?? null)
-          : null,
-        multiCoCount: coIds.length,
-        isTM,
-      });
-
-      // Create invoice
-      const { data: invoice, error: invErr } = await supabase
-        .from('invoices')
-        .insert({
-          project_id: projectId,
-          contract_id: contractId,
-          co_ids: coIds,
-          invoice_number: invoiceNumber,
-
-          billing_period_start: today,
-          billing_period_end: today,
-          status: 'DRAFT',
-          subtotal,
-          retainage_amount: retainageAmount,
-          total_amount: total,
-          created_by: user.id,
-          notes: `Invoice from ${coIds.length} ${isTM ? 'work order' : 'change order'}${coIds.length > 1 ? 's' : ''}`,
-        })
-        .select()
-        .single();
-
-      if (invErr) throw invErr;
+          projectId,
+          fromOrgName: contract.from_org_name,
+          toOrgName: contract.to_org_name,
+  
+          coNumber: coIds.length === 1
+            ? (approvedCOs.find(c => c.id === coIds[0])?.co_number ?? null)
+            : null,
+          multiCoCount: coIds.length,
+          isTM,
+        });
+  
+        // Create invoice
+        const { data: created, error: invErr } = await supabase
+          .from('invoices')
+          .insert({
+            project_id: projectId,
+            contract_id: contractId,
+            co_ids: coIds,
+            invoice_number: invoiceNumber,
+  
+            billing_period_start: today,
+            billing_period_end: today,
+            status: 'DRAFT',
+            subtotal,
+            retainage_amount: retainageAmount,
+            total_amount: total,
+            created_by: user.id,
+            notes: `Invoice from ${coIds.length} ${isTM ? 'work order' : 'change order'}${coIds.length > 1 ? 's' : ''}`,
+          })
+          .select()
+          .single();
+  
+        if (invErr) throw invErr;
+        invoice = created;
+      }
 
       // Create line items. Attach the parent CO's reason_note as line_notes on the
       // FIRST line for each CO so the scope/description is preserved on the invoice.
@@ -631,7 +673,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
 
       if (liErr) throw liErr;
 
-      toast.success(isTM ? 'Invoice created from work orders' : 'Invoice created from change orders');
+      toast.success(editInvoice ? `Invoice ${editInvoice.invoiceNumber} updated` : isTM ? 'Invoice created from work orders' : 'Invoice created from change orders');
       onSuccess();
       onOpenChange(false);
     } catch (err: any) {

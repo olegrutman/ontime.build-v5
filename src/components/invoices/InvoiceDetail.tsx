@@ -1,3 +1,4 @@
+import { CreateInvoiceFromCOs } from './CreateInvoiceFromCOs';
 import { InvoiceLineDescription } from './InvoiceLineDescription';
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
@@ -70,6 +71,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate, confirmS
   const [linkedPO, setLinkedPO] = useState<{ po_number: string; status: string; pricing_owner_org_id: string | null; supplier_org_id: string | null } | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
   const [reviseDialogOpen, setReviseDialogOpen] = useState(false);
+  const [orderEditOpen, setOrderEditOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const { sendNudge, loading: nudgeLoading, wasSent } = useNudge();
@@ -381,6 +383,11 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate, confirmS
   const handleRevise = () => {
     // SOV invoices use the SOV revision wizard; returned order/PO lines are fixed in place as a draft.
     const hasSovLines = lineItems.some(li => (li as any).sov_item_id);
+    const hasOrderLines = lineItems.some(li => (li as any).source_co_id);
+    if (!hasSovLines && hasOrderLines && invoice?.status === 'DRAFT') {
+      setOrderEditOpen(true);
+      return;
+    }
     if (!hasSovLines && invoice?.status === 'REJECTED') {
       updateInvoiceStatus('DRAFT', { revision_count: ((invoice as any).revision_count || 0) + 1 });
       return;
@@ -1024,6 +1031,32 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate, confirmS
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {invoice && orderEditOpen && (
+        <CreateInvoiceFromCOs
+          open={orderEditOpen}
+          onOpenChange={setOrderEditOpen}
+          projectId={projectId}
+          isTM
+          onSuccess={() => {
+            fetchInvoice();
+            onUpdate();
+          }}
+          editInvoice={{
+            id: invoice.id,
+            invoiceNumber: invoice.invoice_number,
+            contractId: invoice.contract_id ?? null,
+            retainagePercent: Number((lineItems[0] as any)?.retainage_percent ?? 0),
+            lines: lineItems.map((li: any) => ({
+              source_co_id: li.source_co_id ?? null,
+              source_entry_ids: li.source_entry_ids ?? null,
+              current_billed: li.current_billed ?? 0,
+              billed_percent: li.billed_percent ?? null,
+              description: li.description ?? null,
+            })),
+          }}
+        />
+      )}
 
       {/* Revision Wizard */}
       {invoice && revisionData && (

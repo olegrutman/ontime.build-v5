@@ -52,3 +52,4 @@
 
 - Field reports: no prices, status via RPCs; others see released items (Sub is the firewall).
 - Correction flags auto-clear when billing matches the approved snapshot.
+- Draft work-order invoices are edited in place in the work-order billing screen, releasing only their own lines first; number and contract totals stay unchanged.
