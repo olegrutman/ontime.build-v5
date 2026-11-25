@@ -1,0 +1,2 @@
+DROP TRIGGER IF EXISTS zz_clear_reverted_scope_correction ON public.co_line_items;
+CREATE TRIGGER zz_clear_reverted_scope_correction AFTER INSERT OR UPDATE OR DELETE ON public.co_line_items FOR EACH ROW EXECUTE FUNCTION public._clear_reverted_co_correction();

@@ -51,3 +51,4 @@
 - Multi-item CO/WO review persists protected per-line decisions and a final approved_amount; parent finalization, contract deltas, SOVs and invoice paths must exclude rejected scope because whole-order status alone cannot represent partial approval.
 
 - Field reports: no prices, status via RPCs; others see released items (Sub is the firewall).
+- Order correction flags clear automatically when an approved order's billing entries and item wording return exactly to the last approved snapshot (no pending price revision, no newer materials/equipment), because add-then-delete edits change nothing that needs approval.

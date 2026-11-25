@@ -10847,6 +10847,10 @@ export type Database = {
         Returns: undefined
       }
       _audit_co_total: { Args: { _co_id: string }; Returns: number }
+      _co_billing_snapshot: {
+        Args: { _co_id: string; _org_id: string }
+        Returns: Json
+      }
       _co_target_contract_id: {
         Args: { _org_a: string; _org_b: string; _project_id: string }
         Returns: string
