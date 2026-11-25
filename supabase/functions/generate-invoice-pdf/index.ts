@@ -248,7 +248,31 @@ Deno.serve(async (req) => {
           y += fontSize + 4;
         }
       };
-      drawTextLines(descriptionLines, 9);
+      const fullDesc = safeText(line.description);
+      const markerAt = fullDesc.lastIndexOf(' — Work done: ');
+      if (markerAt < 0) {
+        drawTextLines(descriptionLines, 9);
+      } else {
+        doc.setFont('helvetica', 'bold').setFontSize(9);
+        const mainLines = doc.splitTextToSize(fullDesc.slice(0, markerAt), contentWidth - 28) as string[];
+        for (const text of mainLines) {
+          if (y + 14 > height - 80) { doc.addPage(); drawHeader(true); drawTableHeader(); }
+          doc.setTextColor(...INK).setFont('helvetica', 'bold').setFontSize(9);
+          doc.text(text, columns.description, y);
+          y += 13;
+        }
+        doc.setFont('helvetica', 'normal').setFontSize(9);
+        const noteLines = doc.splitTextToSize('Work done: ' + fullDesc.slice(markerAt + 14), contentWidth - 32) as string[];
+        for (const text of noteLines) {
+          if (y + 14 > height - 80) { doc.addPage(); drawHeader(true); drawTableHeader(); }
+          const w = doc.getTextWidth(text);
+          doc.setFillColor(255, 236, 179);
+          doc.rect(columns.description - 2, y - 9, w + 4, 12, 'F');
+          doc.setTextColor(...INK).setFont('helvetica', 'normal').setFontSize(9);
+          doc.text(text, columns.description, y);
+          y += 13;
+        }
+      }
       if (scopeLines.length) {
         y += 2;
         drawTextLines(scopeLines, 8, true);

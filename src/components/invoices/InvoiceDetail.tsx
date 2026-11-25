@@ -1,3 +1,4 @@
+import { InvoiceLineDescription } from './InvoiceLineDescription';
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown, Package, RotateCcw, Trash2, Edit, Ban, Bell, Pencil, Check, X, Share2 } from 'lucide-react';
@@ -700,7 +701,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate, confirmS
               const noteText = getInvoiceLineScopeText(item, showFullNotes);
               return (
                 <div key={`m-${item.id}`} className={`p-3 ${isOverbilled ? 'bg-destructive/10' : ''}`}>
-                  <div className="text-sm font-medium mb-2 break-words">{item.description}</div>
+                  <div className="text-sm font-medium mb-2 break-words"><InvoiceLineDescription text={item.description} /></div>
                   {(item as any).rejection_reason && (
                     <div className="text-xs text-destructive mb-2 break-words">Rejected: {(item as any).rejection_reason}</div>
                   )}
@@ -806,7 +807,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate, confirmS
                         <div className="group">
                           <div className="flex items-start gap-2">
                             <div className="flex-1">
-                              {item.description}
+                              <InvoiceLineDescription text={item.description} />
                               {(item as any).rejection_reason && (
                                 <div className="text-xs text-destructive font-normal mt-0.5">Rejected: {(item as any).rejection_reason}</div>
                               )}
@@ -975,7 +976,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate, confirmS
                         return next;
                       })}
                     />
-                    <span className="flex-1 min-w-0 text-sm break-words">{li.description}</span>
+                    <span className="flex-1 min-w-0 text-sm break-words"><InvoiceLineDescription text={li.description} /></span>
                     <span className="shrink-0 font-mono tabular-nums text-sm">{formatCurrency(li.current_billed)}</span>
                   </label>
                   {checked && (

@@ -1,3 +1,4 @@
+import { InvoiceLineDescription } from './InvoiceLineDescription';
 import { Textarea } from '@/components/ui/textarea';
 import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -871,7 +872,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
                     <tbody>
                       {lineItems.map((li, i) => (
                         <tr key={i} className="border-b last:border-0 hover:bg-muted/20">
-                          <td className="px-3 py-2 text-foreground">{li.description}</td>
+                          <td className="px-3 py-2 text-foreground"><InvoiceLineDescription text={li.description} /></td>
                           <td className="px-3 py-2">
                             <Badge variant="outline" className="text-[10px] capitalize">{li.type}</Badge>
                           </td>
