@@ -4901,6 +4901,7 @@ export type Database = {
           source_entry_id: string | null
           source_entry_ids: string[] | null
           source_entry_type: string | null
+          source_line_item_id: string | null
           sov_item_id: string | null
           total_billed: number
         }
@@ -4923,6 +4924,7 @@ export type Database = {
           source_entry_id?: string | null
           source_entry_ids?: string[] | null
           source_entry_type?: string | null
+          source_line_item_id?: string | null
           sov_item_id?: string | null
           total_billed?: number
         }
@@ -4945,6 +4947,7 @@ export type Database = {
           source_entry_id?: string | null
           source_entry_ids?: string[] | null
           source_entry_type?: string | null
+          source_line_item_id?: string | null
           sov_item_id?: string | null
           total_billed?: number
         }

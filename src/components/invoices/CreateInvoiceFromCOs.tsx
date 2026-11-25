@@ -28,6 +28,9 @@ import { releaseEditedInvoice, type EditableWoInvoice } from '@/lib/woInvoiceEdi
 import { splitWorkDone } from './InvoiceLineDescription';
 import { BillingPeriodPicker, validateBillingPeriod } from './BillingPeriodPicker';
 import { format } from 'date-fns';
+import { itemValues, itemProgressAmount, EXTRAS_KEY } from '@/lib/woItemBilling';
+
+interface BillItem { id: string; coId: string; name: string; value: number; billed: number }
 
 
 interface CreateInvoiceFromCOsProps {
@@ -71,6 +74,9 @@ interface GeneratedLineItem {
   type: 'labor' | 'material' | 'equipment' | 'progress';
   entryIds: string[];
   percent?: number;
+  itemId?: string;
+  itemValue?: number;
+  itemBilled?: number;
 }
 
 interface EligibleContract {
@@ -106,6 +112,11 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
   const [percentById, setPercentById] = useState<Record<string, number>>({});
   const [workNoteById, setWorkNoteById] = useState<Record<string, string>>({});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [billItems, setBillItems] = useState<Record<string, BillItem[]>>({});
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [itemPct, setItemPct] = useState<Record<string, number>>({});
+  const [itemNote, setItemNote] = useState<Record<string, string>>({});
+  const [legacyCoIds, setLegacyCoIds] = useState<Set<string>>(new Set());
   const [lineItems, setLineItems] = useState<GeneratedLineItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -215,6 +226,41 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
           .select('co_id').in('co_id', filtered.map(c => c.id)).eq('approval_status', 'approved').not('completed_at', 'is', null);
         if (completedError) throw completedError;
         setCompletedCoIds(new Set((completed ?? []).map(item => item.co_id)));
+
+        // Items per order, each with its share of the price and its own billed-to-date.
+        const fIds = filtered.map(c => c.id);
+        let itemsQ = supabase.from(t.line).select('id, co_id, item_name, approval_status, sort_order').in('co_id', fIds).order('sort_order');
+        itemsQ = invoicingRole === 'FC' ? itemsQ.neq('approval_status', 'rejected') : itemsQ.eq('approval_status', 'approved');
+        const [itemsRes, weightRes, itemBilledRes] = await Promise.all([
+          fIds.length ? itemsQ : Promise.resolve({ data: [], error: null } as any),
+          fIds.length ? supabase.from(t.labor).select('co_line_item_id, line_total').in('co_id', fIds).eq('org_id', currentOrgId).eq('is_actual_cost', false) : Promise.resolve({ data: [], error: null } as any),
+          fIds.length ? supabase.from('invoice_line_items').select('source_co_id, source_line_item_id, current_billed, invoice_id, invoices!inner(status)').in('source_co_id', fIds).neq('invoices.status', 'REJECTED') : Promise.resolve({ data: [], error: null } as any),
+        ]);
+        if (itemsRes.error) throw itemsRes.error;
+        if (weightRes.error) throw weightRes.error;
+        if (itemBilledRes.error) throw itemBilledRes.error;
+        const weight = new Map<string, number>();
+        for (const w of (weightRes.data ?? []) as any[]) if (w.co_line_item_id) weight.set(w.co_line_item_id, (weight.get(w.co_line_item_id) ?? 0) + Number(w.line_total ?? 0));
+        const itemBilled = new Map<string, number>();
+        const taggedByCo = new Map<string, number>();
+        for (const l of (itemBilledRes.data ?? []) as any[]) {
+          if (editInvoice && l.invoice_id === editInvoice.id) continue;
+          if (!l.source_line_item_id) continue;
+          itemBilled.set(l.source_line_item_id, (itemBilled.get(l.source_line_item_id) ?? 0) + Number(l.current_billed ?? 0));
+          taggedByCo.set(l.source_co_id, (taggedByCo.get(l.source_co_id) ?? 0) + Number(l.current_billed ?? 0));
+        }
+        const itemsByCoMap: Record<string, BillItem[]> = {};
+        for (const co of filtered) {
+          const rows = ((itemsRes.data ?? []) as any[]).filter(r => r.co_id === co.id);
+          const values = itemValues(approvedInvoiceValue(co as ApprovedCO), rows.map(r => ({ id: r.id, weight: weight.get(r.id) ?? 0 })));
+          itemsByCoMap[co.id] = rows.map(r => ({ id: r.id, coId: co.id, name: r.item_name, value: values.get(r.id) ?? 0, billed: Math.round((itemBilled.get(r.id) ?? 0) * 100) / 100 }));
+        }
+        setBillItems(itemsByCoMap);
+        setItemPct({});
+        setItemNote({});
+        const allKeys = new Set<string>();
+        Object.entries(itemsByCoMap).forEach(([coId, list]) => { allKeys.add(EXTRAS_KEY(coId)); list.forEach(i => allKeys.add(i.id)); });
+        setSelectedItems(allKeys);
         let balanceMap = new Map((balanceResult.data ?? []).map(row => [row.co_id, {
           grand_total: Number(row.grand_total ?? 0),
           already_billed: Number(row.already_billed ?? 0),
@@ -238,6 +284,33 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
           setPercentById(pct);
           setWorkNoteById(notes);
           setRetainagePercent(editInvoice.retainagePercent || 0);
+        }
+        // Orders already billed by order-level percent keep that method, so items are never double-billed.
+        const legacy = new Set<string>();
+        for (const co of filtered) {
+          if (co.pricing_type !== 'fixed') continue;
+          const prior = (billedInfo.get(co.id)?.billed ?? 0) + (billedInfo.get(co.id)?.draft ?? 0);
+          if (prior - (taggedByCo.get(co.id) ?? 0) > 0.01) legacy.add(co.id);
+        }
+        setLegacyCoIds(legacy);
+        if (editInvoice) {
+          const p: Record<string, number> = {}; const n: Record<string, string> = {};
+          const billedItemIds = new Set<string>();
+          for (const line of editInvoice.lines) {
+            if (!line.source_line_item_id) continue;
+            billedItemIds.add(line.source_line_item_id);
+            if (line.billed_percent != null) p[line.source_line_item_id] = Number(line.billed_percent);
+            const note = splitWorkDone(line.description).note;
+            if (note) n[line.source_line_item_id] = note;
+          }
+          setItemPct(p); setItemNote(n);
+          if (billedItemIds.size) {
+            setSelectedItems(prev => {
+              const next = new Set<string>();
+              prev.forEach(k => { if (k.endsWith('::extras') || billedItemIds.has(k)) next.add(k); });
+              return next;
+            });
+          }
         }
         setBilledMap(billedInfo);
         setBillingBalances(balanceMap);
@@ -319,6 +392,14 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
     setSelectedIds(prev => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleItem(key: string) {
+    setSelectedItems(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
       return next;
     });
   }
@@ -432,9 +513,10 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         const claims = completedItemClaims(scopeItems.filter(item => item.co_id === id), ownEntries,
           info?.entryIds ?? new Set(), Math.max(0, summaryFor(co).remaining - (info?.draft ?? 0)), priorProgress);
         for (const claim of claims) {
+          if (!selectedItems.has(claim.itemId)) continue;
           const item = scopeMap.get(claim.itemId);
           generated.push({ description: `${co.co_number ?? 'Order'} · ${item?.item_name ?? 'Completed item'}`, amount: claim.amount,
-            coId: id, type: 'labor', entryIds: claim.entryIds });
+            coId: id, type: 'labor', entryIds: claim.entryIds, itemId: claim.itemId });
         }
       }
 
@@ -445,6 +527,24 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         const co = coById.get(id);
         if (!co) continue;
         const s = summaryFor(co);
+        if (!legacyCoIds.has(id) && (billItems[id]?.length ?? 0) > 0) {
+          const label = co.co_number ?? co.title ?? 'WO';
+          let available = Math.max(0, s.remaining - (billedMap.get(id)?.draft ?? 0));
+          for (const item of billItems[id]) {
+            if (!selectedItems.has(item.id)) continue;
+            const pct = itemPct[item.id] ?? 0;
+            const amount = Math.min(available, itemProgressAmount(item.value, pct, item.billed));
+            if (amount <= 0) continue;
+            available = Math.round((available - amount) * 100) / 100;
+            const isFinal = amount >= item.value - item.billed - 0.005;
+            const note = (itemNote[item.id] ?? '').trim();
+            generated.push({
+              description: `${label} · ${item.name} — ${isFinal ? 'Final billing' : 'Progress billing'} (${pct}% of ${fmtCurrency(item.value)})${note ? ` — Work done: ${note}` : ''}`,
+              amount, coId: id, type: 'progress', entryIds: [], percent: pct, itemId: item.id, itemValue: item.value, itemBilled: item.billed,
+            });
+          }
+          continue;
+        }
         const value = s.limit;
         const pct = percentById[id] ?? (co.completion_acknowledged_at && value > 0 ? Math.round((s.remaining / value) * 10000) / 100 : 0);
         const amount = fixedProgressAmount(value, pct, s.billed + (billedMap.get(id)?.draft ?? 0));
@@ -460,6 +560,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       // Labor entries → line items (T&M / NTE: only entries not on an earlier invoice)
       for (const entry of billableLabor) {
         if (fixedIds.has(entry.co_id) || alreadyBilled(entry.co_id, entry.id)) continue;
+        if (!selectedItems.has(entry.co_line_item_id)) continue;
         const scope = scopeMap.get(entry.co_line_item_id);
         if (!scope) continue;
         const order = coById.get(entry.co_id);
@@ -474,12 +575,13 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
           desc = `${itemName} – Labor`;
         }
         if (entry.description) desc += ` (${entry.description})`;
-        generated.push({ description: `${coById.get(entry.co_id)?.co_number ?? 'Order'} · ${desc}`, amount: entry.line_total ?? 0, coId: entry.co_id, type: 'labor', entryIds: [entry.id] });
+        generated.push({ description: `${coById.get(entry.co_id)?.co_number ?? 'Order'} · ${desc}`, amount: entry.line_total ?? 0, coId: entry.co_id, type: 'labor', entryIds: [entry.id], itemId: entry.co_line_item_id });
       }
 
       // Materials → line items. Skip when GC procures (supplier bills GC directly).
       for (const mat of materials) {
         if (fixedIds.has(mat.co_id) || alreadyBilled(mat.co_id, mat.id)) continue;
+        if (!selectedItems.has(EXTRAS_KEY(mat.co_id))) continue;
         const order = coById.get(mat.co_id);
         if (invoicingRole === 'FC' && order?.pricing_type === 'tm' && !(['approved', 'contracted'].includes(order.status) && order.approved_at)) continue;
         if (Number(mat.billed_amount ?? 0) <= 0) continue;
@@ -495,6 +597,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       // Equipment → line items. Skip when GC procures.
       for (const eq of equipment) {
         if (fixedIds.has(eq.co_id) || alreadyBilled(eq.co_id, eq.id)) continue;
+        if (!selectedItems.has(EXTRAS_KEY(eq.co_id))) continue;
         const order = coById.get(eq.co_id);
         if (invoicingRole === 'FC' && order?.pricing_type === 'tm' && !(['approved', 'contracted'].includes(order.status) && order.approved_at)) continue;
         if (Number(eq.billed_amount ?? 0) <= 0) continue;
@@ -537,17 +640,17 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         const buckets = new Map<string, GeneratedLineItem>();
         for (const li of generated) {
           const key = `${li.coId}::${li.type}`;
+          if (li.type === 'progress') { buckets.set(`${key}::${li.itemId ?? buckets.size}`, { ...li, entryIds: [] }); continue; }
           const existing = buckets.get(key);
           if (existing) {
+            if (existing.itemId !== li.itemId) existing.itemId = undefined;
             existing.amount += li.amount;
             existing.entryIds.push(...li.entryIds);
-          } else if (li.type === 'progress') {
-            buckets.set(key, { ...li, entryIds: [] });
           } else {
             const co = coById.get(li.coId);
             const label = co?.co_number ?? co?.title ?? 'CO';
             const typeLabel = li.type === 'labor' ? 'Labor' : li.type === 'material' ? 'Materials' : 'Equipment';
-            buckets.set(key, { description: `${label} — ${typeLabel}`, amount: li.amount, coId: li.coId, type: li.type, entryIds: [...li.entryIds] });
+            buckets.set(key, { description: `${label} — ${typeLabel}`, amount: li.amount, coId: li.coId, type: li.type, entryIds: [...li.entryIds], itemId: li.itemId });
           }
         }
         finalItems = Array.from(buckets.values());
@@ -664,7 +767,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         if (isFirstForCO) seenCoIds.add(li.coId);
         const co = approvedCOs.find(c => c.id === li.coId);
         const isProgress = li.type === 'progress' && co;
-        const prev = isProgress ? (billedMap.get(li.coId)?.billed ?? 0) : 0;
+        const prev = isProgress ? (li.itemId ? (li.itemBilled ?? 0) : (billedMap.get(li.coId)?.billed ?? 0)) : 0;
         return {
           invoice_id: invoice.id,
           description: li.description,
@@ -672,7 +775,8 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
           line_notes: (coItemDescs[li.coId] ?? [])
             .filter(it => li.description.includes(it.name))
             .sort((a, b) => b.name.length - a.name.length)[0]?.desc || null,
-          scheduled_value: isProgress && co ? approvedInvoiceValue(co) : li.amount,
+          scheduled_value: isProgress && co ? (li.itemId ? (li.itemValue ?? li.amount) : approvedInvoiceValue(co)) : li.amount,
+          source_line_item_id: li.itemId ?? null,
           previous_billed: prev,
           current_billed: li.amount,
           total_billed: prev + li.amount,
@@ -821,7 +925,54 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
                             );
                           })()}
                           {completedCoIds.has(co.id) && <Badge variant="outline">Completed items available</Badge>}
-                          {selected && isFixedProgress(co) && !completedCoIds.has(co.id) && (() => {
+                          {selected && (billItems[co.id]?.length ?? 0) > 0 && (
+                            <div className="mt-2 space-y-1.5 rounded-lg border bg-background p-2" onClick={e => e.stopPropagation()}>
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-[0.7rem] uppercase tracking-wider font-semibold text-muted-foreground">Items to bill</span>
+                                <button type="button" className="text-xs text-primary hover:underline shrink-0" onClick={() => {
+                                  const keys = [...billItems[co.id].map(i => i.id), EXTRAS_KEY(co.id)];
+                                  const all = keys.every(k => selectedItems.has(k));
+                                  setSelectedItems(prev => { const n = new Set(prev); keys.forEach(k => all ? n.delete(k) : n.add(k)); return n; });
+                                }}>{[...billItems[co.id].map(i => i.id), EXTRAS_KEY(co.id)].every(k => selectedItems.has(k)) ? 'Clear all' : 'Select all'}</button>
+                              </div>
+                              {billItems[co.id].map(item => {
+                                const on = selectedItems.has(item.id);
+                                const perItemPct = isFixedProgress(co) && !legacyCoIds.has(co.id) && !completedCoIds.has(co.id);
+                                const left = Math.max(0, Math.round((item.value - item.billed) * 100) / 100);
+                                const maxPct = item.value > 0 ? Math.round((left / item.value) * 10000) / 100 : 0;
+                                const pct = itemPct[item.id] ?? 0;
+                                return (
+                                  <div key={item.id} className="rounded-md border px-2 py-1.5">
+                                    <label className="flex items-start gap-2 cursor-pointer">
+                                      <Checkbox checked={on} onCheckedChange={() => toggleItem(item.id)} className="mt-0.5 shrink-0" aria-label={`Bill ${item.name}`} />
+                                      <span className="flex-1 min-w-0 text-sm break-words">{item.name}</span>
+                                      {perItemPct && <span className="text-[11px] font-mono text-muted-foreground shrink-0">{fmtCurrency(left)} left</span>}
+                                    </label>
+                                    {on && perItemPct && (
+                                      <div className="mt-1.5 flex flex-wrap items-center gap-2 pl-6">
+                                        <Label htmlFor={`ipct-${item.id}`} className="text-xs">Bill this period</Label>
+                                        <Input id={`ipct-${item.id}`} type="number" min={0} max={maxPct} step={1} value={pct}
+                                          onChange={e => setItemPct(p => ({ ...p, [item.id]: Math.min(maxPct, Math.max(0, Number(e.target.value) || 0)) }))}
+                                          className="w-20 h-8" />
+                                        <span className="text-xs text-muted-foreground">% of {fmtCurrency(item.value)} = <span className="font-mono text-foreground">{fmtCurrency(itemProgressAmount(item.value, pct, item.billed))}</span></span>
+                                        <Textarea aria-label={`What was done on ${item.name} (optional)`} placeholder="What was done this period (optional)"
+                                          value={itemNote[item.id] ?? ''} maxLength={500}
+                                          onChange={e => setItemNote(p => ({ ...p, [item.id]: e.target.value }))}
+                                          className="basis-full min-h-[52px] text-sm" />
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                              {!isFixedProgress(co) && (
+                                <label className="flex items-start gap-2 rounded-md border px-2 py-1.5 cursor-pointer">
+                                  <Checkbox checked={selectedItems.has(EXTRAS_KEY(co.id))} onCheckedChange={() => toggleItem(EXTRAS_KEY(co.id))} className="mt-0.5 shrink-0" aria-label="Bill materials and equipment" />
+                                  <span className="flex-1 text-sm">Materials &amp; equipment</span>
+                                </label>
+                              )}
+                            </div>
+                          )}
+                          {selected && isFixedProgress(co) && !completedCoIds.has(co.id) && (legacyCoIds.has(co.id) || !(billItems[co.id]?.length)) && (() => {
                             const s = summaryFor(co);
                             const value = s.limit;
                             const available = Math.max(0, s.remaining - (billedMap.get(co.id)?.draft ?? 0));

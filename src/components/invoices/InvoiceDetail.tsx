@@ -1055,6 +1055,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate, confirmS
               current_billed: li.current_billed ?? 0,
               billed_percent: li.billed_percent ?? null,
               description: li.description ?? null,
+              source_line_item_id: li.source_line_item_id ?? null,
             })),
           }}
         />

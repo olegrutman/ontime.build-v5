@@ -6,6 +6,7 @@ export interface EditableWoInvoiceLine {
   current_billed: number | null;
   billed_percent: number | null;
   description: string | null;
+  source_line_item_id?: string | null;
 }
 
 export interface EditableWoInvoice {

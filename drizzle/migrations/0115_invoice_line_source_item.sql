@@ -1,0 +1,2 @@
+ALTER TABLE public.invoice_line_items ADD COLUMN IF NOT EXISTS source_line_item_id uuid;
+CREATE INDEX IF NOT EXISTS invoice_line_items_source_line_item_idx ON public.invoice_line_items(source_line_item_id) WHERE source_line_item_id IS NOT NULL;
