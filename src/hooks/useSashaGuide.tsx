@@ -73,6 +73,8 @@ export function SashaGuideProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!activeGuide || !currentStep || isComplete) return;
+    // A route-advancing step already satisfied by the current page must not be redirected away.
+    if (currentStep.advanceOn === 'route' && pathMatches(currentStep.matchPath, location.pathname)) return;
     const destination = currentStep.route?.(currentProjectId);
     if (destination && destination !== location.pathname) navigate(destination);
   }, [activeGuide, currentStep, currentProjectId, isComplete, location.pathname, navigate]);

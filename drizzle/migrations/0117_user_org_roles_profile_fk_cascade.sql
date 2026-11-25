@@ -1,0 +1,2 @@
+ALTER TABLE public.user_org_roles DROP CONSTRAINT user_org_roles_user_id_profiles_fkey;
+ALTER TABLE public.user_org_roles ADD CONSTRAINT user_org_roles_user_id_profiles_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(user_id) ON DELETE CASCADE;
