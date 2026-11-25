@@ -245,9 +245,9 @@ describe('CO intake — pricing_type prompt & persistence', () => {
     await extractScope();
 
     expect(screen.getByText(/Pricing model/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Fixed Price/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Time & Materials/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Not To Exceed/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Fixed Price/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Time & Materials/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Not to Exceed/i })).toBeInTheDocument();
   });
 
   it('defaults to pricing_type = "fixed" when the user does not change it', async () => {
@@ -265,7 +265,7 @@ describe('CO intake — pricing_type prompt & persistence', () => {
     renderPage();
     await extractScope();
 
-    fireEvent.click(screen.getByRole('button', { name: /Time & Materials/i }));
+    fireEvent.click(screen.getByRole('radio', { name: /Time & Materials/i }));
     await clickCreateDraft();
 
     const payload = changeOrderInsertMock.mock.calls[0][0];
@@ -276,7 +276,7 @@ describe('CO intake — pricing_type prompt & persistence', () => {
     renderPage();
     await extractScope();
 
-    fireEvent.click(screen.getByRole('button', { name: /Not To Exceed/i }));
+    fireEvent.click(screen.getByRole('radio', { name: /Not to Exceed/i }));
     await clickCreateDraft();
 
     const payload = changeOrderInsertMock.mock.calls[0][0];

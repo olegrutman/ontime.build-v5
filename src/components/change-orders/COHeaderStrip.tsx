@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cleanTitle } from '@/lib/coTitle';
 import { CODescriptionEditor } from './CODescriptionEditor';
+import { COPricingTypeChange } from './COPricingTypeChange';
 import { coPricingStatusLabel, type COPricingReadiness } from '@/lib/coPricingReadiness';
 import { CO_PRICING_PRESENTATION } from '@/lib/coPricingPresentation';
 
@@ -74,6 +75,7 @@ export function COHeaderStrip({
           )}>
             <PricingIcon className="h-3.5 w-3.5 shrink-0" />{pricingPresentation.label}
           </span>
+          {!isWithdrawn && <COPricingTypeChange co={co} myOrgId={myOrgId} part="button" />}
           <span className={cn(
             'inline-flex max-w-full items-center rounded-md border px-2.5 py-1 text-center text-[0.68rem] font-bold uppercase tracking-wider',
             status === 'approved' || status === 'contracted'
@@ -159,6 +161,8 @@ export function COHeaderStrip({
           )}
         </div>
       </div>
+
+      {!isWithdrawn && <COPricingTypeChange co={co} myOrgId={myOrgId} part="pending" />}
 
       {documentActions}
     </header>

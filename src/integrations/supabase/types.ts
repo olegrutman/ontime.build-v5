@@ -2468,6 +2468,75 @@ export type Database = {
           },
         ]
       }
+      co_pricing_type_requests: {
+        Row: {
+          co_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          from_org_id: string
+          from_type: string
+          id: string
+          nte_cap: number | null
+          project_id: string
+          reason: string | null
+          requested_by: string
+          status: string
+          to_org_id: string
+          to_type: string
+        }
+        Insert: {
+          co_id: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          from_org_id: string
+          from_type: string
+          id?: string
+          nte_cap?: number | null
+          project_id: string
+          reason?: string | null
+          requested_by: string
+          status?: string
+          to_org_id: string
+          to_type: string
+        }
+        Update: {
+          co_id?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          from_org_id?: string
+          from_type?: string
+          id?: string
+          nte_cap?: number | null
+          project_id?: string
+          reason?: string | null
+          requested_by?: string
+          status?: string
+          to_org_id?: string
+          to_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_pricing_type_requests_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_pricing_type_requests_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       co_proposal_items: {
         Row: {
           amount_snapshot: number
@@ -10851,6 +10920,10 @@ export type Database = {
         Args: { _co_id: string; _org_id: string }
         Returns: Json
       }
+      _co_pricing_change_block: {
+        Args: { c: Database["public"]["Tables"]["change_orders"]["Row"] }
+        Returns: string
+      }
       _co_target_contract_id: {
         Args: { _org_a: string; _org_b: string; _project_id: string }
         Returns: string
@@ -11085,6 +11158,15 @@ export type Database = {
       }
       can_view_po_pricing: { Args: { po_id: string }; Returns: boolean }
       catalog_facets: { Args: { p_supplier_id: string }; Returns: Json }
+      change_co_pricing_type: {
+        Args: {
+          _co_id: string
+          _nte_cap?: number
+          _reason?: string
+          _to_type: string
+        }
+        Returns: string
+      }
       change_org_member_role: {
         Args: { p_member_role_id: string; p_new_role: string }
         Returns: undefined
@@ -11189,6 +11271,10 @@ export type Database = {
       }
       decide_co_price_revision: {
         Args: { _approve: boolean; _revision_id: string }
+        Returns: undefined
+      }
+      decide_co_pricing_type_request: {
+        Args: { _approve: boolean; _note?: string; _request_id: string }
         Returns: undefined
       }
       decide_field_item: {

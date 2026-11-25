@@ -52,4 +52,4 @@
 - Field reports: no prices, status via RPCs; others see released items (Sub is the firewall).
 - Correction flags auto-clear once billing matches approval.
 - WO draft invoices edit in place, releasing only their own lines.
-- Approved T&M/NTE orders accrue tickets unflagged; close-out blocks new billable entries.
+- T&M/NTE accrue tickets unflagged; close-out blocks entries. Type changes: change_co_pricing_type RPC.

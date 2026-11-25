@@ -16,10 +16,12 @@ interface StepPricingAndRoutingProps {
   gcName?: string;
 }
 
+import { PRICING_TYPE_GUIDE } from '@/lib/pricingTypeChoice';
+
 const PRICING_OPTIONS: { type: COPricingType; tag: string; name: string; desc: string; isDefault?: boolean }[] = [
-  { type: 'fixed', tag: 'Recommended', name: 'Fixed Price', desc: 'One number, signed off upfront.', isDefault: true },
-  { type: 'tm', tag: 'Track Actuals', name: 'Time & Materials', desc: 'Bill hourly rates + materials.' },
-  { type: 'nte', tag: 'With Ceiling', name: 'Not To Exceed', desc: 'T&M up to a ceiling number.' },
+  { type: 'fixed', tag: 'Recommended', name: 'Fixed Price', desc: `${PRICING_TYPE_GUIDE.fixed.what} ${PRICING_TYPE_GUIDE.fixed.bestFor}`, isDefault: true },
+  { type: 'tm', tag: 'Track Actuals', name: 'Time & Materials', desc: `${PRICING_TYPE_GUIDE.tm.what} ${PRICING_TYPE_GUIDE.tm.bestFor}` },
+  { type: 'nte', tag: 'With Ceiling', name: 'Not To Exceed', desc: `${PRICING_TYPE_GUIDE.nte.what} ${PRICING_TYPE_GUIDE.nte.bestFor}` },
 ];
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
