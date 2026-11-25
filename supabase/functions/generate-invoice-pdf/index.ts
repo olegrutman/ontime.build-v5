@@ -69,6 +69,7 @@ Deno.serve(async (req) => {
     const invoiceId = typeof body.invoice_id === 'string' ? body.invoice_id : '';
     const submitting = body.submitting === true;
     const showFullScope = body.show_full_scope === true;
+    const exportOnly = body.export_only === true;
     if (!invoiceId) return json({ error: 'invoice_id required' }, 400);
 
     const asUser = createClient(SUPABASE_URL, SERVICE_KEY, {
@@ -364,7 +365,7 @@ Deno.serve(async (req) => {
       .createSignedUrl(path, LINK_TTL_SECONDS, { download: `${invoice.invoice_number ?? 'invoice'}.pdf` });
     if (signError || !signed?.signedUrl) throw signError ?? new Error('Could not create download link');
 
-    await svc.from('invoices').update({
+    if (!exportOnly) await svc.from('invoices').update({
       invoice_pdf_url: signed.signedUrl,
       invoice_pdf_generated_at: new Date().toISOString(),
     }).eq('id', invoiceId);

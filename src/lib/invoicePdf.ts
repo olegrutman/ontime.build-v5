@@ -36,3 +36,14 @@ export async function clearInvoicePdf(invoiceId: string) {
     .update({ invoice_pdf_url: null, invoice_pdf_generated_at: null })
     .eq('id', invoiceId);
 }
+
+/** Builds the same PDF for viewing, matching the on-screen full-scope choice, without changing the invoice's attached link. */
+export async function exportInvoicePdf(invoiceId: string, showFullScope: boolean): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('generate-invoice-pdf', {
+    body: { invoice_id: invoiceId, show_full_scope: showFullScope, export_only: true },
+  });
+  if (error) throw error;
+  const url = (data as { url?: string })?.url;
+  if (!url) throw new Error('Could not build the PDF');
+  return url;
+}

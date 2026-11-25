@@ -35,6 +35,7 @@ import {
   clearInvoicePdf,
   getAttachPdfPreference,
   setAttachPdfPreference,
+  exportInvoicePdf,
 } from '@/lib/invoicePdf';
 import { getInvoiceLineScopeText, hasInvoiceLineScopeText } from '@/lib/invoiceLineScope';
 
@@ -504,24 +505,13 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate, confirmS
             disabled={exportLoading}
             onClick={async () => {
               setExportLoading(true);
+              const pdfWindow = window.open('', '_blank');
               try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (!session?.access_token) {
-                  toast.error('Please log in to export');
-                  return;
-                }
-                const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invoice-download?invoice_id=${invoiceId}`;
-                const res = await fetch(url, {
-                  headers: { Authorization: `Bearer ${session.access_token}` },
-                });
-                if (!res.ok) {
-                  const err = await res.json().catch(() => ({ error: 'Export failed' }));
-                  throw new Error(err.error || `Export failed (${res.status})`);
-                }
-                const html = await res.text();
-                const blob = new Blob([html], { type: 'text/html' });
-                window.open(URL.createObjectURL(blob), '_blank');
+                const pdfUrl = await exportInvoicePdf(invoiceId, showFullNotes);
+                if (pdfWindow) pdfWindow.location.href = pdfUrl;
+                else window.location.assign(pdfUrl);
               } catch (err: any) {
+                pdfWindow?.close();
                 toast.error(err.message || 'Failed to export invoice');
               } finally {
                 setExportLoading(false);
