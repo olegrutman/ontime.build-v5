@@ -1046,6 +1046,8 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate, confirmS
             id: invoice.id,
             invoiceNumber: invoice.invoice_number,
             contractId: invoice.contract_id ?? null,
+            periodStart: invoice.billing_period_start ?? null,
+            periodEnd: invoice.billing_period_end ?? null,
             retainagePercent: Number((lineItems[0] as any)?.retainage_percent ?? 0),
             lines: lineItems.map((li: any) => ({
               source_co_id: li.source_co_id ?? null,

@@ -13,6 +13,8 @@ export interface EditableWoInvoice {
   invoiceNumber: string;
   contractId: string | null;
   retainagePercent: number;
+  periodStart?: string | null;
+  periodEnd?: string | null;
   lines: EditableWoInvoiceLine[];
 }
 

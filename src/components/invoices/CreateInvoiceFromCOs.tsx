@@ -26,6 +26,8 @@ import { untaggedProgressAmount } from '@/lib/coInvoiceRows';
 import { canBillCrewLaborEntry, canCrewBillOrder } from '@/lib/crewHourReview';
 import { releaseEditedInvoice, type EditableWoInvoice } from '@/lib/woInvoiceEdit';
 import { splitWorkDone } from './InvoiceLineDescription';
+import { BillingPeriodPicker, validateBillingPeriod } from './BillingPeriodPicker';
+import { format } from 'date-fns';
 
 
 interface CreateInvoiceFromCOsProps {
@@ -110,6 +112,11 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
   const [loadVersion, setLoadVersion] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [retainagePercent, setRetainagePercent] = useState(0);
+  const [periodStart, setPeriodStart] = useState<Date | undefined>(undefined);
+  const [periodEnd, setPeriodEnd] = useState<Date | undefined>(undefined);
+  const [periodConfirmed, setPeriodConfirmed] = useState(false);
+  const [showPeriodWarning, setShowPeriodWarning] = useState(false);
+  const periodError = validateBillingPeriod(periodStart, periodEnd, periodConfirmed);
   const [invoiceMode, setInvoiceMode] = useState<'per_co' | 'aggregate'>('per_co');
   const [eligibleContracts, setEligibleContracts] = useState<EligibleContract[]>([]);
   const [selectedContractId, setSelectedContractId] = useState<string>('');
@@ -125,6 +132,11 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
     if (!open || !projectId || !currentOrgId) return;
     setStep('select');
     setSelectedIds(new Set());
+    const parseDay = (d?: string | null) => (d ? new Date(`${d}T00:00:00`) : undefined);
+    setPeriodStart(parseDay(editInvoice?.periodStart));
+    setPeriodEnd(parseDay(editInvoice?.periodEnd));
+    setPeriodConfirmed(!!(editInvoice?.periodStart && editInvoice?.periodEnd));
+    setShowPeriodWarning(false);
     setPercentById({});
     setLineItems([]);
 
@@ -556,11 +568,17 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
 
   async function handleSubmit() {
     if (!user || !currentOrgId) return;
+    if (periodError) {
+      setShowPeriodWarning(true);
+      toast.error(periodError);
+      return;
+    }
     setSubmitting(true);
     try {
       const coIds = Array.from(selectedIds);
       const now = new Date().toISOString();
-      const today = new Date().toISOString().slice(0, 10);
+      const startDay = format(periodStart!, 'yyyy-MM-dd');
+      const endDay = format(periodEnd!, 'yyyy-MM-dd');
 
       // The upstream contract this org bills on (TC → GC, FC → TC). When several
       // eligible contracts exist (duplicates), the user must pick one — never guess.
@@ -584,7 +602,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       if (editInvoice) {
         const { data: updated, error: updErr } = await supabase
           .from('invoices')
-          .update({ contract_id: contractId, co_ids: coIds, subtotal, retainage_amount: retainageAmount, total_amount: total })
+          .update({ contract_id: contractId, co_ids: coIds, billing_period_start: startDay, billing_period_end: endDay, subtotal, retainage_amount: retainageAmount, total_amount: total })
           .eq('id', editInvoice.id)
           .eq('status', 'DRAFT')
           .select('id')
@@ -616,8 +634,8 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
             co_ids: coIds,
             invoice_number: invoiceNumber,
   
-            billing_period_start: today,
-            billing_period_end: today,
+            billing_period_start: startDay,
+            billing_period_end: endDay,
             status: 'DRAFT',
             subtotal,
             retainage_amount: retainageAmount,
@@ -926,6 +944,30 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
                 </div>
 
                 <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm">Billing period</Label>
+                    {!periodConfirmed && (
+                      <span className="text-[10px] uppercase tracking-wide text-destructive">Required</span>
+                    )}
+                  </div>
+                  <BillingPeriodPicker
+                    periodStart={periodStart}
+                    periodEnd={periodEnd}
+                    confirmed={periodConfirmed}
+                    showRequiredWarning={showPeriodWarning}
+                    onChange={(st, en, confirmed) => {
+                      setPeriodStart(st);
+                      setPeriodEnd(en);
+                      setPeriodConfirmed(confirmed && Boolean(st && en));
+                      if (confirmed) setShowPeriodWarning(false);
+                    }}
+                  />
+                  {periodError && periodConfirmed && (
+                    <p className="text-xs text-destructive">{periodError}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
                   <div className="flex items-center gap-3">
                     <Label htmlFor="retainage" className="text-sm whitespace-nowrap">Retainage %</Label>
                     <Input
@@ -963,11 +1005,11 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button
                 onClick={handleSubmit}
-                disabled={submitting || lineItems.length === 0 || !selectedContractId}
+                disabled={submitting || lineItems.length === 0 || !selectedContractId || (!!periodError && periodConfirmed)}
                 className="gap-1.5"
               >
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                Create Invoice
+                {editInvoice ? 'Save changes' : 'Create Invoice'}
               </Button>
             </div>
           </div>
