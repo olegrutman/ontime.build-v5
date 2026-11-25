@@ -145,6 +145,8 @@
 
 - [x] Redesign the expanded scope-item card as two labeled ledgers (locked crew work with plain-language math, editable billing) per approved Design A
 - [x] Verify the expanded card live on WO-5 at desktop and 320/390px (no overflow; temporary design preview removed)
+- [x] Tested the Field Report lifecycle before fixes: draft deletion works at the database boundary but has no screen action; submission, AI sorting, photos, release/hold and typed view passed. Confirmed all report/review alerts incorrectly open Daily Log, no automatic unsubmitted-draft reminder exists, and File/Send/Submit wording differs across the shared model, editor and Sasha tours.
+- [x] Chose Submit for the review handoff and Start for creating a draft; mapped the shared overview/dashboard prompts, draft editor, toasts, notifications and Sasha wording for the proposed fix.
 - [x] Let the GC add or edit the owner price from the Overview at any time, with an "Add owner price" prompt when unset; one shared resolver reads it and one write sets both price columns
 - [x] Verify owner-price save, reload readback, missing-row creation, zero rejection and dashboard totals (6 tests; live GC_Test overview and dashboard; 70 phone views clear)
 - [x] Audit every CO/WO detail and item-pricing figure for duplicates, hierarchy and mismatches; propose one simplified design for approval before building. Live order, item dialogs, source records and role-specific formulas reviewed; two mockups presented.
