@@ -5,6 +5,7 @@ import type { ChangeOrder, COFinancials } from '@/types/changeOrder';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import type { RoleLabels } from '@/hooks/useRoleLabels';
 import type { COPricingReadiness } from '@/lib/coPricingReadiness';
+import { tmOrderPhase } from '@/lib/tmLifecycle';
 
 interface CONextActionBannerProps {
   co: ChangeOrder;
@@ -47,6 +48,35 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
     ? (financials.viewer?.totalToUpstream ?? financials.billableGrandTotal)
     : financials.billableGrandTotal;
 
+
+  const tmPhase = tmOrderPhase(co);
+  if (tmPhase === 'collecting') {
+    const capNote = co.pricing_type === 'nte' && co.nte_cap ? ` of ${fmtCurrency(co.nte_cap)} ceiling` : '';
+    return isGC
+      ? {
+          icon: <Clock className="h-5 w-5" />,
+          title: 'Open — collecting time',
+          subtitle: `Rates are authorized. Running total ${fmtCurrency(priceToUpstream)}${capNote}. New tickets and invoices will keep arriving until the work is closed out.`,
+          actions: [],
+        }
+      : {
+          icon: <Clock className="h-5 w-5" />,
+          title: 'Open — collecting time',
+          subtitle: `Log hours, materials and equipment each day. Bill approved tickets any time. Running total ${fmtCurrency(priceToUpstream)}${capNote}. Close out the order when the work is done.`,
+          actions: [
+            { label: 'Log today\'s time', action: 'log_hours', primary: true },
+            { label: 'Add Materials', action: 'scroll_materials' },
+          ],
+        };
+  }
+  if (tmPhase === 'closed' && (status === 'approved' || status === 'contracted')) {
+    return {
+      icon: <Lock className="h-5 w-5" />,
+      title: `Closed out — final total ${fmtCurrency(priceToUpstream)}`,
+      subtitle: 'No more billable hours, materials or equipment can be added. Bill any remaining approved tickets.',
+      actions: [],
+    };
+  }
 
   if (isGC) {
     if (status === 'submitted') {

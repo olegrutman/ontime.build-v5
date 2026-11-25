@@ -590,6 +590,7 @@ export function COStatusActions({
   }
 
   async function doMarkCompleted() {
+    if (co.pricing_type !== 'fixed' && !window.confirm('Close out this order? After closing, nobody can add more hours, materials or equipment. Make sure every approved ticket is billed or removed first.')) return;
     setActing(true);
     try {
       await updateCO.mutateAsync({

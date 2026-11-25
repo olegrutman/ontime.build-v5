@@ -52,3 +52,4 @@
 - Field reports: no prices, status via RPCs; others see released items (Sub is the firewall).
 - Correction flags auto-clear when billing matches the approved snapshot.
 - WO draft invoices edit in place via the WO builder, releasing only their own lines.
+- T&M/NTE orders stay open for dated tickets after rate approval (no correction flags); close-out (completed_at) blocks new billable entries via block_closed_tm_entries, because T&M accrues continuously until closed.
