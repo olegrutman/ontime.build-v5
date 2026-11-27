@@ -63,3 +63,32 @@ export async function fetchWoBilledToDate(
   }
   return out;
 }
+
+/** Item reservations use the same issuer-contract scope and status rules as WO totals. */
+export async function fetchWoItemBilledToDate(
+  projectId: string,
+  orgId: string,
+  coIds: string[],
+  editingInvoiceId?: string,
+): Promise<{ itemBilled: Map<string, number>; taggedByCo: Map<string, number> }> {
+  const itemBilled = new Map<string, number>();
+  const taggedByCo = new Map<string, number>();
+  if (coIds.length === 0) return { itemBilled, taggedByCo };
+
+  const { data, error } = await supabase.from('invoice_line_items')
+    .select('source_co_id, source_line_item_id, current_billed, description, invoice_id, invoices!inner(status, project_id, project_contracts!inner(from_org_id))')
+    .in('source_co_id', coIds)
+    .eq('invoices.project_id', projectId)
+    .eq('invoices.project_contracts.from_org_id', orgId);
+  if (error) throw error;
+
+  for (const line of data ?? []) {
+    if (line.invoice_id === editingInvoiceId || !line.source_line_item_id || !line.source_co_id) continue;
+    const info: WoBilledInfo = { billed: 0, draft: 0, entryIds: new Set(), legacyFullyBilled: false };
+    applyWoInvoiceLine(info, line.invoices.status, line);
+    const reserved = info.billed + info.draft;
+    itemBilled.set(line.source_line_item_id, (itemBilled.get(line.source_line_item_id) ?? 0) + reserved);
+    taggedByCo.set(line.source_co_id, (taggedByCo.get(line.source_co_id) ?? 0) + reserved);
+  }
+  return { itemBilled, taggedByCo };
+}

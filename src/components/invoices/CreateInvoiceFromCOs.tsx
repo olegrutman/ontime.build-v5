@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 import { CO_REASON_LABELS } from '@/types/changeOrder';
 import type { COReasonCode, COLaborEntry, COMaterialItem, COEquipmentItem, COLineItem } from '@/types/changeOrder';
 import { buildInvoiceNumber } from '@/lib/invoiceNumber';
-import { fetchWoBilledToDate, type WoBilledInfo } from '@/lib/woProgressBillingData';
+import { fetchWoBilledToDate, fetchWoItemBilledToDate, type WoBilledInfo } from '@/lib/woProgressBillingData';
 import { woBillingSummary, fixedProgressAmount, hasBillableBalance } from '@/lib/woProgressBilling';
 import { completedItemClaims, isCompletedBillableItem } from '@/lib/coItemCompletion';
 import { untaggedProgressAmount } from '@/lib/coInvoiceRows';
@@ -231,24 +231,15 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         const fIds = filtered.map(c => c.id);
         let itemsQ = supabase.from(t.line).select('id, co_id, item_name, approval_status, sort_order').in('co_id', fIds).order('sort_order');
         itemsQ = invoicingRole === 'FC' ? itemsQ.neq('approval_status', 'rejected') : itemsQ.eq('approval_status', 'approved');
-        const [itemsRes, weightRes, itemBilledRes] = await Promise.all([
+        const [itemsRes, weightRes, { itemBilled, taggedByCo }] = await Promise.all([
           fIds.length ? itemsQ : Promise.resolve({ data: [], error: null } as any),
           fIds.length ? supabase.from(t.labor).select('co_line_item_id, line_total').in('co_id', fIds).eq('org_id', currentOrgId).eq('is_actual_cost', false) : Promise.resolve({ data: [], error: null } as any),
-          fIds.length ? supabase.from('invoice_line_items').select('source_co_id, source_line_item_id, current_billed, invoice_id, invoices!inner(status)').in('source_co_id', fIds).neq('invoices.status', 'REJECTED') : Promise.resolve({ data: [], error: null } as any),
+          fetchWoItemBilledToDate(projectId, currentOrgId, fIds, editInvoice?.id),
         ]);
         if (itemsRes.error) throw itemsRes.error;
         if (weightRes.error) throw weightRes.error;
-        if (itemBilledRes.error) throw itemBilledRes.error;
         const weight = new Map<string, number>();
         for (const w of (weightRes.data ?? []) as any[]) if (w.co_line_item_id) weight.set(w.co_line_item_id, (weight.get(w.co_line_item_id) ?? 0) + Number(w.line_total ?? 0));
-        const itemBilled = new Map<string, number>();
-        const taggedByCo = new Map<string, number>();
-        for (const l of (itemBilledRes.data ?? []) as any[]) {
-          if (editInvoice && l.invoice_id === editInvoice.id) continue;
-          if (!l.source_line_item_id) continue;
-          itemBilled.set(l.source_line_item_id, (itemBilled.get(l.source_line_item_id) ?? 0) + Number(l.current_billed ?? 0));
-          taggedByCo.set(l.source_co_id, (taggedByCo.get(l.source_co_id) ?? 0) + Number(l.current_billed ?? 0));
-        }
         const itemsByCoMap: Record<string, BillItem[]> = {};
         for (const co of filtered) {
           const rows = ((itemsRes.data ?? []) as any[]).filter(r => r.co_id === co.id);
