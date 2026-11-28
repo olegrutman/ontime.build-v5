@@ -816,7 +816,8 @@ export function COStatusActions({
   const hasAnyAction = canShare || canSendToWIP || canCloseForPricing || canSubmit || canSubmitFCPricing || canRecall || canApprove || canReject || crewPending || crewApproved || ownInternalEligible || ownInternalApproved || canMarkCompleted || canAcknowledge || canWithdraw || canDelete;
 
   if (!hasAnyAction) {
-    if (isApproved) {
+    // A crew on someone else's order is not party to the upstream approval.
+    if (isApproved && !(isFC && isAnyCollaborator && co.org_id !== currentOrgId)) {
       return (
         <div className="co-light-shell px-4 py-3 flex items-center gap-2">
           <Check className="h-4 w-4 co-light-success-text" />

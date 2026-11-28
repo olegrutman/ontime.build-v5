@@ -36,7 +36,8 @@ export function CORow({ co, onClick, needsAction = false, selectable = false, is
   const status = co.status as COStatus;
   // Viewer-scoped amount only — never fall back to the upstream submitted price.
   const amount = (co as { display_total?: number }).display_total ?? 0;
-  const isApproved = status === 'approved' || status === 'contracted';
+  const crewOnly = !!co.collaboratorStatus && !!co.collaboratorOrgId && co.collaboratorOrgId !== co.org_id;
+  const isApproved = !crewOnly && (status === 'approved' || status === 'contracted');
   const isClosed = status === 'withdrawn' || status === 'rejected';
   const days = differenceInDays(new Date(), new Date(co.created_at));
   const stale = !isApproved && !isClosed && days > 14;
@@ -109,7 +110,9 @@ export function CORow({ co, onClick, needsAction = false, selectable = false, is
 
       {/* Approval trail */}
       <div className="md:col-span-3">
-        <COApprovalTrail status={status} pricingReadiness={co.pricing_readiness} keptInternal={co.kept_internal} />
+        <COApprovalTrail status={status} pricingReadiness={co.pricing_readiness} keptInternal={co.kept_internal}
+          crewHandoff={co.collaboratorStatus && co.collaboratorOrgId && co.collaboratorOrgId !== co.org_id
+            ? (co.collaboratorStatus === 'completed' ? 'sent' : 'not_sent') : undefined} />
       </div>
 
       {/* Amount */}

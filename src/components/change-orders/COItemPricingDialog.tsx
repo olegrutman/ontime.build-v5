@@ -1,3 +1,4 @@
+import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Check, CheckCircle, Info, Lock, Loader2, MapPin, Pencil, Plus, Trash2, Users, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -180,6 +181,8 @@ function EntryRow({
 }
 
 interface COItemPricingDialogProps {
+  /** Agreement-scoped status tags from the item row. */
+  agreementTags?: React.ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   openFormOnOpen?: boolean;
@@ -217,6 +220,7 @@ export function COItemPricingDialog({
   openFormOnOpen = false,
   item,
   laborEntries,
+  agreementTags,
   coId,
   orgId,
   pricingType,
@@ -439,14 +443,7 @@ export function COItemPricingDialog({
         <DialogHeader className="shrink-0 border-b border-border bg-card px-5 py-4 pr-12 text-left">
           <div className="flex items-start justify-between gap-3">
             <DialogTitle className="min-w-0 font-heading text-2xl text-foreground">{item.item_name}</DialogTitle>
-            <span className={cn(
-              'mt-1 inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold',
-              item.approval_status === 'approved' && 'bg-state-approved-bg text-state-approved-foreground',
-              item.approval_status === 'rejected' && 'bg-destructive/10 text-destructive',
-              item.approval_status === 'pending' && 'bg-muted text-muted-foreground',
-            )}>
-              {item.approval_status === 'approved' ? 'Approved' : item.approval_status === 'rejected' ? 'Rejected' : 'Pending review'}
-            </span>
+            <span className="mt-1 shrink-0">{agreementTags}</span>
           </div>
           <DialogDescription className="whitespace-pre-line break-words text-sm text-muted-foreground">
             {cleanDescription || 'Review scope, pricing and private costs for this item.'}

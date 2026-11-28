@@ -42,6 +42,8 @@ interface ReviewBarProps {
   /** The reviewing company may decide this order. */
   canReview: boolean;
   onRefresh: () => void;
+  /** Names the agreement when the viewer is party to more than one. */
+  title?: string;
 }
 
 /** One review per agreement: row choices are provisional until "Confirm decisions". */
@@ -50,7 +52,7 @@ export function requestSubmitReview(coId: string, decision: 'approve' | 'reject'
   window.dispatchEvent(new CustomEvent(CO_SUBMIT_REVIEW_EVENT, { detail: { coId, decision } }));
 }
 
-export function COLineReviewBar({ coId, items, canReview, onRefresh }: ReviewBarProps) {
+export function COLineReviewBar({ coId, items, canReview, onRefresh, title }: ReviewBarProps) {
   const [saving, setSaving] = useState(false);
   const summary = summarizeLineReview(items);
   const multi = items.length > 1;
@@ -73,7 +75,7 @@ export function COLineReviewBar({ coId, items, canReview, onRefresh }: ReviewBar
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-muted/20 px-3 py-3 sm:px-5">
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold text-foreground">Review</p>
+        <p className="text-xs font-semibold text-foreground">{title ?? 'Review'}</p>
         <p className="mt-0.5 break-words text-[11px] text-muted-foreground">
           {!multi
             ? canReview ? 'Accept or reject this order in one review.' : 'Awaiting review'

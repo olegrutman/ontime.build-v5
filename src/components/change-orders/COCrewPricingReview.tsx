@@ -27,6 +27,14 @@ export function COCrewPricingReview({ crewName, lineItems, laborEntries, submitt
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   if (pending.length === 0) return null;
+  if (!submitted) {
+    const saved = pending.reduce((sum, e) => sum + Number(e.line_total ?? 0), 0);
+    return (
+      <div className="rounded-xl border border-dashed border-border bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground break-words sm:px-4">
+        <span className="font-semibold text-foreground">{crewName} is still pricing</span> · {money(saved)} saved, not sent yet. You can review it once they send it to you.
+      </div>
+    );
+  }
 
   const decided = pending.filter(e => choices[e.id]).length;
   const total = pending.reduce((s, e) => s + Number(e.line_total ?? 0), 0);
@@ -65,7 +73,7 @@ export function COCrewPricingReview({ crewName, lineItems, laborEntries, submitt
         <div className="w-full min-w-0 sm:w-auto sm:flex-1">
           <p className="text-sm font-semibold text-foreground break-words">Review {crewName} pricing</p>
           <p className="mt-0.5 break-words text-[11px] text-muted-foreground">
-            {submitted ? 'Pricing sent' : 'Priced'} · {pending.length} entr{pending.length === 1 ? 'y' : 'ies'} · {money(total)} · {decided} decided. Nothing is saved until you confirm your decisions.
+            Pricing sent · {pending.length} entr{pending.length === 1 ? 'y' : 'ies'} · {money(total)} · {decided} decided. Nothing is saved until you confirm your decisions.
           </p>
         </div>
         <Button type="button" size="sm" variant="outline" className="h-8 shrink-0 gap-1.5 text-xs" disabled={saving}

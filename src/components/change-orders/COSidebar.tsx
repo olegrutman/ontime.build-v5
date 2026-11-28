@@ -75,7 +75,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
               recipientName={showCrewCard ? (routing?.targets[0]?.name ?? rl.TC) : undefined}
               coStatus={co.status}
               crewTotal={financials.fcLaborTotal}
-              billedUpstream={financials.tcBillableToGC}
+              billedUpstream={showCrewCard ? 0 : financials.tcBillableToGC}
               options={fcOrgOptions}
               collaborators={showCrewCard ? collaborators.filter(c => c.organization_id === props.myOrgId) : collaborators}
               acting={!!(requestFCInput.isPending || completeFCInput.isPending)}

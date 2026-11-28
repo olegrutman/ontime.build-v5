@@ -51,7 +51,8 @@ export function FCInputRequestCard({
   onComplete,
 }: FCInputRequestCardProps) {
   const afterSubmission = ['submitted', 'approved', 'contracted'].includes(coStatus ?? '');
-  const overBilled = crewTotal > 0 && billedUpstream > 0 && crewTotal > billedUpstream + 0.005;
+  // Margin warning is private to the hiring company; the crew never sees its price.
+  const overBilled = !recipientName && crewTotal > 0 && billedUpstream > 0 && crewTotal > billedUpstream + 0.005;
   const rl = useRoleLabelsContext();
   const [selectedOrgId, setSelectedOrgId] = useState<string>('');
 
@@ -104,7 +105,7 @@ export function FCInputRequestCard({
 
       {overBilled && (
         <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive break-words">
-          {rl.FC} price ({fmt(crewTotal)}) exceeds your billed amount ({fmt(billedUpstream)}).
+          Your {rl.FC.toLowerCase()} cost ({fmt(crewTotal)}) is higher than your approved price ({fmt(billedUpstream)}).
         </div>
       )}
 

@@ -9,6 +9,8 @@ import { COItemPricingDialog } from './COItemPricingDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronDown, CheckCircle, MapPin, Lock, DollarSign, Trash2, Pencil, Loader2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { COAgreementTags } from './COAgreementTags';
+import { crewItemStatus, type AgreementView } from '@/lib/agreementStatus';
 import { fmtHours } from '@/lib/crewWorkload';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -57,6 +59,12 @@ interface COLineItemRowProps {
   entryRequestToken?: number;
   /** Uses the same protected edit window as the legacy order-wide pricing switch. */
   canChangeLaborPricingMethod?: boolean;
+  /** Which agreement(s) this viewer is party to; tags never show another agreement as the viewer's own. */
+  agreementView?: AgreementView;
+  /** Fixed-price crew pricing becomes reviewable only after the crew sends it. */
+  crewPricingSent?: boolean;
+  crewName?: string;
+  upstreamName?: string;
 }
 
 
@@ -89,8 +97,13 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   canReview = false,
   entryRequestToken,
   canChangeLaborPricingMethod = false,
+  agreementView = 'upstream', crewPricingSent = true, crewName, upstreamName,
 }, ref) {
   const rl = useRoleLabelsContext();
+  const crewStatus = crewItemStatus(laborEntries, crewPricingSent);
+  const agreementTags = (cls?: string) => (
+    <COAgreementTags item={item} view={agreementView} crewStatus={crewStatus} crewName={crewName} upstreamName={upstreamName} className={cls} />
+  );
 
   // Resolve effective pricing type: line-item override wins, else CO default
   const pricingType: COPricingType = (item.pricing_type as COPricingType) ?? coPricingType;
@@ -488,14 +501,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 ) : (
                   <span className="text-muted-foreground">Not priced</span>
                 )}
-                <span className={cn(
-                  'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                  item.approval_status === 'approved' && 'bg-state-approved-bg text-state-approved-foreground',
-                  item.approval_status === 'rejected' && 'bg-destructive/10 text-destructive',
-                  item.approval_status === 'pending' && 'bg-muted text-muted-foreground',
-                )}>
-                  {item.approval_status === 'approved' ? 'Approved' : item.approval_status === 'rejected' ? 'Rejected' : 'Pending review'}
-                </span>
+                {agreementTags()}
               </div>
             </div>
           </div>
@@ -573,14 +579,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
 
           <div className="hidden justify-end md:flex">
-            <span className={cn(
-              'inline-flex items-center rounded-full px-2 py-1 text-[10px] font-semibold',
-              item.approval_status === 'approved' && 'bg-state-approved-bg text-state-approved-foreground',
-              item.approval_status === 'rejected' && 'bg-destructive/10 text-destructive',
-              item.approval_status === 'pending' && 'bg-muted text-muted-foreground',
-            )}>
-              {item.approval_status === 'approved' ? 'Approved' : item.approval_status === 'rejected' ? 'Rejected' : 'Pending'}
-            </span>
+            {agreementTags('flex-col items-end')}
           </div>
 
             <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
@@ -745,6 +744,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
         openFormOnOpen={formOpen}
         item={item}
         laborEntries={laborEntries}
+        agreementTags={agreementTags()}
         coId={coId}
         orgId={orgId}
         pricingType={pricingType}

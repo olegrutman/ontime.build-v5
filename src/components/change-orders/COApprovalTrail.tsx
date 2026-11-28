@@ -43,11 +43,14 @@ interface COApprovalTrailProps {
   className?: string;
   /** hide the caption line */
   compact?: boolean;
+  /** Crew view: show its own agreement with the hiring company instead of the upstream status. */
+  crewHandoff?: 'not_sent' | 'sent';
 }
 
-export function COApprovalTrail({ status, pricingReadiness, keptInternal, className, compact = false }: COApprovalTrailProps) {
-  const reached = STAGE_INDEX[status] ?? -1;
-  const pending = PENDING.includes(status);
+export function COApprovalTrail({ status, pricingReadiness, keptInternal, className, compact = false, crewHandoff }: COApprovalTrailProps) {
+  const crewOpen = !!crewHandoff && !['withdrawn', 'rejected'].includes(status);
+  const reached = crewOpen ? (crewHandoff === 'sent' ? 2 : 1) : (STAGE_INDEX[status] ?? -1);
+  const pending = crewOpen ? true : PENDING.includes(status);
   const closed = status === 'rejected' || status === 'withdrawn';
 
   return (
@@ -74,7 +77,7 @@ export function COApprovalTrail({ status, pricingReadiness, keptInternal, classN
         <p
           className={cn(
             'mt-1 text-[0.6rem] font-semibold uppercase tracking-wider break-words',
-            status === 'approved' || status === 'contracted'
+            !crewOpen && (status === 'approved' || status === 'contracted')
               ? 'text-state-approved'
               : status === 'rejected'
                 ? 'text-destructive'
@@ -83,7 +86,9 @@ export function COApprovalTrail({ status, pricingReadiness, keptInternal, classN
                   : 'text-muted-foreground',
           )}
         >
-          {coPricingStatusLabel(status, pricingReadiness, keptInternal) ?? coTrailLabel(status)}
+          {crewOpen
+            ? (crewHandoff === 'sent' ? 'Your pricing sent' : 'Your pricing · not sent')
+            : coPricingStatusLabel(status, pricingReadiness, keptInternal) ?? coTrailLabel(status)}
         </p>
       )}
     </div>

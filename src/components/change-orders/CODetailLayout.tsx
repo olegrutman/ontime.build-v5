@@ -44,6 +44,7 @@ import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { COStatusActions } from './COStatusActions';
 import { COLineItemRow } from './COLineItemRow';
 import { COLineReviewBar } from './COLineReview';
+import { crewPricingSent, type AgreementView } from '@/lib/agreementStatus';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COMaterialResponsibilityToggle } from './COMaterialResponsibilityToggle';
@@ -525,6 +526,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const canReviewOrder = isGC && canApprove && status === 'submitted'
     && (co.org_id === myOrgId || co.assigned_to_org_id === myOrgId);
   const canReviewLineItems = canReviewOrder && lineItems.length > 1;
+  // Each company sees only the agreements it is party to.
+  const isCrewCollaborator = !!co && isFC && co.org_id !== myOrgId && collaborators.some(c => c.organization_id === myOrgId);
+  const hasCrewAgreement = isTC && collaborators.length > 0;
+  const agreementView: AgreementView = isCrewCollaborator ? 'crew' : hasCrewAgreement ? 'both' : 'upstream';
+  const crewSent = crewPricingSent(co?.pricing_type, collaborators);
   const hasRejectedLineItems = lineItems.some(item => item.approval_status === 'rejected');
   const rfiBlocked = !!(co as any).blocked_by_rfi_id;
   const displayTitle = co.title ?? co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order');
@@ -888,12 +894,15 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                         crewName={fcCollabName || rl.FC}
                         lineItems={lineItems}
                         laborEntries={laborEntries}
-                        submitted={collaborators.some(c => c.status === 'completed')}
+                        submitted={crewSent}
                         onRefresh={refreshDetail}
                       />
                     </div>
                   )}
-                  <COLineReviewBar coId={co.id} items={lineItems} canReview={canReviewOrder} onRefresh={refreshDetail} />
+                  {!isCrewCollaborator && (
+                    <COLineReviewBar coId={co.id} items={lineItems} canReview={canReviewOrder} onRefresh={refreshDetail}
+                      title={hasCrewAgreement ? `Review with ${rl.GC}` : undefined} />
+                  )}
                   {lineItems.length > 0 && (
                     <div className="hidden px-4 py-2 text-[10px] font-bold uppercase tracking-[1.2px] text-muted-foreground md:grid md:grid-cols-[2rem_minmax(0,1fr)_7rem_8rem_7rem_5rem] md:items-center md:gap-3">
                       <span>#</span>
@@ -934,6 +943,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                           coStatus={co.status}
                           canReview={canReviewLineItems}
                           canChangeLaborPricingMethod={isTC && canChangeCrewPricingBase(co, myOrgId)}
+                          agreementView={agreementView}
+                          crewPricingSent={crewSent}
+                          crewName={fcCollabName || rl.FC}
+                          upstreamName={rl.GC}
                         />
                       </div>
                     ))}</div>
