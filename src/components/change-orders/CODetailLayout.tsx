@@ -287,6 +287,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     queryClient.invalidateQueries({ queryKey: ['co-corrections', projectId] });
     queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
     queryClient.invalidateQueries({ queryKey: ['co-financials-v2', coId] });
+    queryClient.invalidateQueries({ queryKey: ['co-review-events', coId] });
     queryClient.invalidateQueries({ queryKey: ['co-responsibility', coId] });
     await queryClient.refetchQueries({ queryKey: ['co-detail', coId] });
   }

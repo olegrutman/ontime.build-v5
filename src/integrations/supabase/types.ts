@@ -2791,6 +2791,63 @@ export type Database = {
           },
         ]
       }
+      co_review_events: {
+        Row: {
+          agreement: string
+          co_id: string
+          decided_at: string
+          decided_by_name: string | null
+          decided_by_org_name: string | null
+          decided_by_user_id: string | null
+          decision: string
+          id: string
+          party_org_ids: string[]
+          reason: string | null
+          subject_label: string
+        }
+        Insert: {
+          agreement: string
+          co_id: string
+          decided_at?: string
+          decided_by_name?: string | null
+          decided_by_org_name?: string | null
+          decided_by_user_id?: string | null
+          decision: string
+          id?: string
+          party_org_ids?: string[]
+          reason?: string | null
+          subject_label: string
+        }
+        Update: {
+          agreement?: string
+          co_id?: string
+          decided_at?: string
+          decided_by_name?: string | null
+          decided_by_org_name?: string | null
+          decided_by_user_id?: string | null
+          decision?: string
+          id?: string
+          party_org_ids?: string[]
+          reason?: string | null
+          subject_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_review_events_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_review_events_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       co_scenario_builder_map: {
         Row: {
           child_scenario_ids: string[]
@@ -10943,6 +11000,10 @@ export type Database = {
           _url: string
         }
         Returns: undefined
+      }
+      _review_actor: {
+        Args: { _uid: string }
+        Returns: Record<string, unknown>
       }
       accept_org_invitation: {
         Args: { p_invitation_id: string }

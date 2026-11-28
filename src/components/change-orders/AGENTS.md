@@ -1,1 +1,2 @@
 - CO/WO review: one Confirm decisions step per agreement (crew entries too, in COCrewPricingReview); handoff reads the submission record.
+- Review history is written by DB triggers into co_review_events (no amounts, party_org_ids-scoped); never insert from the client.

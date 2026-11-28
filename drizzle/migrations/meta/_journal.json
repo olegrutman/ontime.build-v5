@@ -827,6 +827,13 @@
       "when": 1795637444982,
       "tag": "0117_user_org_roles_profile_fk_cascade",
       "breakpoints": true
+    },
+    {
+      "idx": 118,
+      "version": "7",
+      "when": 1795826789406,
+      "tag": "0118_co_review_events",
+      "breakpoints": true
     }
   ]
 }

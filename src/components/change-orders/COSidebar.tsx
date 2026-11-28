@@ -1,3 +1,4 @@
+import { COReviewHistory } from '@/components/change-orders/COReviewHistory';
 import { forwardRef } from 'react';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
@@ -57,6 +58,8 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
   return (
     <div ref={ref} className="space-y-3">
       <COTeamCard co={co} collaborators={collaborators} />
+
+      <COReviewHistory coId={co.id} />
 
       <COSOVPanel coId={co.id} isGC={isGC} isTC={isTC} isFC={isFC} myOrgId={props.myOrgId} />
 
