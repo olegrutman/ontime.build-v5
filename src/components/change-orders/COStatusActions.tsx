@@ -707,7 +707,6 @@ export function COStatusActions({
   const canSubmit = (isTC || isFC) && !isAnyCollaborator && submitStatuses.includes(status) && !!effectiveAssignee
     && !(crewDraft && (!co.crew_approved_at || co.kept_internal));
   /* FC collaborator can submit pricing independently (M4) */
-  const canSubmitFCPricing = isFC && isActiveCollaborator && status === 'closed_for_pricing';
   const canRecall = (isTC || isFC) && !isAnyCollaborator && status === 'submitted';
   /* GC approves using org_id (creating org) not assigned_to_org_id (C2) */
   /* The GC may be either the creating org (GC-initiated CO) or the assigned org
@@ -796,7 +795,7 @@ export function COStatusActions({
         <p className="text-sm font-semibold text-destructive">Rejected</p>
         <p className="text-xs text-muted-foreground">{co.rejection_note}</p>
         <div className="flex gap-2">
-          {(canSubmit || canSubmitFCPricing) && (
+          {canSubmit && (
             <Button size="sm" className="flex-1 min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={doSubmit} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
               Resubmit
@@ -813,7 +812,7 @@ export function COStatusActions({
     );
   }
 
-  const hasAnyAction = canShare || canSendToWIP || canCloseForPricing || canSubmit || canSubmitFCPricing || canRecall || canApprove || canReject || crewPending || crewApproved || ownInternalEligible || ownInternalApproved || canMarkCompleted || canAcknowledge || canWithdraw || canDelete;
+  const hasAnyAction = canShare || canSendToWIP || canCloseForPricing || canSubmit || canRecall || canApprove || canReject || crewPending || crewApproved || ownInternalEligible || ownInternalApproved || canMarkCompleted || canAcknowledge || canWithdraw || canDelete;
 
   if (!hasAnyAction) {
     // A crew on someone else's order is not party to the upstream approval.
@@ -855,10 +854,10 @@ export function COStatusActions({
               {co.pricing_type === 'fixed' ? 'Close CO for Final Pricing' : 'Close scope for authorization'}
             </Button>
           )}
-          {(canSubmit || canSubmitFCPricing) && (
+          {canSubmit && (
             <Button size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={doSubmit} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-              {canSubmitFCPricing ? `Submit ${rl.FC} pricing` : ownInternalApproved ? `Submit to ${rl.GC}` : co.pricing_type === 'fixed' ? 'Submit scope & price' : co.pricing_type === 'tm' ? 'Submit rates & actuals' : 'Submit rates & ceiling'}
+              {ownInternalApproved ? `Submit to ${rl.GC}` : co.pricing_type === 'fixed' ? 'Submit scope & price' : co.pricing_type === 'tm' ? 'Submit rates & actuals' : 'Submit rates & ceiling'}
             </Button>
           )}
           {ownInternalEligible && (

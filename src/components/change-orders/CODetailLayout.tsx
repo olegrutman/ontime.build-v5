@@ -13,6 +13,8 @@ import { useCORealtime } from '@/hooks/useCORealtime';
 import { useProjectFCOrgs } from '@/hooks/useProjectFCOrgs';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { COCrewPricingReview } from '@/components/change-orders/COCrewPricingReview';
+import { COCrewPricingSendButton } from './COCrewPricingSendButton';
+import { canSendCrewPricing } from '@/lib/crewPricingSend';
 
 const fmtMoney2 = (v: number) => `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 import { useCORoleContext } from '@/hooks/useCORoleContext';
@@ -106,6 +108,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [pdfPerspectiveOpen, setPdfPerspectiveOpen] = useState(false);
   const [entryRequest, setEntryRequest] = useState<{ itemId: string; token: number } | null>(null);
+  const [crewSendOpen, setCrewSendOpen] = useState(false);
 
   async function downloadPdfWithPerspective(
     perspective?: 'upstream' | 'downstream',
@@ -349,6 +352,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         }
         break;
       case 'submit_to_tc':
+        if (isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co?.org_id !== myOrgId) {
+          setCrewSendOpen(true);
+          break;
+        }
         if (co) {
           if (photosBlocked) {
             toast.error('At least 1 photo is required before submitting. This project has photo requirements enabled.');
@@ -529,6 +536,24 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   // Each company sees only the agreements it is party to.
   const agreementView: AgreementView = agreementViewFor({ isGC, isTC, isFC, coOrgId: co?.org_id, myOrgId, collaborators });
   const isCrewCollaborator = agreementView === 'crew';
+  const ownCrewCollaborator = collaborators.find(c => c.organization_id === myOrgId);
+  const canSendOwnCrewPricing = isCrewCollaborator && canSendCrewPricing(isFC, ownCrewCollaborator?.status, status);
+  const crewRecipientName = coRouting?.targets.find(target => target.id === coRouting.defaultId)?.name ?? rl.TC;
+  async function sendCrewPricing() {
+    if (!canSendOwnCrewPricing || completeFCInput.isPending) return;
+    if (photosBlocked) {
+      toast.error('Add at least one photo before sending pricing.');
+      return;
+    }
+    try {
+      await completeFCInput.mutateAsync();
+      setCrewSendOpen(false);
+      toast.success(`Pricing sent to ${crewRecipientName}`);
+      await refreshDetail();
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Could not send pricing');
+    }
+  }
   const hasCrewAgreement = agreementView === 'both';
   const crewSent = crewPricingSent(co?.pricing_type, collaborators);
   const crewOwnEntries = laborEntries.filter(e => e.entered_by_role === 'FC' && !e.is_actual_cost && e.org_id === myOrgId);
@@ -626,8 +651,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const sidebarProps = {
     co, isGC, isTC, isFC, role, myOrgId, projectId,
     financials, collaborators, fcOrgOptions, fcCollabName,
-    canEdit, canRequestFCInput, canCompleteFCInput,
-    nteLog, requestFCInput, completeFCInput,
+    canEdit, canRequestFCInput, canCompleteFCInput: canSendOwnCrewPricing,
+    nteLog, requestFCInput, completeFCInput: { isPending: completeFCInput.isPending, mutateAsync: async () => { setCrewSendOpen(true); } },
     requestNTEIncrease, approveNTEIncrease, rejectNTEIncrease,
     onRefresh: refreshDetail,
     lineItemCount: lineItems.length,
@@ -704,6 +729,15 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             toLabel={isFC ? rl.TC : rl.GC}
             documentActions={documentActions}
           />
+          {canSendOwnCrewPricing && (
+            <section aria-label="Your pricing handoff" className="flex flex-col gap-3 border-b border-border pb-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">Your pricing · not sent</p>
+                <p className="text-xs text-muted-foreground">Send your saved pricing for this entire order to {crewRecipientName}.</p>
+              </div>
+              <div className="w-full shrink-0 sm:w-64"><COCrewPricingSendButton recipientName={crewRecipientName} sending={completeFCInput.isPending} onSend={() => setCrewSendOpen(true)} /></div>
+            </section>
+          )}
 
           {/* Desktop: compact numbers span the page in one row; phones keep their compact grid below the items. */}
           <div className="hidden lg:block">
@@ -954,6 +988,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                           crewName={fcCollabName || rl.FC}
                           upstreamName={rl.GC}
                           hirerName={rl.TC}
+                          onSendCrewPricing={canSendOwnCrewPricing ? () => setCrewSendOpen(true) : undefined}
+                          sendingCrewPricing={completeFCInput.isPending}
                         />
                       </div>
                     ))}</div>
@@ -1132,6 +1168,23 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           </div>
         </div>
       </div>
+
+      <Dialog open={crewSendOpen} onOpenChange={open => { if (!completeFCInput.isPending) setCrewSendOpen(open); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send pricing to {crewRecipientName}?</DialogTitle>
+            <DialogDescription>Your saved crew pricing for the entire {co.document_type === 'WO' ? 'work order' : 'change order'} will be sent for review. This does not submit or change the other company's upstream agreement.</DialogDescription>
+          </DialogHeader>
+          <div className="border-y border-border py-3">
+            <p className="text-sm text-muted-foreground">{lineItems.length} scope items · your saved pricing</p>
+            <p className="font-mono text-xl font-bold text-foreground">{fmtMoney2(crewOwnEntries.reduce((sum, entry) => sum + Number(entry.line_total ?? 0), 0))}</p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" disabled={completeFCInput.isPending} onClick={() => setCrewSendOpen(false)}>Cancel</Button>
+            <COCrewPricingSendButton recipientName={crewRecipientName} sending={completeFCInput.isPending} onSend={() => void sendCrewPricing()} />
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={outsideApprovalOpen} onOpenChange={setOutsideApprovalOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">

@@ -67,6 +67,8 @@ interface COLineItemRowProps {
   upstreamName?: string;
   /** Company that hired the crew (crew view wording). */
   hirerName?: string;
+  onSendCrewPricing?: () => void;
+  sendingCrewPricing?: boolean;
 }
 
 
@@ -100,6 +102,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   entryRequestToken,
   canChangeLaborPricingMethod = false,
   agreementView = 'upstream', crewPricingSent = true, crewName, upstreamName, hirerName,
+  onSendCrewPricing, sendingCrewPricing,
 }, ref) {
   const rl = useRoleLabelsContext();
   const crewStatus = crewItemStatus(laborEntries, crewPricingSent);
@@ -752,6 +755,8 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
         hideUpstreamReview={agreementView === 'crew'}
         crewPricingSent={crewPricingSent}
         hirerName={hirerName}
+        onSendCrewPricing={onSendCrewPricing}
+        sendingCrewPricing={sendingCrewPricing}
         coId={coId}
         orgId={orgId}
         pricingType={pricingType}

@@ -147,7 +147,7 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
       return {
         icon: <ClipboardList className="h-5 w-5" />,
         title: `${upstream} requested your input`,
-        subtitle: `Log your hours and materials, then use the single Submit input action in your handoff card.`,
+        subtitle: `Save your pricing, then send the entire order’s crew pricing to ${upstream} using Send pricing.`,
         actions: [
           { label: 'Log Hours', action: 'log_hours', primary: true },
           { label: 'Add Materials', action: 'scroll_materials' },

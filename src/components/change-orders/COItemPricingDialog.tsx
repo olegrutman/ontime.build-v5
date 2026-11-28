@@ -19,6 +19,7 @@ import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 import { LaborEntryForm } from './LaborEntryForm';
 import { COLineItemReview } from './COLineReview';
 import { crewItemBillingState } from '@/lib/agreementStatus';
+import { COCrewPricingSendButton } from './COCrewPricingSendButton';
 
 const money = (value: number) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -192,6 +193,8 @@ interface COItemPricingDialogProps {
   hideUpstreamReview?: boolean;
   crewPricingSent?: boolean;
   hirerName?: string;
+  onSendCrewPricing?: () => void;
+  sendingCrewPricing?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   openFormOnOpen?: boolean;
@@ -233,6 +236,8 @@ export function COItemPricingDialog({
   hideUpstreamReview = false,
   crewPricingSent = true,
   hirerName,
+  onSendCrewPricing,
+  sendingCrewPricing,
   coId,
   orgId,
   pricingType,
@@ -470,6 +475,12 @@ export function COItemPricingDialog({
           </div>
         </DialogHeader>
 
+        {hideUpstreamReview && onSendCrewPricing && (
+          <div className="shrink-0 border-b border-border px-4 py-3 sm:px-5">
+            <COCrewPricingSendButton recipientName={hirerName ?? rl.TC} sending={sendingCrewPricing} onSend={() => { onOpenChange(false); onSendCrewPricing(); }} />
+            <p className="mt-2 text-xs text-muted-foreground">Sends your saved pricing for this entire order, not just this item.</p>
+          </div>
+        )}
         {!hideUpstreamReview && <COLineItemReview coId={coId} item={item} canReview={canReview} onRefresh={onRefresh} />}
 
         {isTC && onLaborPricingMethodChange && (

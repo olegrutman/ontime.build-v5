@@ -12,6 +12,7 @@ import {
 import type { COCollaborator, COFCOrgOption } from '@/types/changeOrder';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { crewHandoffMessage, resolveCrewHandoff } from '@/lib/crewHandoffStatus';
+import { COCrewPricingSendButton } from './COCrewPricingSendButton';
 
 interface FCInputRequestCardProps {
   canRequest: boolean;
@@ -99,7 +100,9 @@ export function FCInputRequestCard({
 
       {afterSubmission && (
         <p className="text-xs text-muted-foreground break-words">
-          {rl.FC} pricing after submission is between you and your {rl.FC.toLowerCase()}. It does not change the price sent to the {rl.GC}.
+          {recipientName
+            ? `Your pricing is sent only to ${recipientName}.`
+            : `${rl.FC} pricing is a separate agreement with you. It does not change the price sent to the ${rl.GC}.`}
         </p>
       )}
 
@@ -143,16 +146,7 @@ export function FCInputRequestCard({
         )}
 
         {canComplete && activeCollaborator && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full h-8 text-xs"
-            disabled={acting}
-            onClick={() => void onComplete()}
-          >
-            {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-            Send pricing to {recipientName ?? rl.TC}
-          </Button>
+          <COCrewPricingSendButton recipientName={recipientName ?? rl.TC} sending={acting} onSend={() => void onComplete()} />
         )}
     </div>
   );
