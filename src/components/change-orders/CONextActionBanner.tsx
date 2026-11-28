@@ -84,7 +84,7 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
         return {
           icon: <CheckCircle className="h-5 w-5" />,
           title: 'Review each scope item',
-          subtitle: 'Accept or reject each item, then submit the review once',
+          subtitle: 'Accept or reject each item, then confirm your decisions once',
           actions: [{ label: 'Review items', action: 'scroll_scope' }],
         };
       }

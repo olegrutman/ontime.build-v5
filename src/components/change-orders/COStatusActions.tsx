@@ -910,7 +910,7 @@ export function COStatusActions({
             <>
               {itemReview && !lineReview.complete && (
                 <p className="text-[0.7rem] text-muted-foreground">
-                  Accept or reject the {lineReview.pending} remaining item{lineReview.pending === 1 ? '' : 's'} in Scope &amp; Labor, then submit the review once.
+                  Accept or reject the {lineReview.pending} remaining item{lineReview.pending === 1 ? '' : 's'} in Scope &amp; Labor, then confirm your decisions once.
                 </p>
               )}
               <Button size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={() => setApproveOpen(true)} disabled={acting || (itemReview && !lineReview.complete)}>
@@ -918,7 +918,7 @@ export function COStatusActions({
                 {forwardsToGC
                   ? `Send to ${rl.GC}`
                   : itemReview
-                    ? 'Submit review'
+                    ? 'Confirm decisions'
                     : co.pricing_type === 'fixed' ? 'Approve scope & price' : co.pricing_type === 'tm' ? 'Authorize rates & actuals' : 'Authorize rates & cap'}
               </Button>
             </>

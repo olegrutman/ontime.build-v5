@@ -6,7 +6,7 @@ describe('crew pricing handoff', () => {
     const s = resolveCrewHandoff({ collaboratorStatus: 'active', crewCreatedOrder: false, crewPricedTotal: 13000 });
     expect(s).toBe('saved');
     expect(crewHandoffMessage(s, 'hirer', { crew: 'Pacifico Builders', hirer: 'IMIS, LLC' }, 13000).label)
-      .toBe('Pricing saved ($13,000.00), not submitted to IMIS, LLC yet');
+      .toBe('Priced $13,000.00 — ready for your review');
   });
   it('a recorded submission is submitted', () => {
     expect(resolveCrewHandoff({ collaboratorStatus: 'completed', crewCreatedOrder: false, crewPricedTotal: 0 })).toBe('submitted');

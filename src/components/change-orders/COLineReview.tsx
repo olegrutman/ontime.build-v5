@@ -44,7 +44,7 @@ interface ReviewBarProps {
   onRefresh: () => void;
 }
 
-/** One review per agreement: row choices are provisional until "Submit review". */
+/** One review per agreement: row choices are provisional until "Confirm decisions". */
 export const CO_SUBMIT_REVIEW_EVENT = 'co-submit-review';
 export function requestSubmitReview(coId: string, decision: 'approve' | 'reject') {
   window.dispatchEvent(new CustomEvent(CO_SUBMIT_REVIEW_EVENT, { detail: { coId, decision } }));
@@ -61,7 +61,7 @@ export function COLineReviewBar({ coId, items, canReview, onRefresh }: ReviewBar
     try {
       const pending = items.filter(item => (item.approval_status ?? 'pending') === 'pending');
       await saveDecisions(coId, pending.map(item => ({ id: item.id, decision: 'approved' as const })));
-      toast.success('Remaining items accepted. Submit the review to make it final.');
+      toast.success('Remaining items accepted. Confirm your decisions to make it final.');
       onRefresh();
     } catch (error: any) {
       toast.error(error?.message ?? 'Failed to accept items');
@@ -78,8 +78,8 @@ export function COLineReviewBar({ coId, items, canReview, onRefresh }: ReviewBar
           {!multi
             ? canReview ? 'Accept or reject this order in one review.' : 'Awaiting review'
             : summary.pending > 0
-              ? `${summary.pending} to decide · ${summary.approved} accepted · ${summary.rejected} rejected${canReview ? ' — choices are not final until you submit the review' : ''}`
-              : `${summary.approved} accepted · ${summary.rejected} rejected${canReview ? ' — submit the review to make it final' : ''}`}
+              ? `${summary.pending} to decide · ${summary.approved} accepted · ${summary.rejected} rejected${canReview ? ' — nothing is final until you confirm your decisions' : ''}`
+              : `${summary.approved} accepted · ${summary.rejected} rejected${canReview ? ' — confirm your decisions to make it final' : ''}`}
         </p>
       </div>
       {canReview && multi && summary.pending > 0 && (
@@ -91,7 +91,7 @@ export function COLineReviewBar({ coId, items, canReview, onRefresh }: ReviewBar
       {canReview && multi && (
         <Button type="button" size="sm" onClick={() => requestSubmitReview(coId, 'approve')} disabled={saving || !summary.complete} className="h-8 shrink-0 gap-1.5 text-xs">
           <Check className="h-3.5 w-3.5" />
-          Submit review
+          Confirm decisions
         </Button>
       )}
       {canReview && !multi && (
@@ -100,7 +100,7 @@ export function COLineReviewBar({ coId, items, canReview, onRefresh }: ReviewBar
             <X className="h-3.5 w-3.5" /> Reject
           </Button>
           <Button type="button" size="sm" onClick={() => requestSubmitReview(coId, 'approve')} className="h-8 shrink-0 gap-1.5 text-xs">
-            <Check className="h-3.5 w-3.5" /> Accept &amp; submit review
+            <Check className="h-3.5 w-3.5" /> Approve
           </Button>
         </>
       )}
@@ -125,7 +125,7 @@ export function COLineItemReview({ coId, item, canReview, onRefresh }: ItemRevie
     setSaving(true);
     try {
       await saveDecisions(coId, [{ id: item.id, decision: 'approved' }]);
-      toast.success(`Accepted “${item.item_name}” — submit the review when every item is decided`);
+      toast.success(`Accepted “${item.item_name}” — confirm your decisions when every item is decided`);
       onRefresh();
     } catch (error: any) {
       toast.error(error?.message ?? 'Failed to approve item');
@@ -139,7 +139,7 @@ export function COLineItemReview({ coId, item, canReview, onRefresh }: ItemRevie
     setSaving(true);
     try {
       await saveDecisions(coId, [{ id: item.id, decision: 'rejected', reason: reason.trim() }]);
-      toast.success(`Rejected “${item.item_name}” — submit the review when every item is decided`);
+      toast.success(`Rejected “${item.item_name}” — confirm your decisions when every item is decided`);
       setRejectOpen(false);
       onRefresh();
     } catch (error: any) {
@@ -191,7 +191,7 @@ export function COLineItemReview({ coId, item, canReview, onRefresh }: ItemRevie
           <DialogHeader>
             <DialogTitle>Reject “{item.item_name}”</DialogTitle>
             <DialogDescription>
-              This item will be excluded from the accepted amount when you submit the review. The submitter will see your reason.
+              This item will be excluded from the accepted amount when you confirm your decisions. The submitter will see your reason.
             </DialogDescription>
           </DialogHeader>
           <div>

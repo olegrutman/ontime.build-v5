@@ -28,16 +28,16 @@ export function crewHandoffMessage(
   switch (state) {
     case 'saved':
       return viewer === 'crew'
-        ? { label: `Pricing saved (${fmt(crewPricedTotal)}), not submitted — submit it to ${names.hirer} when ready`, badge: 'Saved' }
-        : { label: `Pricing saved (${fmt(crewPricedTotal)}), not submitted to ${names.hirer} yet`, badge: 'Not submitted' };
+        ? { label: `Pricing saved (${fmt(crewPricedTotal)}) — send it to ${names.hirer} when ready`, badge: 'Saved' }
+        : { label: `Priced ${fmt(crewPricedTotal)} — ready for your review`, badge: 'Priced' };
     case 'waiting':
       return viewer === 'crew'
-        ? { label: `Add your pricing, then submit it to ${names.hirer}`, badge: 'In progress' }
+        ? { label: `Add your pricing, then send it to ${names.hirer}`, badge: 'In progress' }
         : { label: 'Pricing requested — nothing saved yet', badge: 'Requested' };
     case 'submitted':
       return viewer === 'crew'
-        ? { label: `Submitted pricing — ${names.hirer} to review`, badge: 'Submitted' }
-        : { label: `Submitted pricing — ${names.hirer} to review`, badge: 'Submitted' };
+        ? { label: `Pricing sent — ${names.hirer} to review`, badge: 'Sent' }
+        : { label: 'Pricing sent — ready for your review', badge: 'Priced' };
     case 'creator':
       return { label: 'Created this work order and logged their pricing', badge: 'Received' };
     default:

@@ -150,7 +150,7 @@ export function FCInputRequestCard({
             onClick={() => void onComplete()}
           >
             {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-            Submit input to {recipientName ?? rl.TC}
+            Send pricing to {recipientName ?? rl.TC}
           </Button>
         )}
     </div>

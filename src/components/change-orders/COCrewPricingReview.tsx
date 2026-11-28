@@ -19,7 +19,7 @@ interface Props {
   onRefresh: () => void;
 }
 
-/** One review of the crew's pricing: choices stay provisional until "Submit review". */
+/** One review of the crew's pricing: choices stay provisional until "Confirm decisions". */
 export function COCrewPricingReview({ crewName, lineItems, laborEntries, submitted, onRefresh }: Props) {
   const pending = useMemo(() => laborEntries.filter(e =>
     e.entered_by_role === 'FC' && !e.is_actual_cost && e.crew_review_status === 'pending'), [laborEntries]);
@@ -47,12 +47,12 @@ export function COCrewPricingReview({ crewName, lineItems, laborEntries, submitt
       }
       const rejected = decisions.filter(d => d.decision === 'rejected').length;
       toast.success(rejected > 0
-        ? `Review submitted — ${decisions.length - rejected} accepted, ${rejected} sent back to ${crewName}`
-        : `Review submitted — all ${crewName} pricing accepted`);
+        ? `Decisions saved — ${decisions.length - rejected} accepted, ${rejected} sent back to ${crewName}`
+        : `Decisions saved — all ${crewName} pricing accepted`);
       setChoices({});
       onRefresh();
     } catch (err: any) {
-      toast.error(err?.message ?? 'Failed to submit review');
+      toast.error(err?.message ?? 'Failed to save decisions');
       onRefresh();
     } finally {
       setSaving(false);
@@ -65,7 +65,7 @@ export function COCrewPricingReview({ crewName, lineItems, laborEntries, submitt
         <div className="w-full min-w-0 sm:w-auto sm:flex-1">
           <p className="text-sm font-semibold text-foreground break-words">Review {crewName} pricing</p>
           <p className="mt-0.5 break-words text-[11px] text-muted-foreground">
-            {submitted ? `${crewName} submitted` : `${crewName} saved, not submitted yet`} · {pending.length} entr{pending.length === 1 ? 'y' : 'ies'} · {money(total)} · {decided} decided. Choices are not final until you submit the review.
+            {submitted ? 'Pricing sent' : 'Priced'} · {pending.length} entr{pending.length === 1 ? 'y' : 'ies'} · {money(total)} · {decided} decided. Nothing is saved until you confirm your decisions.
           </p>
         </div>
         <Button type="button" size="sm" variant="outline" className="h-8 shrink-0 gap-1.5 text-xs" disabled={saving}
@@ -73,7 +73,7 @@ export function COCrewPricingReview({ crewName, lineItems, laborEntries, submitt
           <CheckCheck className="h-3.5 w-3.5" /> Accept all remaining
         </Button>
         <Button type="button" size="sm" className="h-8 shrink-0 gap-1.5 text-xs" disabled={saving || decided < pending.length} onClick={() => void submit()}>
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Submit review
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Confirm decisions
         </Button>
       </div>
       <div className="divide-y divide-border/60">
