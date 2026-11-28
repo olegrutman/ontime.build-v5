@@ -34,7 +34,11 @@ function EntryRow({
   onApproval,
   showCrewReview = false,
   onCrewReview,
+  crewSent = true,
+  waitingLabel = 'Review needed',
 }: {
+  crewSent?: boolean;
+  waitingLabel?: string;
   entry: COLaborEntry;
   privateEntry?: boolean;
   downstream?: boolean;
@@ -132,9 +136,9 @@ function EntryRow({
               'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
               reviewStatus === 'approved' && 'bg-state-approved-bg text-state-approved-foreground',
               reviewStatus === 'rejected' && 'bg-destructive/10 text-destructive',
-              reviewStatus === 'pending' && 'bg-state-open-bg text-state-open-foreground',
+              reviewStatus === 'pending' && (crewSent ? 'bg-state-open-bg text-state-open-foreground' : 'bg-muted text-muted-foreground'),
             )}>
-              {reviewStatus === 'approved' ? 'Hours approved' : reviewStatus === 'rejected' ? 'Hours rejected' : 'Review needed'}
+              {reviewStatus === 'approved' ? 'Accepted' : reviewStatus === 'rejected' ? 'Sent back' : crewSent ? waitingLabel : 'Not sent'}
             </span>
             {entry.crew_reviewed_at && (
               <span className="text-[11px] text-muted-foreground">Reviewed {new Date(entry.crew_reviewed_at).toLocaleDateString()}</span>
@@ -183,6 +187,10 @@ function EntryRow({
 interface COItemPricingDialogProps {
   /** Agreement-scoped status tags from the item row. */
   agreementTags?: React.ReactNode;
+  /** Crew view hides the hiring company's upstream decision. */
+  hideUpstreamReview?: boolean;
+  crewPricingSent?: boolean;
+  hirerName?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   openFormOnOpen?: boolean;
@@ -221,6 +229,9 @@ export function COItemPricingDialog({
   item,
   laborEntries,
   agreementTags,
+  hideUpstreamReview = false,
+  crewPricingSent = true,
+  hirerName,
   coId,
   orgId,
   pricingType,
@@ -385,6 +396,8 @@ export function COItemPricingDialog({
             onApproval={approved => void handleGCApproval(entry.id, approved)}
             showCrewReview={entry.entered_by_role === 'FC' && !entry.is_actual_cost && (isFC || (isTC && !!options.downstream))}
             onCrewReview={undefined}
+            crewSent={crewPricingSent}
+            waitingLabel={isFC ? `Waiting for ${hirerName ?? 'review'}` : 'Review needed'}
           />
         ))}
       </div>
@@ -454,7 +467,7 @@ export function COItemPricingDialog({
           </div>
         </DialogHeader>
 
-        <COLineItemReview coId={coId} item={item} canReview={canReview} onRefresh={onRefresh} />
+        {!hideUpstreamReview && <COLineItemReview coId={coId} item={item} canReview={canReview} onRefresh={onRefresh} />}
 
         {isTC && onLaborPricingMethodChange && (
           <section aria-label="Labor pricing method for this item" className="shrink-0 border-b border-border bg-muted/20 px-4 py-3 sm:px-5">

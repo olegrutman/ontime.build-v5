@@ -53,3 +53,18 @@ describe('role-based agreement visibility', () => {
     expect(showCrewMarginWarning(tc, 12000, 12600)).toBe(false);
   });
 });
+
+import { crewMayComplete } from '@/lib/agreementStatus';
+describe('crew completion follows its own agreement', () => {
+  it('blocks completion while pricing is unsent or waiting, even if upstream approved', () => {
+    expect(crewMayComplete('crew', 'not_sent')).toBe(false);
+    expect(crewMayComplete('crew', 'waiting')).toBe(false);
+    expect(crewMayComplete('crew', 'rejected')).toBe(false);
+  });
+  it('allows completion once the hiring company accepted', () => {
+    expect(crewMayComplete('crew', 'accepted')).toBe(true);
+  });
+  it('does not change subcontractor completion', () => {
+    expect(crewMayComplete('both', 'not_sent')).toBe(true);
+  });
+});

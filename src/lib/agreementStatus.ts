@@ -62,3 +62,8 @@ export function visibleAgreements(view: AgreementView): { upstream: boolean; cre
 export function showCrewMarginWarning(view: AgreementView, crewTotal: number, approvedPrice: number): boolean {
   return view === 'both' && crewTotal > 0 && approvedPrice > 0 && crewTotal > approvedPrice + 0.005;
 }
+
+/** A crew on another company's order may complete an item only after its hiring company accepted that item's pricing. */
+export function crewMayComplete(view: AgreementView, crewStatus: CrewAgreementStatus): boolean {
+  return view !== 'crew' || crewStatus === 'accepted';
+}

@@ -953,6 +953,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                           crewPricingSent={crewSent}
                           crewName={fcCollabName || rl.FC}
                           upstreamName={rl.GC}
+                          hirerName={rl.TC}
                         />
                       </div>
                     ))}</div>

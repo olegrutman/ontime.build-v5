@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChevronDown, CheckCircle, MapPin, Lock, DollarSign, Trash2, Pencil, Loader2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { COAgreementTags } from './COAgreementTags';
-import { crewItemStatus, type AgreementView } from '@/lib/agreementStatus';
+import { crewItemStatus, crewMayComplete, type AgreementView } from '@/lib/agreementStatus';
 import { fmtHours } from '@/lib/crewWorkload';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -65,6 +65,8 @@ interface COLineItemRowProps {
   crewPricingSent?: boolean;
   crewName?: string;
   upstreamName?: string;
+  /** Company that hired the crew (crew view wording). */
+  hirerName?: string;
 }
 
 
@@ -97,7 +99,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   canReview = false,
   entryRequestToken,
   canChangeLaborPricingMethod = false,
-  agreementView = 'upstream', crewPricingSent = true, crewName, upstreamName,
+  agreementView = 'upstream', crewPricingSent = true, crewName, upstreamName, hirerName,
 }, ref) {
   const rl = useRoleLabelsContext();
   const crewStatus = crewItemStatus(laborEntries, crewPricingSent);
@@ -135,7 +137,9 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const [deleting, setDeleting] = useState(false);
   const [completing, setCompleting] = useState(false);
   const canCompleteItem = (isTC || (isFC && (isMyOrgItem || laborEntries.some(e => e.org_id === orgId && !e.is_actual_cost))))
-    && ['approved', 'contracted'].includes(coStatus ?? '') && item.approval_status === 'approved';
+    && ['approved', 'contracted'].includes(coStatus ?? '') && item.approval_status === 'approved'
+    // A crew on someone else's order completes only work its hiring company accepted.
+    && crewMayComplete(agreementView, crewStatus);
 
   async function completeItem() {
     setCompleting(true);
@@ -745,6 +749,9 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
         item={item}
         laborEntries={laborEntries}
         agreementTags={agreementTags()}
+        hideUpstreamReview={agreementView === 'crew'}
+        crewPricingSent={crewPricingSent}
+        hirerName={hirerName}
         coId={coId}
         orgId={orgId}
         pricingType={pricingType}
