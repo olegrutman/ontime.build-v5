@@ -19,6 +19,9 @@ describe('crew agreement status', () => {
   it('subcontractor entries do not create a crew status', () => {
     expect(crewItemStatus([{ entered_by_role: 'TC', is_actual_cost: false, crew_review_status: null } as any], true)).toBe('none');
   });
+  it('unrecorded decisions are not counted as accepted when another entry was accepted', () => {
+    expect(crewItemStatus([fc('approved'), fc(null)], true)).toBe('waiting');
+  });
   it('fixed pricing is sent only after the crew handoff; T&M always reviewable', () => {
     expect(crewPricingSent('fixed', [{ status: 'active' }])).toBe(false);
     expect(crewPricingSent('fixed', [{ status: 'completed' }])).toBe(true);
@@ -55,6 +58,7 @@ describe('role-based agreement visibility', () => {
 });
 
 import { crewMayComplete } from '@/lib/agreementStatus';
+import { crewItemBillingState } from '@/lib/agreementStatus';
 describe('crew completion follows its own agreement', () => {
   it('blocks completion while pricing is unsent or waiting, even if upstream approved', () => {
     expect(crewMayComplete('crew', 'not_sent')).toBe(false);
@@ -66,5 +70,31 @@ describe('crew completion follows its own agreement', () => {
   });
   it('does not change subcontractor completion', () => {
     expect(crewMayComplete('both', 'not_sent')).toBe(true);
+  });
+});
+
+describe('Pacifico item billing status', () => {
+  it('saved $15,500 entry is not an agreed or billable amount before IMIS accepts', () => {
+    const result = crewItemBillingState([{ ...fc('pending'), line_total: 15500 }], false);
+    expect(result.currentPrice).toBe(15500);
+    expect(result.acceptedPrice).toBe(0);
+    expect(result.hasAcceptedPricing).toBe(false);
+    expect(result.status).toBe('not_sent');
+  });
+  it('sent pricing still has no accepted billing until IMIS decides', () => {
+    expect(crewItemBillingState([{ ...fc('pending'), line_total: 15500 }], true).acceptedPrice).toBe(0);
+  });
+  it('only IMIS-approved crew entries contribute to the accepted billing amount', () => {
+    const result = crewItemBillingState([
+      { ...fc('approved'), line_total: 15500 },
+      { ...fc('pending'), line_total: 2000 },
+      { ...fc('rejected'), line_total: 1000 },
+      { ...fc(null), line_total: 500 },
+      { ...fc('approved'), is_actual_cost: true, line_total: 10000 },
+      { ...fc('approved'), entered_by_role: 'TC', line_total: 99000 },
+    ], true);
+    expect(result.acceptedPrice).toBe(15500);
+    expect(result.currentPrice).toBe(19000);
+    expect(result.hasAcceptedPricing).toBe(true);
   });
 });

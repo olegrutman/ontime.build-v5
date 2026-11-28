@@ -14,9 +14,7 @@ export function crewItemStatus(entries: Pick<COLaborEntry, 'entered_by_role' | '
   const crew = entries.filter(e => e.entered_by_role === 'FC' && !e.is_actual_cost);
   if (crew.length === 0) return 'none';
   if (crew.some(e => e.crew_review_status === 'rejected')) return 'rejected';
-  if (crew.every(e => e.crew_review_status === 'approved' || e.crew_review_status == null)) {
-    return crew.some(e => e.crew_review_status === 'approved') ? 'accepted' : (submitted ? 'waiting' : 'not_sent');
-  }
+  if (crew.every(e => e.crew_review_status === 'approved')) return 'accepted';
   return submitted ? 'waiting' : 'not_sent';
 }
 
@@ -66,4 +64,19 @@ export function showCrewMarginWarning(view: AgreementView, crewTotal: number, ap
 /** A crew on another company's order may complete an item only after its hiring company accepted that item's pricing. */
 export function crewMayComplete(view: AgreementView, crewStatus: CrewAgreementStatus): boolean {
   return view !== 'crew' || crewStatus === 'accepted';
+}
+
+/** The item window must not treat another agreement's approval/completion as crew billing approval. */
+export function crewItemBillingState(
+  entries: Pick<COLaborEntry, 'entered_by_role' | 'is_actual_cost' | 'crew_review_status' | 'line_total'>[],
+  sent: boolean,
+) {
+  const ownBillable = entries.filter(entry => entry.entered_by_role === 'FC' && !entry.is_actual_cost);
+  const accepted = ownBillable.filter(entry => entry.crew_review_status === 'approved');
+  return {
+    status: crewItemStatus(ownBillable, sent),
+    currentPrice: ownBillable.reduce((sum, entry) => sum + Number(entry.line_total ?? 0), 0),
+    acceptedPrice: accepted.reduce((sum, entry) => sum + Number(entry.line_total ?? 0), 0),
+    hasAcceptedPricing: accepted.length > 0,
+  };
 }

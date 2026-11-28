@@ -18,6 +18,7 @@ import type { COLaborEntry, COLineItem, COLaborPricingMethod, COPricingType } fr
 import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 import { LaborEntryForm } from './LaborEntryForm';
 import { COLineItemReview } from './COLineReview';
+import { crewItemBillingState } from '@/lib/agreementStatus';
 
 const money = (value: number) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -300,6 +301,8 @@ export function COItemPricingDialog({
   const allFcBillable = billableRows.filter(entry => entry.entered_by_role === 'FC');
   const ownTcBillable = allTcBillable.filter(entry => entry.org_id === orgId);
   const ownFcBillable = allFcBillable.filter(entry => entry.org_id === orgId);
+  const crewBilling = crewItemBillingState(ownFcBillable, crewPricingSent);
+  const crewCanFinish = !hideUpstreamReview || crewBilling.status === 'accepted';
   const visibleBillable = isGC ? allTcBillable : isFC ? ownFcBillable : ownTcBillable;
   const actualCosts = laborEntries.filter(entry => entry.is_actual_cost && entry.entered_by_role === myRole && entry.org_id === orgId);
   const actualTotal = actualCosts.reduce((sum, entry) => sum + actualEntryBaseCost(entry), 0);
@@ -525,8 +528,15 @@ export function COItemPricingDialog({
             <>
               <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border bg-muted/20 px-5 py-5">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{pricingType === 'fixed' ? 'Agreed item price' : 'Running item actuals'}</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{pricingType === 'fixed' ? hideUpstreamReview && crewBilling.status !== 'accepted' ? 'Your item price' : 'Agreed item price' : 'Running item actuals'}</p>
                   <p className="mt-1 whitespace-nowrap font-mono text-3xl font-bold text-foreground sm:text-4xl">{money(billableTotal)}</p>
+                  {hideUpstreamReview && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {crewBilling.status === 'not_sent'
+                        ? `Pricing not sent to ${hirerName ?? rl.TC} · not yet available to bill`
+                        : `${money(crewBilling.acceptedPrice)} accepted by ${hirerName ?? rl.TC} for billing`}
+                    </p>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground">{visibleBillable.length} billing entr{visibleBillable.length === 1 ? 'y' : 'ies'}</p>
               </div>
@@ -611,11 +621,19 @@ export function COItemPricingDialog({
           )}
         </div>
 
-        {(item.completed_at || canCompleteItem) && (
+        {(hideUpstreamReview && !crewCanFinish) ? (
+          <div className="shrink-0 border-t border-border bg-muted/20 px-4 py-3 text-xs text-muted-foreground sm:px-5">
+            {crewBilling.status === 'not_sent'
+              ? `Send your pricing to ${hirerName ?? rl.TC}. Their acceptance—not another company's approval—makes this item ready to finish.`
+              : crewBilling.status === 'rejected'
+                ? `Correct the returned entries and send them to ${hirerName ?? rl.TC} before marking this item complete.`
+                : `Waiting for ${hirerName ?? rl.TC} to accept this item's pricing before you can mark it complete.`}
+          </div>
+        ) : (item.completed_at || canCompleteItem) && (
           <div className="flex shrink-0 flex-col gap-3 border-t border-border bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
             <div className="flex items-start gap-2 text-[11px] leading-relaxed text-muted-foreground">
               <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <p><span className="block text-xs font-semibold text-foreground">{item.completed_at ? 'Item completed' : 'Finish this item separately'}</span>{item.completed_at ? `Completed ${new Date(item.completed_at).toLocaleDateString()}` : 'Completed items become available for billing.'}</p>
+              <p><span className="block text-xs font-semibold text-foreground">{item.completed_at ? 'Item completed' : 'Finish this item separately'}</span>{item.completed_at ? `Completed ${new Date(item.completed_at).toLocaleDateString()}` : hideUpstreamReview ? `Pricing accepted by ${hirerName ?? rl.TC}` : 'Completed items become available for billing.'}</p>
             </div>
             {item.completed_at ? (
               <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-state-approved-bg px-2.5 py-1 text-[11px] font-semibold text-state-approved-foreground sm:self-auto"><CheckCircle className="h-3.5 w-3.5" />Available for billing</span>
