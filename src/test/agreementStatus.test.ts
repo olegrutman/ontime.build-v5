@@ -25,3 +25,31 @@ describe('crew agreement status', () => {
     expect(crewPricingSent('tm', [{ status: 'active' }])).toBe(true);
   });
 });
+
+import { agreementViewFor, visibleAgreements, showCrewMarginWarning } from '@/lib/agreementStatus';
+
+describe('role-based agreement visibility', () => {
+  const base = { coOrgId: 'imis', collaborators: [{ organization_id: 'pacifico' }] };
+  const gc = agreementViewFor({ ...base, isGC: true, isTC: false, isFC: false, myOrgId: 'encompass' });
+  const tc = agreementViewFor({ ...base, isGC: false, isTC: true, isFC: false, myOrgId: 'imis' });
+  const fc = agreementViewFor({ ...base, isGC: false, isTC: false, isFC: true, myOrgId: 'pacifico' });
+
+  it('general contractor sees only its agreement with the subcontractor', () => {
+    expect(visibleAgreements(gc)).toEqual({ upstream: true, crew: false });
+  });
+  it('subcontractor sees both of its agreements', () => {
+    expect(visibleAgreements(tc)).toEqual({ upstream: true, crew: true });
+  });
+  it('crew sees only its agreement with the subcontractor', () => {
+    expect(visibleAgreements(fc)).toEqual({ upstream: false, crew: true });
+  });
+  it('a crew that created its own order sees that order as its own agreement', () => {
+    expect(agreementViewFor({ isGC: false, isTC: false, isFC: true, coOrgId: 'pacifico', myOrgId: 'pacifico', collaborators: [] })).toBe('upstream');
+  });
+  it('margin warning shows to the subcontractor only', () => {
+    expect(showCrewMarginWarning(tc, 13000, 12600)).toBe(true);
+    expect(showCrewMarginWarning(fc, 13000, 12600)).toBe(false);
+    expect(showCrewMarginWarning(gc, 13000, 12600)).toBe(false);
+    expect(showCrewMarginWarning(tc, 12000, 12600)).toBe(false);
+  });
+});

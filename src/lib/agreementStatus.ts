@@ -38,3 +38,27 @@ export function upstreamStatusLabel(status: COLineItem['approval_status'] | unde
 export function crewPricingSent(pricingType: string | null | undefined, collaborators: { status: string }[]): boolean {
   return pricingType !== 'fixed' || collaborators.some(c => c.status === 'completed');
 }
+
+interface ViewerInput {
+  isGC: boolean; isTC: boolean; isFC: boolean;
+  coOrgId: string | null | undefined;
+  myOrgId: string | null | undefined;
+  collaborators: { organization_id: string }[];
+}
+
+/** Which agreements a company is party to on an order. */
+export function agreementViewFor({ isTC, isFC, coOrgId, myOrgId, collaborators }: ViewerInput): AgreementView {
+  if (isFC && coOrgId !== myOrgId && collaborators.some(c => c.organization_id === myOrgId)) return 'crew';
+  if (isTC && collaborators.length > 0) return 'both';
+  return 'upstream';
+}
+
+/** Tags a viewer may see: crews never see the upstream agreement, the general contractor never sees crew pricing. */
+export function visibleAgreements(view: AgreementView): { upstream: boolean; crew: boolean } {
+  return { upstream: view !== 'crew', crew: view !== 'upstream' };
+}
+
+/** The crew-cost vs approved-price warning belongs to the hiring company only. */
+export function showCrewMarginWarning(view: AgreementView, crewTotal: number, approvedPrice: number): boolean {
+  return view === 'both' && crewTotal > 0 && approvedPrice > 0 && crewTotal > approvedPrice + 0.005;
+}

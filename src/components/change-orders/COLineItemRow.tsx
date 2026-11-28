@@ -578,7 +578,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
 
-          <div className="hidden justify-end md:flex">
+          <div className="hidden min-w-0 justify-end overflow-hidden md:flex">
             {agreementTags('flex-col items-end')}
           </div>
 

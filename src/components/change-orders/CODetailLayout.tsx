@@ -44,7 +44,7 @@ import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { COStatusActions } from './COStatusActions';
 import { COLineItemRow } from './COLineItemRow';
 import { COLineReviewBar } from './COLineReview';
-import { crewPricingSent, type AgreementView } from '@/lib/agreementStatus';
+import { crewPricingSent, agreementViewFor, type AgreementView } from '@/lib/agreementStatus';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COMaterialResponsibilityToggle } from './COMaterialResponsibilityToggle';
@@ -527,9 +527,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     && (co.org_id === myOrgId || co.assigned_to_org_id === myOrgId);
   const canReviewLineItems = canReviewOrder && lineItems.length > 1;
   // Each company sees only the agreements it is party to.
-  const isCrewCollaborator = !!co && isFC && co.org_id !== myOrgId && collaborators.some(c => c.organization_id === myOrgId);
-  const hasCrewAgreement = isTC && collaborators.length > 0;
-  const agreementView: AgreementView = isCrewCollaborator ? 'crew' : hasCrewAgreement ? 'both' : 'upstream';
+  const agreementView: AgreementView = agreementViewFor({ isGC, isTC, isFC, coOrgId: co?.org_id, myOrgId, collaborators });
+  const isCrewCollaborator = agreementView === 'crew';
+  const hasCrewAgreement = agreementView === 'both';
   const crewSent = crewPricingSent(co?.pricing_type, collaborators);
   const hasRejectedLineItems = lineItems.some(item => item.approval_status === 'rejected');
   const rfiBlocked = !!(co as any).blocked_by_rfi_id;
