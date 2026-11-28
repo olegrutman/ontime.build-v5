@@ -27,6 +27,7 @@ import { sendCONotification, buildCONotification } from '@/lib/coNotifications';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
 import { resolveCOAssignee, snapshotCOSubmission } from '@/lib/coSubmitPrep';
 import { approvedLaborForReview, summarizeLineReview } from '@/lib/coLineReview';
+import { CO_SUBMIT_REVIEW_EVENT } from '@/components/change-orders/COLineReview';
 import { crewUpstreamPricingError } from '@/lib/crewHourReview';
 import { canApproveOwnOrderInternally, isOwnOrderInternallyApproved } from '@/lib/coInternalApproval';
 import { nteCeilingError, parseNteCeiling } from '@/lib/coNteCeiling';
@@ -105,6 +106,18 @@ export function COStatusActions({
   const [nteCeiling, setNteCeiling] = useState(co.nte_cap == null ? '' : String(co.nte_cap));
 
   const isDamagedByOthers = co.reason === 'damaged_by_others';
+
+  // The Scope & Labor review bar submits through this same, single decision.
+  useEffect(() => {
+    const onSubmitReview = (event: Event) => {
+      const detail = (event as CustomEvent<{ coId: string; decision: 'approve' | 'reject' }>).detail;
+      if (detail?.coId !== co.id) return;
+      if (detail.decision === 'reject') setRejectOpen(true);
+      else setApproveOpen(true);
+    };
+    window.addEventListener(CO_SUBMIT_REVIEW_EVENT, onSubmitReview);
+    return () => window.removeEventListener(CO_SUBMIT_REVIEW_EVENT, onSubmitReview);
+  }, [co.id]);
 
   // Fetch project participants when needed for backcharge dialog
   useEffect(() => {
@@ -897,7 +910,7 @@ export function COStatusActions({
             <>
               {itemReview && !lineReview.complete && (
                 <p className="text-[0.7rem] text-muted-foreground">
-                  Decide all {lineReview.pending} pending item{lineReview.pending === 1 ? '' : 's'} in Scope &amp; Labor to finish the review.
+                  Accept or reject the {lineReview.pending} remaining item{lineReview.pending === 1 ? '' : 's'} in Scope &amp; Labor, then submit the review once.
                 </p>
               )}
               <Button size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={() => setApproveOpen(true)} disabled={acting || (itemReview && !lineReview.complete)}>
@@ -905,7 +918,7 @@ export function COStatusActions({
                 {forwardsToGC
                   ? `Send to ${rl.GC}`
                   : itemReview
-                    ? !lineReview.complete ? 'Finish review' : lineReview.approved === 0 ? 'Finish rejection' : lineReview.rejected > 0 ? 'Finish partial approval' : 'Finish approval'
+                    ? 'Submit review'
                     : co.pricing_type === 'fixed' ? 'Approve scope & price' : co.pricing_type === 'tm' ? 'Authorize rates & actuals' : 'Authorize rates & cap'}
               </Button>
             </>
@@ -915,7 +928,7 @@ export function COStatusActions({
               {co.kept_internal ? `Bill ${rl.GC} instead` : 'Keep as internal cost'}
             </Button>
           )}
-          {canReject && (
+          {canReject && !itemReview && (
             <Button variant="destructive" size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={() => setRejectOpen(true)} disabled={acting}>
               <X className="h-3 w-3" />
               {crewPending ? `Send back to ${rl.FC} to fix` : 'Reject'}

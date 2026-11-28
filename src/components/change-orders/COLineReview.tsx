@@ -31,7 +31,7 @@ function ApprovalBadge({ item }: { item: COLineItem }) {
       status === 'pending' && 'bg-muted text-muted-foreground',
     )}>
       {status === 'approved' ? <Check className="h-3 w-3" /> : status === 'rejected' ? <X className="h-3 w-3" /> : null}
-      {status === 'approved' ? 'Approved' : status === 'rejected' ? 'Rejected' : 'Awaiting review'}
+      {status === 'approved' ? 'Accepted' : status === 'rejected' ? 'Rejected' : 'To decide'}
     </span>
   );
 }
@@ -39,23 +39,32 @@ function ApprovalBadge({ item }: { item: COLineItem }) {
 interface ReviewBarProps {
   coId: string;
   items: COLineItem[];
+  /** The reviewing company may decide this order. */
   canReview: boolean;
   onRefresh: () => void;
+}
+
+/** One review per agreement: row choices are provisional until "Submit review". */
+export const CO_SUBMIT_REVIEW_EVENT = 'co-submit-review';
+export function requestSubmitReview(coId: string, decision: 'approve' | 'reject') {
+  window.dispatchEvent(new CustomEvent(CO_SUBMIT_REVIEW_EVENT, { detail: { coId, decision } }));
 }
 
 export function COLineReviewBar({ coId, items, canReview, onRefresh }: ReviewBarProps) {
   const [saving, setSaving] = useState(false);
   const summary = summarizeLineReview(items);
-  if (!canReview && summary.pending === items.length) return null;
+  const multi = items.length > 1;
+  if (!canReview && (!multi || summary.pending === items.length)) return null;
 
-  async function approveAll() {
+  async function acceptRemaining() {
     setSaving(true);
     try {
-      await saveDecisions(coId, items.map(item => ({ id: item.id, decision: 'approved' as const })));
-      toast.success('All items approved. Finish the review in Actions.');
+      const pending = items.filter(item => (item.approval_status ?? 'pending') === 'pending');
+      await saveDecisions(coId, pending.map(item => ({ id: item.id, decision: 'approved' as const })));
+      toast.success('Remaining items accepted. Submit the review to make it final.');
       onRefresh();
     } catch (error: any) {
-      toast.error(error?.message ?? 'Failed to approve all items');
+      toast.error(error?.message ?? 'Failed to accept items');
     } finally {
       setSaving(false);
     }
@@ -64,18 +73,36 @@ export function COLineReviewBar({ coId, items, canReview, onRefresh }: ReviewBar
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-muted/20 px-3 py-3 sm:px-5">
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold text-foreground">Item review</p>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
-          {summary.pending > 0
-            ? `${summary.pending} pending · ${summary.approved} approved · ${summary.rejected} rejected`
-            : `${summary.approved} approved · ${summary.rejected} rejected${canReview ? ' — finish the review in Actions' : ''}`}
+        <p className="text-xs font-semibold text-foreground">Review</p>
+        <p className="mt-0.5 break-words text-[11px] text-muted-foreground">
+          {!multi
+            ? canReview ? 'Accept or reject this order in one review.' : 'Awaiting review'
+            : summary.pending > 0
+              ? `${summary.pending} to decide · ${summary.approved} accepted · ${summary.rejected} rejected${canReview ? ' — choices are not final until you submit the review' : ''}`
+              : `${summary.approved} accepted · ${summary.rejected} rejected${canReview ? ' — submit the review to make it final' : ''}`}
         </p>
       </div>
-      {canReview && (
-        <Button type="button" size="sm" onClick={approveAll} disabled={saving} className="h-8 shrink-0 gap-1.5 text-xs">
+      {canReview && multi && summary.pending > 0 && (
+        <Button type="button" size="sm" variant="outline" onClick={acceptRemaining} disabled={saving} className="h-8 shrink-0 gap-1.5 text-xs">
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCheck className="h-3.5 w-3.5" />}
-          Approve all
+          Accept all remaining
         </Button>
+      )}
+      {canReview && multi && (
+        <Button type="button" size="sm" onClick={() => requestSubmitReview(coId, 'approve')} disabled={saving || !summary.complete} className="h-8 shrink-0 gap-1.5 text-xs">
+          <Check className="h-3.5 w-3.5" />
+          Submit review
+        </Button>
+      )}
+      {canReview && !multi && (
+        <>
+          <Button type="button" size="sm" variant="outline" onClick={() => requestSubmitReview(coId, 'reject')} className="h-8 shrink-0 gap-1.5 text-xs text-destructive hover:text-destructive">
+            <X className="h-3.5 w-3.5" /> Reject
+          </Button>
+          <Button type="button" size="sm" onClick={() => requestSubmitReview(coId, 'approve')} className="h-8 shrink-0 gap-1.5 text-xs">
+            <Check className="h-3.5 w-3.5" /> Accept &amp; submit review
+          </Button>
+        </>
       )}
     </div>
   );
@@ -98,7 +125,7 @@ export function COLineItemReview({ coId, item, canReview, onRefresh }: ItemRevie
     setSaving(true);
     try {
       await saveDecisions(coId, [{ id: item.id, decision: 'approved' }]);
-      toast.success(`Approved “${item.item_name}”`);
+      toast.success(`Accepted “${item.item_name}” — submit the review when every item is decided`);
       onRefresh();
     } catch (error: any) {
       toast.error(error?.message ?? 'Failed to approve item');
@@ -112,7 +139,7 @@ export function COLineItemReview({ coId, item, canReview, onRefresh }: ItemRevie
     setSaving(true);
     try {
       await saveDecisions(coId, [{ id: item.id, decision: 'rejected', reason: reason.trim() }]);
-      toast.success(`Rejected “${item.item_name}”`);
+      toast.success(`Rejected “${item.item_name}” — submit the review when every item is decided`);
       setRejectOpen(false);
       onRefresh();
     } catch (error: any) {
@@ -164,7 +191,7 @@ export function COLineItemReview({ coId, item, canReview, onRefresh }: ItemRevie
           <DialogHeader>
             <DialogTitle>Reject “{item.item_name}”</DialogTitle>
             <DialogDescription>
-              This item will be excluded from the approved amount. The submitter will see your reason.
+              This item will be excluded from the accepted amount when you submit the review. The submitter will see your reason.
             </DialogDescription>
           </DialogHeader>
           <div>

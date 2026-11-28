@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select';
 import type { COCollaborator, COFCOrgOption } from '@/types/changeOrder';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import { crewHandoffMessage, resolveCrewHandoff } from '@/lib/crewHandoffStatus';
 
 interface FCInputRequestCardProps {
   canRequest: boolean;
@@ -64,13 +65,14 @@ export function FCInputRequestCard({
     [collaborators]
   );
 
-  const statusLabel = activeCollaborator
-    ? recipientName ? 'Input in progress — review your entries, then submit when ready' : `Waiting on ${rl.FC}`
-    : completedCollaborator
-      ? recipientName ? `Submitted to ${recipientName}` : `${rl.FC} input complete`
-      : creatorCrewName
-        ? `Input received from ${creatorCrewName}`
-        : `No ${rl.FC.toLowerCase()} requested yet`;
+  const crewNameForStatus = (activeCollaborator ?? completedCollaborator)?.organization?.name ?? creatorCrewName ?? rl.FC;
+  const handoff = resolveCrewHandoff({
+    collaboratorStatus: activeCollaborator ? 'active' : completedCollaborator ? 'completed' : null,
+    crewCreatedOrder: !!creatorCrewName,
+    crewPricedTotal: crewTotal,
+  });
+  const handoffMessage = crewHandoffMessage(handoff, recipientName ? 'crew' : 'hirer', { crew: crewNameForStatus, hirer: recipientName ?? rl.TC }, crewTotal);
+  const statusLabel = handoff === 'not_requested' ? `No ${rl.FC.toLowerCase()} requested yet` : handoffMessage.label;
 
   const selectedValue = selectedOrgId || activeCollaborator?.organization_id || '';
   const crewName = (activeCollaborator ?? completedCollaborator)?.organization?.name ?? creatorCrewName;
@@ -84,14 +86,12 @@ export function FCInputRequestCard({
         <div className="min-w-0">
           <p className="text-sm font-semibold text-foreground break-words">{crewName ?? `No ${rl.FC.toLowerCase()} yet`}</p>
           <p className="text-xs text-muted-foreground break-words">
-            {creatorCrewName && !activeCollaborator && !completedCollaborator
-              ? 'Created this work order and logged their pricing'
-              : statusLabel}
+{statusLabel}
           </p>
         </div>
         {crewName && (
           <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
-            {activeCollaborator ? recipientName ? 'In progress' : 'Waiting' : recipientName ? 'Submitted' : 'Received'}
+            {handoffMessage.badge || 'Received'}
           </span>
         )}
       </div>

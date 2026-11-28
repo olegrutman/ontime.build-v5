@@ -451,8 +451,20 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               </div>
 
               {/* Mobile money line — desktop shows table columns instead */}
+              {isTC && (fcTotal > 0 || isPriced) && (
+                <div className="md:hidden mt-2 grid grid-cols-2 gap-2 text-xs">
+                  <div className="min-w-0 rounded-lg bg-muted/40 px-2 py-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{rl.FC} cost · private</p>
+                    <p className="font-mono text-sm font-semibold text-foreground">{fcTotal > 0 ? `$${fmt(fcTotal)}` : '—'}</p>
+                  </div>
+                  <div className="min-w-0 rounded-lg bg-muted/40 px-2 py-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Your price</p>
+                    <p className="font-mono text-sm font-semibold text-foreground">{isPriced ? `$${fmt(tcTotal)}` : '—'}</p>
+                  </div>
+                </div>
+              )}
               <div className="md:hidden mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
-                {isPriced ? (
+                {isPriced && isTC ? null : isPriced ? (
                   <span className="font-mono text-lg font-bold text-foreground">${fmt(totalForRole)}</span>
                 ) : showProvisional ? (
                   <button
@@ -488,8 +500,8 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             </div>
           </div>
 
-          {/* Crew cost column (desktop) */}
-          <div className="hidden text-right">
+          {/* Crew cost column (desktop) — private to the company that hired the crew */}
+          <div className={cn('text-right', isTC ? 'hidden md:block' : 'hidden')}>
             {isTC && fcTotal > 0 ? (
               <>
                 <span className="inline-flex items-center justify-end gap-1 font-mono text-sm font-semibold text-foreground">
@@ -497,7 +509,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                   <Lock className="h-3 w-3 text-state-approved" />
                 </span>
                 <span className="block text-[10px] text-muted-foreground">
-                  {crewHoursOnItem > 0 ? `${fmtHours(crewHoursOnItem)}h` : 'lump sum'} · private
+                  {fcBillable.some(e => e.crew_review_status === 'pending') ? 'includes pending' : crewHoursOnItem > 0 ? `${fmtHours(crewHoursOnItem)}h · private` : 'private'}
                 </span>
               </>
             ) : isTC && entryCount > 0 && actualTotal === 0 ? (
@@ -510,7 +522,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
           {/* Rate column (desktop) */}
-          <div className="hidden md:block text-right">
+          <div className={cn('text-right', isTC ? 'hidden' : 'hidden md:block')}>
             <span className="text-sm text-foreground">{modeLabel}</span>
             {isHourlyMode && totalHours > 0 && (
               <span className="block font-mono text-[10px] text-muted-foreground">{fmtHours(totalHours)}h</span>

@@ -12,6 +12,8 @@ import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useCORealtime } from '@/hooks/useCORealtime';
 import { useProjectFCOrgs } from '@/hooks/useProjectFCOrgs';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+
+const fmtMoney2 = (v: number) => `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { useCOResponsibility } from '@/hooks/useCOResponsibility';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
@@ -511,8 +513,16 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
   const status = co.status as COStatus;
   const finalizedApprovalAmount = finalizedCOApprovalAmount(co);
-  const canReviewLineItems = isGC && canApprove && status === 'submitted' && lineItems.length > 1
+  const scopeItemIds = new Set(lineItems.map(item => item.id));
+  const itemCrewCostTotal = laborEntries
+    .filter(e => scopeItemIds.has(e.co_line_item_id) && !e.is_actual_cost && e.entered_by_role === 'FC')
+    .reduce((sum, e) => sum + Number(e.line_total ?? 0), 0);
+  const itemSellTotal = laborEntries
+    .filter(e => scopeItemIds.has(e.co_line_item_id) && !e.is_actual_cost && e.entered_by_role === 'TC')
+    .reduce((sum, e) => sum + Number(e.line_total ?? 0), 0);
+  const canReviewOrder = isGC && canApprove && status === 'submitted'
     && (co.org_id === myOrgId || co.assigned_to_org_id === myOrgId);
+  const canReviewLineItems = canReviewOrder && lineItems.length > 1;
   const hasRejectedLineItems = lineItems.some(item => item.approval_status === 'rejected');
   const rfiBlocked = !!(co as any).blocked_by_rfi_id;
   const displayTitle = co.title ?? co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order');
@@ -870,13 +880,13 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
                 {/* Line items */}
                 <div>
-                  <COLineReviewBar coId={co.id} items={lineItems} canReview={canReviewLineItems} onRefresh={refreshDetail} />
+                  <COLineReviewBar coId={co.id} items={lineItems} canReview={canReviewOrder} onRefresh={refreshDetail} />
                   {lineItems.length > 0 && (
                     <div className="hidden px-4 py-2 text-[10px] font-bold uppercase tracking-[1.2px] text-muted-foreground md:grid md:grid-cols-[2rem_minmax(0,1fr)_7rem_8rem_7rem_5rem] md:items-center md:gap-3">
                       <span>#</span>
                       <span>Item</span>
-                      <span className="text-right">{co.pricing_type === 'fixed' ? 'Pricing' : 'Entry'}</span>
-                      <span className="text-right">{co.pricing_type === 'fixed' ? 'Price' : 'Actuals'}</span>
+                      <span className="text-right">{isTC ? `${rl.FC} cost` : co.pricing_type === 'fixed' ? 'Pricing' : 'Entry'}</span>
+                      <span className="text-right">{isTC ? 'Your price' : co.pricing_type === 'fixed' ? 'Price' : 'Actuals'}</span>
                       <span className="text-right">Review</span>
                       <span className="text-right">Open</span>
                     </div>
@@ -914,6 +924,23 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                         />
                       </div>
                     ))}</div>
+                  )}
+                  {isTC && lineItems.length > 0 && (
+                    <div className="mx-2 mb-2 grid grid-cols-2 gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2.5 sm:mx-3 sm:mb-3 md:grid-cols-[minmax(0,1fr)_8rem_8rem_auto] md:items-center">
+                      <p className="col-span-2 text-xs font-semibold text-foreground md:col-span-1">Totals · {rl.FC} cost is private to you</p>
+                      <div className="min-w-0 md:text-right">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{rl.FC} cost</p>
+                        <p className="font-mono text-sm font-bold text-foreground">{fmtMoney2(itemCrewCostTotal)}</p>
+                      </div>
+                      <div className="min-w-0 md:text-right">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Your price</p>
+                        <p className="font-mono text-sm font-bold text-foreground">{fmtMoney2(itemSellTotal)}</p>
+                      </div>
+                      <div className="col-span-2 min-w-0 md:col-span-1 md:text-right">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Difference</p>
+                        <p className="font-mono text-sm font-bold text-foreground">{fmtMoney2(itemSellTotal - itemCrewCostTotal)}</p>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
