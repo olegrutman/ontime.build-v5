@@ -531,6 +531,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const isCrewCollaborator = agreementView === 'crew';
   const hasCrewAgreement = agreementView === 'both';
   const crewSent = crewPricingSent(co?.pricing_type, collaborators);
+  const crewOwnEntries = laborEntries.filter(e => e.entered_by_role === 'FC' && !e.is_actual_cost && e.org_id === myOrgId);
+  const crewHandoff = !isCrewCollaborator ? undefined
+    : crewOwnEntries.length > 0 && crewOwnEntries.every(e => e.crew_review_status === 'approved') ? 'accepted' as const
+    : crewSent ? 'sent' as const : 'not_sent' as const;
   const hasRejectedLineItems = lineItems.some(item => item.approval_status === 'rejected');
   const rfiBlocked = !!(co as any).blocked_by_rfi_id;
   const displayTitle = co.title ?? co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order');
@@ -691,6 +695,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
           <COHeaderStrip
             co={co}
+            crewHandoff={crewHandoff}
             role={role}
             myOrgName={myOrgName}
             myOrgId={myOrgId}
@@ -704,6 +709,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           <div className="hidden lg:block">
             <COKPIStrip
               co={co}
+              crewHandoff={crewHandoff}
               isGC={isGC}
               isTC={isTC}
               isFC={isFC}
@@ -731,7 +737,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} crewForwardPricingError={crewForwardPricingError} />
             </div>
             <aside className="min-w-0 space-y-3 xl:col-start-2 xl:row-span-2 xl:row-start-1">
-            <section ref={actionsRef} aria-label="Actions" className="space-y-3 rounded-2xl border-2 border-primary/30 bg-card p-3 shadow-sm">
+            <section ref={actionsRef} aria-label="Actions" className="space-y-3 rounded-2xl border-2 border-primary/30 bg-card p-3 shadow-sm empty:hidden">
               {(isTC || isFC) && co.pricing_type !== 'fixed' && canEdit && !nteBlocked && lineItems.some(item => item.approval_status !== 'rejected') && (
                 <Button className="min-h-10 w-full gap-2 whitespace-normal" onClick={openFirstEntry}>
                   <Clock3 className="h-4 w-4 shrink-0" />Log hours &amp; actuals
@@ -975,6 +981,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                 <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Order numbers · tap for item breakdown</p>
                 <COKPIStrip
             co={co}
+            crewHandoff={crewHandoff}
             isGC={isGC}
             isTC={isTC}
             isFC={isFC}

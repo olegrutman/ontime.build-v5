@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils';
 import { unbilledActuals } from '@/lib/coPricingPresentation';
 
 interface COKPIStripProps {
+  /** Crew view: price label follows the crew's own agreement, not the upstream approval. */
+  crewHandoff?: 'not_sent' | 'sent' | 'accepted';
   co: ChangeOrder;
   isGC: boolean;
   isTC: boolean;
@@ -343,7 +345,7 @@ function getLegacyTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       ? Number(props.co.approved_amount)
       : currentRevenue;
     tiles.push({
-      label: isApproved ? 'Approved price' : 'Proposed price',
+      label: props.crewHandoff ? (props.crewHandoff === 'accepted' ? 'Accepted price' : 'Your price') : isApproved ? 'Approved price' : 'Proposed price',
       value: fmtCurrency(revenue),
       color: 'hsl(var(--primary))',
       kind: 'revenue',

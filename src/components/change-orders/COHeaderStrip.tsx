@@ -13,6 +13,8 @@ import { coPricingStatusLabel, type COPricingReadiness } from '@/lib/coPricingRe
 import { CO_PRICING_PRESENTATION } from '@/lib/coPricingPresentation';
 
 interface COHeaderStripProps {
+  /** Crew view: its own pricing agreement replaces the upstream order status. */
+  crewHandoff?: 'not_sent' | 'sent' | 'accepted';
   co: ChangeOrder;
   role: COCreatedByRole;
   myOrgName: string;
@@ -27,6 +29,7 @@ export function COHeaderStrip({
   co,
   myOrgName,
   pricingReadiness,
+  crewHandoff,
   myOrgId,
   fromLabel,
   toLabel,
@@ -43,7 +46,8 @@ export function COHeaderStrip({
   const [draft, setDraft] = useState(co.title ?? '');
   const [saving, setSaving] = useState(false);
   const documentLabel = co.document_type === 'WO' ? 'Work order workspace' : 'Change order workspace';
-  const statusLabel = coPricingStatusLabel(status, pricingReadiness, co.kept_internal) ?? CO_STATUS_LABELS[status];
+  const crewLabel = crewHandoff === 'accepted' ? 'Your pricing accepted' : crewHandoff === 'sent' ? 'Pricing sent · in review' : crewHandoff === 'not_sent' ? 'Your pricing · not sent' : null;
+  const statusLabel = crewLabel ?? coPricingStatusLabel(status, pricingReadiness, co.kept_internal) ?? CO_STATUS_LABELS[status];
   const pricingPresentation = CO_PRICING_PRESENTATION[co.pricing_type];
   const PricingIcon = co.pricing_type === 'fixed' ? LockKeyhole : co.pricing_type === 'tm' ? Clock3 : Gauge;
 
@@ -78,7 +82,8 @@ export function COHeaderStrip({
           {!isWithdrawn && <COPricingTypeChange co={co} myOrgId={myOrgId} part="button" />}
           <span className={cn(
             'inline-flex max-w-full items-center rounded-md border px-2.5 py-1 text-center text-[0.68rem] font-bold uppercase tracking-wider',
-            status === 'approved' || status === 'contracted'
+            crewHandoff ? (crewHandoff === 'accepted' ? 'border-state-approved/30 bg-state-approved/15 text-state-approved' : 'border-white/15 bg-white/10 text-white/80')
+            : status === 'approved' || status === 'contracted'
               ? 'border-state-approved/30 bg-state-approved/15 text-state-approved'
               : status === 'submitted'
                 ? 'border-type-sov/30 bg-type-sov/15 text-type-sov'
