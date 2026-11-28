@@ -380,9 +380,7 @@ export function COItemPricingDialog({
             showApproval={!options.privateEntry && !options.downstream && showGCApproval}
             onApproval={approved => void handleGCApproval(entry.id, approved)}
             showCrewReview={entry.entered_by_role === 'FC' && !entry.is_actual_cost && (isFC || (isTC && !!options.downstream))}
-            onCrewReview={isTC && options.downstream
-              ? (decision, note) => handleCrewReview(entry.id, decision, note)
-              : undefined}
+            onCrewReview={undefined}
           />
         ))}
       </div>

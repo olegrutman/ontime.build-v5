@@ -82,3 +82,22 @@ export function canBillCrewLaborEntry(entry: CrewHourReviewFields, order: CrewBi
   if (entry.crew_review_status === 'approved') return true;
   return entry.crew_review_status == null && (order.status === 'approved' || order.status === 'contracted');
 }
+
+export type CrewReviewChoice = { decision: 'approved' | 'rejected'; note?: string };
+
+/**
+ * One crew pricing review: every pending entry needs a choice and every
+ * rejection a reason before anything is saved.
+ */
+export function crewReviewSubmission(
+  pendingIds: readonly string[],
+  choices: Record<string, CrewReviewChoice | undefined>,
+): { error: string | null; decisions: { id: string; decision: 'approved' | 'rejected'; note: string | null }[] } {
+  const undecided = pendingIds.filter(id => !choices[id]);
+  if (pendingIds.length === 0) return { error: 'Nothing to review.', decisions: [] };
+  if (undecided.length > 0) return { error: `Decide ${undecided.length} more entr${undecided.length === 1 ? 'y' : 'ies'} before submitting.`, decisions: [] };
+  const decisions = pendingIds.map(id => ({ id, decision: choices[id]!.decision, note: choices[id]!.note?.trim() || null }));
+  const missingReason = decisions.find(d => d.decision === 'rejected' && !d.note);
+  if (missingReason) return { error: 'Explain why these crew hours are rejected.', decisions: [] };
+  return { error: null, decisions };
+}

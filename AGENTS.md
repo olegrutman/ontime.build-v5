@@ -53,4 +53,3 @@
 - Correction flags auto-clear once billing matches approval.
 - WO draft invoices edit in place, releasing only their own lines.
 - T&M/NTE accrue tickets unflagged; close-out blocks entries. Type changes: change_co_pricing_type RPC.
-- CO/WO review: one Submit review per agreement; crew handoff reads the submission record, not saved prices.

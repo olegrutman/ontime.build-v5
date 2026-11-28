@@ -12,6 +12,7 @@ import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useCORealtime } from '@/hooks/useCORealtime';
 import { useProjectFCOrgs } from '@/hooks/useProjectFCOrgs';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import { COCrewPricingReview } from '@/components/change-orders/COCrewPricingReview';
 
 const fmtMoney2 = (v: number) => `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 import { useCORoleContext } from '@/hooks/useCORoleContext';
@@ -880,6 +881,17 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
                 {/* Line items */}
                 <div>
+                  {isTC && (
+                    <div className="p-2 sm:p-3 pb-0 sm:pb-0">
+                      <COCrewPricingReview
+                        crewName={fcCollabName || rl.FC}
+                        lineItems={lineItems}
+                        laborEntries={laborEntries}
+                        submitted={collaborators.some(c => c.status === 'completed')}
+                        onRefresh={refreshDetail}
+                      />
+                    </div>
+                  )}
                   <COLineReviewBar coId={co.id} items={lineItems} canReview={canReviewOrder} onRefresh={refreshDetail} />
                   {lineItems.length > 0 && (
                     <div className="hidden px-4 py-2 text-[10px] font-bold uppercase tracking-[1.2px] text-muted-foreground md:grid md:grid-cols-[2rem_minmax(0,1fr)_7rem_8rem_7rem_5rem] md:items-center md:gap-3">

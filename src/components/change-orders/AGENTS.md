@@ -1,0 +1,1 @@
+- CO/WO review: one Submit review per agreement (crew entries too, in COCrewPricingReview); handoff reads the submission record.
